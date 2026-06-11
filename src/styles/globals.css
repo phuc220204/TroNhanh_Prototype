@@ -1,0 +1,43 @@
+/* ══════════════════════════════════════════
+   GLOBAL MOBILE-SAFETY GUARDS — Trọ Nhanh
+   Mục tiêu: chặn horizontal scroll ngoài ý muốn
+   trên mobile (360–390px) mà KHÔNG phá desktop.
+
+   Chỉ đặt overflow-x trên <html>: theo spec, overflow
+   của root element được propagate lên viewport, nên
+   trang vẫn cuộn dọc bình thường, window.scrollY vẫn
+   chạy (navbar desktop dùng nó để đổ bóng khi scroll),
+   và position: sticky vẫn hoạt động.
+   KHÔNG đặt overflow-x lên <body> vì body đang có
+   height:100% → sẽ biến body thành scroll-container và
+   làm hỏng window.scrollY của desktop.
+══════════════════════════════════════════ */
+
+html {
+  overflow-x: hidden;
+  max-width: 100%;
+}
+
+body,
+#root {
+  max-width: 100%;
+}
+
+/* Media không bao giờ tràn khỏi khung chứa trên mobile.
+   Không áp cho <svg> để tránh ảnh hưởng icon có size cố định. */
+img,
+video,
+canvas {
+  max-width: 100%;
+}
+
+/* Vùng scroll ngang có chủ đích (chips, KPI carousel):
+   ẩn scrollbar cho gọn nhưng vẫn scroll được trong vùng đó. */
+.tn-scroll-x {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+.tn-scroll-x::-webkit-scrollbar {
+  display: none;
+}
