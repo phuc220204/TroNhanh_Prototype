@@ -2,13 +2,22 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router";
 import {
   LayoutGrid, Building2, FileText, Users, Wallet, Settings, LifeBuoy, LogOut,
-  Bell, Home, MessageSquare, User, ChevronRight, X,
+  Bell, Home, MessageSquare, User, ChevronRight, X, Search,
 } from "lucide-react";
 import { C, font } from "../theme";
 import { useBreakpoint } from "./useBreakpoint";
 import { DemoBanner } from "./common/DemoBanner";
 
 export type LandlordNavId = "overview" | "rooms" | "listings" | "tenants" | "payments" | "settings";
+
+/* Prototype has no real auth. This just clears any demo flags we might
+   have set; it's a harmless no-op otherwise. Kept tiny on purpose. */
+function clearDemoAuth() {
+  try {
+    localStorage.removeItem("tronhanh.demoUser");
+    sessionStorage.removeItem("tronhanh.demoUser");
+  } catch { /* storage unavailable — ignore */ }
+}
 
 const NAV: { id: LandlordNavId; icon: typeof LayoutGrid; label: string; to?: string }[] = [
   { id: "overview", icon: LayoutGrid, label: "Overview", to: "/chu-tro" },
@@ -68,8 +77,9 @@ function Sidebar({ active }: { active: LandlordNavId }) {
           <p style={{ fontFamily: font, fontSize: 13, fontWeight: 700, color: C.textPrimary, margin: "0 0 8px", lineHeight: 1.4 }}>Cần hỗ trợ quản lý tốt hơn?</p>
           <button style={{ fontFamily: font, fontSize: 12.5, fontWeight: 700, color: C.white, background: C.primary, border: "none", borderRadius: 8, padding: "7px 13px", cursor: "pointer", width: "100%" }}>Liên hệ hỗ trợ</button>
         </div>
+        <button onClick={() => navigate("/")} style={{ display: "flex", alignItems: "center", gap: 11, padding: "9px 13px", borderRadius: 10, border: "none", background: "transparent", cursor: "pointer", fontFamily: font, fontSize: 13, fontWeight: 500, color: C.textSecondary, width: "100%" }}><Search size={16} /> Về trang tìm phòng</button>
         <button style={{ display: "flex", alignItems: "center", gap: 11, padding: "9px 13px", borderRadius: 10, border: "none", background: "transparent", cursor: "pointer", fontFamily: font, fontSize: 13, fontWeight: 500, color: C.textSecondary, width: "100%" }}><LifeBuoy size={16} /> Hỗ trợ</button>
-        <button onClick={() => navigate("/")} style={{ display: "flex", alignItems: "center", gap: 11, padding: "9px 13px", borderRadius: 10, border: "none", background: "transparent", cursor: "pointer", fontFamily: font, fontSize: 13, fontWeight: 500, color: C.textSecondary, width: "100%" }}><LogOut size={16} /> Logout</button>
+        <button onClick={() => { clearDemoAuth(); navigate("/"); }} style={{ display: "flex", alignItems: "center", gap: 11, padding: "9px 13px", borderRadius: 10, border: "none", background: "transparent", cursor: "pointer", fontFamily: font, fontSize: 13, fontWeight: 600, color: C.repairing, width: "100%" }}><LogOut size={16} /> Đăng xuất</button>
       </div>
     </aside>
   );
@@ -117,7 +127,13 @@ function MobileTabBar({ active }: { active: LandlordNavId }) {
         open={accountOpen}
         onClose={() => setAccountOpen(false)}
         onNavigate={(to) => { setAccountOpen(false); navigate(to); }}
-        onLogout={() => { setAccountOpen(false); setLoggedOut(true); }}
+        onLogout={() => {
+          setAccountOpen(false);
+          clearDemoAuth();
+          setLoggedOut(true);
+          // Show the toast briefly, then return to the public home route.
+          window.setTimeout(() => navigate("/"), 650);
+        }}
       />
       <LogoutToast show={loggedOut} onDone={() => setLoggedOut(false)} />
     </>
@@ -134,6 +150,7 @@ function AccountSheet({ open, onClose, onNavigate, onLogout }: {
     { Icon: User, label: "Hồ sơ", action: onClose },
     { Icon: MessageSquare, label: "Tin nhắn", action: onClose },
     { Icon: LayoutGrid, label: "Dashboard chủ trọ", action: () => onNavigate("/chu-tro") },
+    { Icon: Search, label: "Về trang tìm phòng", action: () => onNavigate("/") },
     { Icon: Settings, label: "Cài đặt", action: onClose },
   ];
   return (
