@@ -261,7 +261,7 @@ export function QuanLyPage() {
             : <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>{rows.map(l => <ListingCard key={l.id} l={l} />)}</div>}
         </div>
         <button onClick={toPost}
-          style={{ position: "fixed", right: 18, bottom: 78, height: 50, borderRadius: 999, background: C.primary, border: "none", display: "flex", alignItems: "center", gap: 7, padding: "0 20px", cursor: "pointer", boxShadow: "0 4px 16px rgba(138,106,69,0.36)", zIndex: 90, fontFamily: font, fontSize: 14, fontWeight: 700, color: C.white }}>
+          style={{ position: "fixed", right: 18, bottom: "calc(76px + env(safe-area-inset-bottom))", height: 50, borderRadius: 999, background: C.primary, border: "none", display: "flex", alignItems: "center", gap: 7, padding: "0 20px", cursor: "pointer", boxShadow: "0 4px 16px rgba(138,106,69,0.36)", zIndex: 90, fontFamily: font, fontSize: 14, fontWeight: 700, color: C.white }}>
           <Plus size={20} /> Đăng tin mới
         </button>
       </LandlordShell>

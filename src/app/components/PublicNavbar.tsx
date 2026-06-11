@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router";
+import { useBreakpoint } from "./useBreakpoint";
 import {
   Search, Heart, User, ChevronDown,
   Home, Key, UserSearch,
@@ -383,6 +384,12 @@ export function PublicNavbarMobile({ onSearch }: { onSearch?: () => void }) {
 export function DemoFAB() {
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
+  const { isMobile } = useBreakpoint();
+
+  /* On mobile the public pages render a sticky BottomTabBar (height 60).
+     Float the FAB ~72px above the viewport bottom so it never overlaps the
+     "Tài khoản" tab; on desktop there is no tab bar, keep the original spot. */
+  const fabSize = isMobile ? 52 : 50;
 
   const shortcuts = [
     { Icon: LayoutDashboard, label: "Dashboard chủ trọ",        action: () => navigate("/chu-tro") },
@@ -393,7 +400,12 @@ export function DemoFAB() {
   ];
 
   return (
-    <div style={{ position: "fixed", bottom: 24, right: 24, zIndex: 300, display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 10 }}>
+    <div style={{
+      position: "fixed",
+      right: isMobile ? 18 : 24,
+      bottom: isMobile ? "calc(72px + env(safe-area-inset-bottom))" : 24,
+      zIndex: 300, display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 10,
+    }}>
       {/* Popup */}
       {open && (
         <div style={{
@@ -430,7 +442,7 @@ export function DemoFAB() {
       <button
         onClick={() => setOpen(v => !v)}
         style={{
-          width: 50, height: 50, borderRadius: "50%",
+          width: fabSize, height: fabSize, borderRadius: "50%",
           background: open ? C.primaryDark : C.primary,
           border: "none", cursor: "pointer",
           display: "flex", alignItems: "center", justifyContent: "center",

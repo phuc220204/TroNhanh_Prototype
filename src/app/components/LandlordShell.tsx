@@ -1,7 +1,8 @@
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router";
 import {
   LayoutGrid, Building2, FileText, Users, Wallet, Settings, LifeBuoy, LogOut,
-  Bell, Home, MessageSquare, User, ChevronRight,
+  Bell, Home, MessageSquare, User, ChevronRight, X,
 } from "lucide-react";
 import { C, font } from "../theme";
 import { useBreakpoint } from "./useBreakpoint";
@@ -88,24 +89,110 @@ function MobileHeader({ title }: { title: string }) {
 
 function MobileTabBar({ active }: { active: LandlordNavId }) {
   const navigate = useNavigate();
-  const tabs: { Icon: typeof Home; label: string; on: LandlordNavId; to?: string }[] = [
-    { Icon: Home, label: "Trang chủ", on: "overview", to: "/chu-tro" },
-    { Icon: Building2, label: "Phòng", on: "rooms", to: "/chu-tro/quan-ly-phong" },
-    { Icon: MessageSquare, label: "Tin nhắn", on: "tenants" },
-    { Icon: User, label: "Tài khoản", on: "settings" },
+  const [accountOpen, setAccountOpen] = useState(false);
+  const [loggedOut, setLoggedOut] = useState(false);
+
+  const tabs: { Icon: typeof Home; label: string; on: LandlordNavId; onTap: () => void }[] = [
+    { Icon: Home, label: "Trang chủ", on: "overview", onTap: () => navigate("/chu-tro") },
+    { Icon: Building2, label: "Phòng", on: "rooms", onTap: () => navigate("/chu-tro/quan-ly-phong") },
+    { Icon: MessageSquare, label: "Tin nhắn", on: "tenants", onTap: () => {} },
+    { Icon: User, label: "Tài khoản", on: "settings", onTap: () => setAccountOpen(true) },
+  ];
+
+  return (
+    <>
+      <nav style={{ background: C.white, borderTop: `1px solid ${C.border}`, height: 60, display: "flex", boxShadow: "0 -2px 12px rgba(92,70,50,0.08)", flexShrink: 0, position: "sticky", bottom: 0, zIndex: 80 }}>
+        {tabs.map(({ Icon, label, on, onTap }) => {
+          const isActive = on === active || (label === "Tài khoản" && accountOpen);
+          return (
+            <button key={label} onClick={onTap} style={{ flex: 1, minHeight: 44, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 3, background: "none", border: "none", cursor: "pointer" }}>
+              <Icon size={22} color={isActive ? C.primary : "#9B8C78"} strokeWidth={isActive ? 2.5 : 1.8} />
+              <span style={{ fontFamily: font, fontSize: 10, fontWeight: isActive ? 700 : 400, color: isActive ? C.primary : "#9B8C78" }}>{label}</span>
+            </button>
+          );
+        })}
+      </nav>
+
+      <AccountSheet
+        open={accountOpen}
+        onClose={() => setAccountOpen(false)}
+        onNavigate={(to) => { setAccountOpen(false); navigate(to); }}
+        onLogout={() => { setAccountOpen(false); setLoggedOut(true); }}
+      />
+      <LogoutToast show={loggedOut} onDone={() => setLoggedOut(false)} />
+    </>
+  );
+}
+
+/* Mobile account bottom sheet — opened from the "Tài khoản" tab.
+   Prototype only: items are placeholders except "Dashboard chủ trọ". */
+function AccountSheet({ open, onClose, onNavigate, onLogout }: {
+  open: boolean; onClose: () => void; onNavigate: (to: string) => void; onLogout: () => void;
+}) {
+  if (!open) return null;
+  const items: { Icon: typeof User; label: string; action: () => void }[] = [
+    { Icon: User, label: "Hồ sơ", action: onClose },
+    { Icon: MessageSquare, label: "Tin nhắn", action: onClose },
+    { Icon: LayoutGrid, label: "Dashboard chủ trọ", action: () => onNavigate("/chu-tro") },
+    { Icon: Settings, label: "Cài đặt", action: onClose },
   ];
   return (
-    <nav style={{ background: C.white, borderTop: `1px solid ${C.border}`, height: 60, display: "flex", boxShadow: "0 -2px 12px rgba(92,70,50,0.08)", flexShrink: 0, position: "sticky", bottom: 0, zIndex: 80 }}>
-      {tabs.map(({ Icon, label, on, to }) => {
-        const isActive = on === active;
-        return (
-          <button key={label} onClick={to ? () => navigate(to) : undefined} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 3, background: "none", border: "none", cursor: "pointer" }}>
-            <Icon size={22} color={isActive ? C.primary : "#9B8C78"} strokeWidth={isActive ? 2.5 : 1.8} />
-            <span style={{ fontFamily: font, fontSize: 10, fontWeight: isActive ? 700 : 400, color: isActive ? C.primary : "#9B8C78" }}>{label}</span>
+    <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(42,26,12,0.5)", zIndex: 300, display: "flex", alignItems: "flex-end" }}>
+      <div onClick={e => e.stopPropagation()} style={{ background: C.white, width: "100%", borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: "10px 0 calc(14px + env(safe-area-inset-bottom))", boxShadow: "0 -8px 40px rgba(30,18,10,0.2)", maxHeight: "85vh", overflowY: "auto" }}>
+        <div style={{ width: 40, height: 4, borderRadius: 4, background: C.border, margin: "0 auto 14px" }} />
+
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 18px 12px" }}>
+          <span style={{ fontFamily: font, fontSize: 16, fontWeight: 800, color: C.textPrimary }}>Tài khoản</span>
+          <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", padding: 4 }}>
+            <X size={18} color={C.textSecondary} />
           </button>
-        );
-      })}
-    </nav>
+        </div>
+
+        {/* User info */}
+        <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "4px 18px 16px", borderBottom: `1px solid ${C.border}`, marginBottom: 6 }}>
+          <div style={{ width: 46, height: 46, borderRadius: "50%", background: C.caramelSoft, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+            <User size={22} color={C.primary} />
+          </div>
+          <div style={{ minWidth: 0 }}>
+            <p style={{ fontFamily: font, fontSize: 15, fontWeight: 700, color: C.textPrimary, margin: 0 }}>Anh Minh</p>
+            <p style={{ fontFamily: font, fontSize: 12.5, color: C.textSecondary, margin: "2px 0 0" }}>Chủ trọ · Đang dùng Landlord Hub</p>
+          </div>
+        </div>
+
+        {items.map(({ Icon, label, action }) => (
+          <button key={label} onClick={action} style={{ display: "flex", alignItems: "center", gap: 13, width: "100%", padding: "13px 18px", minHeight: 48, border: "none", background: "transparent", cursor: "pointer", textAlign: "left" }}
+            onMouseEnter={e => (e.currentTarget.style.background = C.bg)}
+            onMouseLeave={e => (e.currentTarget.style.background = "transparent")}>
+            <Icon size={18} color={C.textSecondary} strokeWidth={1.9} />
+            <span style={{ fontFamily: font, fontSize: 14.5, fontWeight: 500, color: C.textPrimary }}>{label}</span>
+          </button>
+        ))}
+
+        {/* Logout — subtle warm danger, never harsh red */}
+        <div style={{ borderTop: `1px solid ${C.border}`, marginTop: 6, paddingTop: 4 }}>
+          <button onClick={onLogout} style={{ display: "flex", alignItems: "center", gap: 13, width: "100%", padding: "13px 18px", minHeight: 48, border: "none", background: "transparent", cursor: "pointer", textAlign: "left" }}
+            onMouseEnter={e => (e.currentTarget.style.background = C.bg)}
+            onMouseLeave={e => (e.currentTarget.style.background = "transparent")}>
+            <LogOut size={18} color={C.repairing} strokeWidth={1.9} />
+            <span style={{ fontFamily: font, fontSize: 14.5, fontWeight: 600, color: C.repairing }}>Đăng xuất</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function LogoutToast({ show, onDone }: { show: boolean; onDone: () => void }) {
+  useEffect(() => {
+    if (!show) return;
+    const t = setTimeout(onDone, 2200);
+    return () => clearTimeout(t);
+  }, [show, onDone]);
+  if (!show) return null;
+  return (
+    <div style={{ position: "fixed", left: "50%", bottom: "calc(80px + env(safe-area-inset-bottom))", transform: "translateX(-50%)", zIndex: 400, background: C.primaryDark, color: C.cream, fontFamily: font, fontSize: 13.5, fontWeight: 600, padding: "11px 20px", borderRadius: 10, boxShadow: "0 8px 28px rgba(30,18,10,0.3)", whiteSpace: "nowrap" }}>
+      Đã đăng xuất khỏi bản demo
+    </div>
   );
 }
 

@@ -780,7 +780,7 @@ export function QuanLyPhongPage() {
 
         {/* FAB */}
         <button onClick={() => setModal("room")}
-          style={{ position: "fixed", right: 18, bottom: 78, width: 54, height: 54, borderRadius: "50%", background: C.primary, border: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", boxShadow: "0 4px 16px rgba(138,106,69,0.36)", zIndex: 90 }}>
+          style={{ position: "fixed", right: 18, bottom: "calc(76px + env(safe-area-inset-bottom))", width: 54, height: 54, borderRadius: "50%", background: C.primary, border: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", boxShadow: "0 4px 16px rgba(138,106,69,0.36)", zIndex: 90 }}>
           <Plus size={24} color="white" />
         </button>
 
