@@ -3,27 +3,12 @@ import { useNavigate } from "react-router";
 import { useBreakpoint } from "./useBreakpoint";
 import {
   Search, Heart, User, ChevronDown,
-  Home, Key, UserSearch,
+  Key, UserSearch,
   LayoutGrid, LayoutDashboard, Building2, FileText, BookOpen, HelpCircle, X,
   Bell, Menu,
 } from "lucide-react";
 import { C, font } from "../theme";
-
-/* ══════════════════════════════════════════
-   LOGO MARK — replaceable placeholder
-══════════════════════════════════════════ */
-function LogoMark({ size = 32 }: { size?: number }) {
-  return (
-    <div style={{
-      width: size, height: size, borderRadius: size * 0.3,
-      background: `linear-gradient(135deg, ${C.primary} 0%, ${C.primaryDark} 100%)`,
-      display: "flex", alignItems: "center", justifyContent: "center",
-      flexShrink: 0, boxShadow: "0 2px 6px rgba(92,70,50,0.25)",
-    }}>
-      <Home size={size * 0.54} color="#fff" strokeWidth={2.2} />
-    </div>
-  );
-}
+import { BrandLogo } from "./brand/BrandLogo";
 
 /* ══════════════════════════════════════════
    ĐĂNG TIN DROPDOWN
@@ -154,11 +139,8 @@ export function PublicNavbarDesktop({
       transition: "box-shadow 0.2s, border-color 0.2s",
     }}>
       {/* LEFT — Brand */}
-      <button onClick={() => navigate("/")} style={{ display: "flex", alignItems: "center", gap: 10, background: "none", border: "none", cursor: "pointer", padding: "4px 0", flexShrink: 0 }}>
-        <LogoMark size={34} />
-        <span style={{ fontFamily: font, fontSize: 21, fontWeight: 900, color: C.primaryDark, letterSpacing: "-0.03em" }}>
-          Trọ Nhanh
-        </span>
+      <button onClick={() => navigate("/")} aria-label="Trọ Nhanh - Trang chủ" style={{ display: "flex", alignItems: "center", background: "none", border: "none", cursor: "pointer", padding: "4px 0", flexShrink: 0 }}>
+        <BrandLogo variant="full" size="md" />
       </button>
 
       {/* CENTER — Search bar */}
@@ -321,9 +303,8 @@ export function PublicNavbarMobile({ onSearch }: { onSearch?: () => void }) {
         boxShadow: "0 1px 6px rgba(92,70,50,0.07)",
       }}>
         {/* Logo */}
-        <button onClick={() => navigate("/")} style={{ display: "flex", alignItems: "center", gap: 8, background: "none", border: "none", cursor: "pointer", padding: 0 }}>
-          <LogoMark size={28} />
-          <span style={{ fontFamily: font, fontSize: 18, fontWeight: 900, color: C.primaryDark, letterSpacing: "-0.025em" }}>Trọ Nhanh</span>
+        <button onClick={() => navigate("/")} aria-label="Trọ Nhanh - Trang chủ" style={{ display: "flex", alignItems: "center", background: "none", border: "none", cursor: "pointer", padding: 0, minWidth: 0 }}>
+          <BrandLogo variant="full" size="sm" />
         </button>
 
         {/* Right actions */}

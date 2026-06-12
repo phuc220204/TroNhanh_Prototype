@@ -7,6 +7,7 @@ import {
 import { C, font } from "../theme";
 import { useBreakpoint } from "./useBreakpoint";
 import { DemoBanner } from "./common/DemoBanner";
+import { BrandLogo } from "./brand/BrandLogo";
 
 export type LandlordNavId = "overview" | "rooms" | "listings" | "tenants" | "payments" | "settings";
 
@@ -55,7 +56,9 @@ function Sidebar({ active }: { active: LandlordNavId }) {
   return (
     <aside style={{ width: 248, background: C.white, borderRight: `1px solid ${C.border}`, display: "flex", flexDirection: "column", position: "sticky", top: 0, height: "100vh", flexShrink: 0 }}>
       <div style={{ padding: "22px 20px 18px", borderBottom: `1px solid ${C.border}` }}>
-        <span style={{ fontFamily: font, fontSize: 21, fontWeight: 800, color: C.primary, letterSpacing: "-0.02em", cursor: "pointer" }} onClick={() => navigate("/chu-tro")}>Trọ Nhanh</span>
+        <button onClick={() => navigate("/chu-tro")} aria-label="Trọ Nhanh Landlord Hub" style={{ display: "flex", background: "none", border: "none", padding: 0, cursor: "pointer" }}>
+          <BrandLogo variant="full" size="sm" />
+        </button>
         <p style={{ fontFamily: font, fontSize: 13, fontWeight: 700, color: C.textPrimary, margin: "8px 0 1px" }}>Landlord Hub</p>
         <p style={{ fontFamily: font, fontSize: 11.5, color: C.textSecondary, margin: 0 }}>Manage your rentals</p>
       </div>
@@ -87,8 +90,9 @@ function Sidebar({ active }: { active: LandlordNavId }) {
 
 function MobileHeader({ title }: { title: string }) {
   return (
-    <div style={{ background: C.primaryDark, height: 56, display: "flex", alignItems: "center", padding: "0 16px", gap: 12, position: "sticky", top: 0, zIndex: 100, boxShadow: "0 2px 12px rgba(42,26,12,0.22)", flexShrink: 0 }}>
-      <span style={{ fontFamily: font, fontSize: 18, fontWeight: 800, color: C.cream, flex: 1 }}>{title}</span>
+    <div style={{ background: C.primaryDark, height: 56, display: "flex", alignItems: "center", padding: "0 16px", gap: 12, position: "sticky", top: 0, zIndex: 100, boxShadow: "0 2px 12px rgba(42,26,12,0.22)", flexShrink: 0, "--tn-brand-logo-color": C.cream } as React.CSSProperties}>
+      <BrandLogo variant="full" size="sm" />
+      <span style={{ fontFamily: font, fontSize: 18, fontWeight: 800, color: C.cream, flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{title}</span>
       <button style={{ width: 36, height: 36, borderRadius: "50%", background: "rgba(255,255,255,0.12)", border: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", position: "relative" }}>
         <Bell size={17} color={C.cream} />
         <span style={{ position: "absolute", top: 8, right: 9, width: 7, height: 7, borderRadius: "50%", background: "#C8861A" }} />

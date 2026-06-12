@@ -3,7 +3,7 @@ import { useNavigate } from "react-router";
 import {
   Search, Heart, MapPin,
   Wifi, Wind, Car, Bath, Clock, Layers,
-  Home, Star, Bell, User,
+  Home, Star, Bell, User, Users, Calendar,
   SlidersHorizontal, ArrowRight,
   ShieldCheck, CreditCard, MessageSquare, Headphones,
   Mail, TrendingUp, Building2, Banknote,
@@ -13,6 +13,7 @@ import { C, font } from "../theme";
 import { PublicNavbarDesktop, PublicNavbarMobile, DemoFAB } from "../components/PublicNavbar";
 import { DemoBanner } from "../components/common/DemoBanner";
 import { AppSelect } from "../components/common/AppSelect";
+import { ModalShell } from "../components/common/ModalShell";
 
 /* Hero Search — option lists (giữ tiếng Việt, dùng chung desktop + mobile) */
 const LOAI_PHONG = ["Phòng trọ", "Căn hộ dịch vụ", "Căn hộ mini", "Ký túc xá", "Nhà nguyên căn", "Ở ghép"];
@@ -45,6 +46,55 @@ const FEATURED_ROOMS = [
     price: "8.000.000", area: 38, loc: "Gò Vấp",
     amenities: ["wifi", "ac", "bath"], badge: "Nổi bật",
     img: "https://images.unsplash.com/photo-1512918728675-ed5a9ecdebfd?w=600&q=80",
+  },
+];
+
+const ROOM_WANTED_POSTS = [
+  {
+    id: 1, initials: "MA", name: "Nguyễn Minh Anh",
+    title: "Tìm phòng gần ĐH Hutech, Bình Thạnh",
+    locations: "Bình Thạnh, Gò Vấp", budget: "2.5 – 3.5 triệu/tháng",
+    roomType: "Phòng trọ / Căn hộ mini", moveIn: "Dọn vào trong tháng này",
+    amenities: ["Wifi", "WC riêng", "Giờ giấc tự do"],
+  },
+  {
+    id: 2, initials: "QB", name: "Trần Quốc Bảo",
+    title: "Cần căn hộ mini khu Quận 7",
+    locations: "Quận 7, Nhà Bè", budget: "4 – 6 triệu/tháng",
+    roomType: "Căn hộ mini", moveIn: "Dọn vào đầu tháng tới",
+    amenities: ["Máy lạnh", "Có bếp", "Chỗ để xe"],
+  },
+  {
+    id: 3, initials: "TN", name: "Lê Thảo Nhi",
+    title: "Tìm phòng có WC riêng gần Tân Bình",
+    locations: "Tân Bình, Quận 10", budget: "Dưới 3 triệu/tháng",
+    roomType: "Phòng trọ", moveIn: "Có thể dọn vào ngay",
+    amenities: ["WC riêng", "An ninh", "Không chung chủ"],
+  },
+  {
+    id: 4, initials: "GH", name: "Phạm Gia Huy",
+    title: "Tìm phòng ở Gò Vấp, cho người đi làm",
+    locations: "Gò Vấp", budget: "3 – 4 triệu/tháng",
+    roomType: "Phòng trọ / Studio", moveIn: "Trong 2 tuần tới",
+    amenities: ["Giờ tự do", "Wifi", "Yên tĩnh"],
+  },
+];
+
+const ROOMMATE_WANTED_POSTS = [
+  {
+    id: 1, title: "Cần 1 bạn nữ ở ghép tại Quận 10",
+    location: "Quận 10, TP.HCM", price: "1.800.000đ/người",
+    needed: "Cần 1 người", requirements: ["Nữ", "Sinh viên", "Gọn gàng"],
+  },
+  {
+    id: 2, title: "Tìm 1 bạn nam ở ghép gần ĐH Văn Lang",
+    location: "Bình Thạnh, TP.HCM", price: "2.200.000đ/người",
+    needed: "Cần 1 người", requirements: ["Nam", "Không hút thuốc", "Giờ tự do"],
+  },
+  {
+    id: 3, title: "Cần người ở ghép căn hộ mini Bình Thạnh",
+    location: "Bình Thạnh, TP.HCM", price: "2.500.000đ/người",
+    needed: "Cần 2 người", requirements: ["Người đi làm", "Sạch sẽ", "Ở lâu dài"],
   },
 ];
 
@@ -177,6 +227,273 @@ function RoomCard({ room, mobile, onClick }: {
         </div>
       </div>
     </div>
+  );
+}
+
+type HomeModalContent = { title: string; description: string } | null;
+
+function SectionHeader({
+  title, subtitle, cta, mobile, onCta,
+}: { title: string; subtitle: string; cta: string; mobile?: boolean; onCta?: () => void }) {
+  return (
+    <div style={{ display: "flex", justifyContent: "space-between", alignItems: mobile ? "flex-start" : "flex-end", flexDirection: mobile ? "column" : "row", gap: mobile ? 12 : 24, marginBottom: mobile ? 20 : 28 }}>
+      <div style={{ minWidth: 0 }}>
+        <h2 style={{ fontFamily: font, fontSize: mobile ? 20 : 26, fontWeight: 800, color: C.textPrimary, margin: "0 0 6px", letterSpacing: "-0.015em" }}>
+          {title}
+        </h2>
+        <p style={{ fontFamily: font, fontSize: mobile ? 12 : 13, color: C.textSecondary, margin: 0, lineHeight: 1.6, maxWidth: 680 }}>
+          {subtitle}
+        </p>
+      </div>
+      <button type="button" onClick={onCta}
+        style={{ display: "inline-flex", alignItems: "center", gap: 5, minHeight: 44, padding: mobile ? "0" : "0 4px", fontFamily: font, fontSize: 13, fontWeight: 700, color: C.primary, background: "none", border: "none", cursor: "pointer", whiteSpace: "nowrap", flexShrink: 0 }}>
+        {cta}
+      </button>
+    </div>
+  );
+}
+
+function RoomWantedCard({
+  post, onMessage, onView,
+}: { post: typeof ROOM_WANTED_POSTS[0]; onMessage?: () => void; onView?: () => void }) {
+  return (
+    <article style={{ background: `linear-gradient(160deg, ${C.white} 0%, #FBF8F1 100%)`, border: `1px solid ${C.border}`, borderRadius: 16, padding: 18, boxShadow: "0 3px 14px rgba(92,70,50,0.06)", display: "flex", flexDirection: "column", minWidth: 0 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
+        <div style={{ width: 42, height: 42, borderRadius: "50%", background: `linear-gradient(135deg, ${C.primary}, ${C.sand})`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+          <span style={{ fontFamily: font, fontSize: 12, fontWeight: 800, color: C.white }}>{post.initials}</span>
+        </div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <p style={{ fontFamily: font, fontSize: 13, fontWeight: 700, color: C.textPrimary, margin: 0, lineHeight: 1.35 }}>{post.name}</p>
+          <p style={{ fontFamily: font, fontSize: 11, color: C.textSecondary, margin: "2px 0 0" }}>Người thuê</p>
+        </div>
+        <span style={{ fontFamily: font, fontSize: 10, fontWeight: 700, color: C.primaryDark, background: C.cream, borderRadius: 999, padding: "5px 9px", whiteSpace: "nowrap" }}>
+          Đang tìm
+        </span>
+      </div>
+
+      <h3 style={{ fontFamily: font, fontSize: 15, fontWeight: 800, color: C.textPrimary, margin: "0 0 13px", lineHeight: 1.45, minHeight: 44 }}>
+        {post.title}
+      </h3>
+
+      <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 14 }}>
+        {[
+          { Icon: MapPin, text: post.locations },
+          { Icon: Banknote, text: post.budget },
+          { Icon: Building2, text: post.roomType },
+          { Icon: Calendar, text: post.moveIn },
+        ].map(({ Icon, text }) => (
+          <div key={text} style={{ display: "flex", alignItems: "flex-start", gap: 7, minWidth: 0 }}>
+            <Icon size={13} color={C.secondary} strokeWidth={1.9} style={{ flexShrink: 0, marginTop: 2 }} />
+            <span style={{ fontFamily: font, fontSize: 12, color: C.textSecondary, lineHeight: 1.45 }}>{text}</span>
+          </div>
+        ))}
+      </div>
+
+      <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 16 }}>
+        {post.amenities.map(amenity => (
+          <span key={amenity} style={{ fontFamily: font, fontSize: 10, fontWeight: 600, color: C.textSecondary, background: C.caramelSoft, border: `1px solid ${C.border}`, borderRadius: 999, padding: "4px 8px" }}>
+            {amenity}
+          </span>
+        ))}
+      </div>
+
+      <div style={{ display: "flex", gap: 8, marginTop: "auto" }}>
+        <button type="button" onClick={onMessage}
+          style={{ flex: 1, minWidth: 0, minHeight: 44, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, padding: "9px 8px", background: C.primary, color: C.white, border: "none", borderRadius: 10, fontFamily: font, fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
+          <MessageSquare size={14} /> Nhắn tin
+        </button>
+        <button type="button" onClick={onView}
+          style={{ flex: 1, minWidth: 0, minHeight: 44, padding: "9px 8px", background: "transparent", color: C.primary, border: `1.5px solid ${C.primary}`, borderRadius: 10, fontFamily: font, fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
+          Xem nhu cầu
+        </button>
+      </div>
+    </article>
+  );
+}
+
+function RoommateWantedCard({
+  post, onView,
+}: { post: typeof ROOMMATE_WANTED_POSTS[0]; onView?: () => void }) {
+  return (
+    <article style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: 16, padding: 20, boxShadow: "0 3px 14px rgba(92,70,50,0.06)", display: "flex", flexDirection: "column", minWidth: 0 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
+        <div style={{ width: 40, height: 40, borderRadius: 11, background: C.caramelSoft, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+          <Users size={19} color={C.primary} strokeWidth={1.9} />
+        </div>
+        <span style={{ fontFamily: font, fontSize: 11, fontWeight: 700, color: C.primary, textTransform: "uppercase", letterSpacing: "0.05em" }}>Ở ghép</span>
+      </div>
+
+      <h3 style={{ fontFamily: font, fontSize: 16, fontWeight: 800, color: C.textPrimary, margin: "0 0 12px", lineHeight: 1.45 }}>
+        {post.title}
+      </h3>
+      <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}>
+        <MapPin size={13} color={C.secondary} />
+        <span style={{ fontFamily: font, fontSize: 12, color: C.textSecondary }}>{post.location}</span>
+      </div>
+      <p style={{ fontFamily: font, fontSize: 18, fontWeight: 800, color: C.primary, margin: "0 0 7px" }}>{post.price}</p>
+      <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 14 }}>
+        <User size={13} color={C.secondary} />
+        <span style={{ fontFamily: font, fontSize: 12, color: C.textSecondary }}>{post.needed}</span>
+      </div>
+
+      <div style={{ display: "flex", gap: 7, flexWrap: "wrap", marginBottom: 18 }}>
+        {post.requirements.map(requirement => (
+          <span key={requirement} style={{ fontFamily: font, fontSize: 11, color: C.textSecondary, background: C.caramelSoft, borderRadius: 999, padding: "5px 9px" }}>
+            {requirement}
+          </span>
+        ))}
+      </div>
+
+      <button type="button" onClick={onView}
+        style={{ width: "100%", minHeight: 44, marginTop: "auto", display: "flex", alignItems: "center", justifyContent: "center", gap: 6, padding: "10px 14px", background: "transparent", color: C.primary, border: `1.5px solid ${C.primary}`, borderRadius: 10, fontFamily: font, fontSize: 13, fontWeight: 700, cursor: "pointer" }}>
+        Xem chi tiết <ArrowRight size={14} />
+      </button>
+    </article>
+  );
+}
+
+function MarketplaceSections({
+  mobile, tablet, onInfo,
+}: { mobile?: boolean; tablet?: boolean; onInfo: (content: HomeModalContent) => void }) {
+  const roomWantedCols = mobile ? 1 : tablet ? 2 : 4;
+  const roommateCols = mobile ? 1 : tablet ? 2 : 3;
+
+  return (
+    <>
+      <section style={{ background: C.caramelSoft, borderTop: `1px solid ${C.border}`, borderBottom: `1px solid ${C.border}` }}>
+        <div style={{ maxWidth: 1200, margin: "0 auto", padding: mobile ? "48px 16px" : "64px 32px" }}>
+          <SectionHeader
+            mobile={mobile}
+            title="Người thuê đang tìm phòng"
+            subtitle="Các nhu cầu tìm phòng mới nhất từ sinh viên, người đi làm và người cần chuyển trọ."
+            cta="Xem tất cả nhu cầu →"
+            onCta={() => onInfo({ title: "Nhu cầu tìm phòng", description: "Danh sách đầy đủ nhu cầu tìm phòng đang được hoàn thiện trong bản Demo Prototype." })}
+          />
+          <div style={{ display: "grid", gridTemplateColumns: `repeat(${roomWantedCols}, minmax(0, 1fr))`, gap: mobile ? 14 : 16 }}>
+            {ROOM_WANTED_POSTS.map(post => (
+              <RoomWantedCard
+                key={post.id}
+                post={post}
+                onMessage={() => onInfo({ title: `Nhắn tin với ${post.name}`, description: "Luồng nhắn tin giữa chủ trọ và người đang tìm phòng sẽ sử dụng chat trong ứng dụng Trọ Nhanh." })}
+                onView={() => onInfo({ title: post.title, description: `${post.name} đang tìm ${post.roomType.toLowerCase()} tại ${post.locations}, ngân sách ${post.budget}.` })}
+              />
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section style={{ background: C.bg }}>
+        <div style={{ maxWidth: 1200, margin: "0 auto", padding: mobile ? "48px 16px" : "64px 32px" }}>
+          <SectionHeader
+            mobile={mobile}
+            title="Tìm người ở ghép"
+            subtitle="Kết nối những người có nhu cầu chia sẻ chi phí thuê phòng."
+            cta="Xem tin ở ghép →"
+            onCta={() => onInfo({ title: "Tin tìm người ở ghép", description: "Danh sách đầy đủ tin ở ghép đang được hoàn thiện trong bản Demo Prototype." })}
+          />
+          <div style={{ display: "grid", gridTemplateColumns: `repeat(${roommateCols}, minmax(0, 1fr))`, gap: mobile ? 14 : 18 }}>
+            {ROOMMATE_WANTED_POSTS.map(post => (
+              <RoommateWantedCard
+                key={post.id}
+                post={post}
+                onView={() => onInfo({ title: post.title, description: `${post.location} · ${post.price} · ${post.needed}. Yêu cầu: ${post.requirements.join(", ")}.` })}
+              />
+            ))}
+          </div>
+        </div>
+      </section>
+    </>
+  );
+}
+
+function PostingCTASection({
+  mobile, onRenterPost, onLandlordPost,
+}: { mobile?: boolean; onRenterPost?: () => void; onLandlordPost?: () => void }) {
+  const cards = [
+    {
+      Icon: Search, title: "Tôi đang tìm phòng",
+      description: "Đăng nhu cầu tìm phòng để chủ trọ phù hợp chủ động liên hệ với bạn.",
+      button: "Đăng tin tìm phòng", onClick: onRenterPost, primary: true,
+    },
+    {
+      Icon: Building2, title: "Tôi có phòng cho thuê",
+      description: "Đăng phòng trống, quản lý tin đăng và tiếp cận người thuê phù hợp.",
+      button: "Đăng tin cho thuê", onClick: onLandlordPost, primary: false,
+    },
+  ];
+
+  return (
+    <section style={{ background: C.white, borderTop: `1px solid ${C.border}`, borderBottom: `1px solid ${C.border}` }}>
+      <div style={{ maxWidth: 1200, margin: "0 auto", padding: mobile ? "52px 16px" : "72px 32px" }}>
+        <div style={{ textAlign: "center", marginBottom: mobile ? 24 : 32 }}>
+          <h2 style={{ fontFamily: font, fontSize: mobile ? 22 : 30, fontWeight: 900, color: C.textPrimary, margin: "0 0 8px", letterSpacing: "-0.02em" }}>Bạn muốn đăng tin?</h2>
+          <p style={{ fontFamily: font, fontSize: 13, color: C.textSecondary, margin: 0 }}>Chọn nhu cầu phù hợp để bắt đầu kết nối trên Trọ Nhanh.</p>
+        </div>
+
+        <div style={{ display: "grid", gridTemplateColumns: mobile ? "1fr" : "1fr 1fr", gap: mobile ? 14 : 20, maxWidth: 920, margin: "0 auto" }}>
+          {cards.map(({ Icon, title, description, button, onClick, primary }) => (
+            <div key={title} style={{ background: primary ? C.caramelSoft : C.bg, border: `1px solid ${C.border}`, borderRadius: 16, padding: mobile ? 20 : 26, display: "flex", alignItems: mobile ? "flex-start" : "center", flexDirection: mobile ? "column" : "row", gap: 18 }}>
+              <div style={{ width: 48, height: 48, borderRadius: 13, background: primary ? C.primary : C.cream, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                <Icon size={22} color={primary ? C.white : C.primary} />
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <h3 style={{ fontFamily: font, fontSize: 17, fontWeight: 800, color: C.textPrimary, margin: "0 0 7px" }}>{title}</h3>
+                <p style={{ fontFamily: font, fontSize: 13, color: C.textSecondary, margin: "0 0 16px", lineHeight: 1.6 }}>{description}</p>
+                <button type="button" onClick={onClick}
+                  style={{ minHeight: 44, padding: "10px 18px", display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 6, background: primary ? C.primary : "transparent", color: primary ? C.white : C.primary, border: primary ? "none" : `1.5px solid ${C.primary}`, borderRadius: 10, fontFamily: font, fontSize: 13, fontWeight: 700, cursor: "pointer" }}>
+                  {button} <ArrowRight size={14} />
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function InfoModal({ content, onClose }: { content: HomeModalContent; onClose: () => void }) {
+  if (!content) return null;
+  return (
+    <ModalShell
+      title={content.title}
+      onClose={onClose}
+      footer={<Btn label="Đã hiểu" onClick={onClose} />}
+    >
+      <p style={{ fontFamily: font, fontSize: 14, color: C.textSecondary, lineHeight: 1.7, margin: 0 }}>{content.description}</p>
+      <div style={{ padding: "12px 14px", background: C.caramelSoft, border: `1px solid ${C.border}`, borderRadius: 10, display: "flex", alignItems: "flex-start", gap: 8 }}>
+        <MessageSquare size={15} color={C.primary} style={{ flexShrink: 0, marginTop: 2 }} />
+        <span style={{ fontFamily: font, fontSize: 12, color: C.textSecondary, lineHeight: 1.6 }}>Đây là tương tác placeholder của bản Demo Prototype.</span>
+      </div>
+    </ModalShell>
+  );
+}
+
+function PostTypeModal({ onClose, onSelect }: { onClose: () => void; onSelect: (type: string) => void }) {
+  return (
+    <ModalShell
+      title="Chọn loại tin muốn đăng"
+      onClose={onClose}
+      footer={<Btn variant="ghost" label="Đóng" onClick={onClose} />}
+    >
+      <p style={{ fontFamily: font, fontSize: 13, color: C.textSecondary, lineHeight: 1.65, margin: 0 }}>Người thuê có thể đăng nhu cầu tìm phòng hoặc tìm người phù hợp để ở ghép.</p>
+      {[
+        { Icon: Search, title: "Đăng nhu cầu tìm phòng", desc: "Cho chủ trọ biết khu vực, ngân sách và loại phòng bạn cần." },
+        { Icon: Users, title: "Đăng tin tìm người ở ghép", desc: "Tìm người phù hợp để cùng chia sẻ phòng và chi phí thuê." },
+      ].map(({ Icon, title, desc }) => (
+        <button type="button" key={title} onClick={() => onSelect(title)}
+          style={{ width: "100%", minHeight: 72, display: "flex", alignItems: "center", gap: 12, padding: "14px", textAlign: "left", background: C.bg, border: `1px solid ${C.border}`, borderRadius: 12, cursor: "pointer" }}>
+          <div style={{ width: 38, height: 38, borderRadius: 10, background: C.caramelSoft, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+            <Icon size={18} color={C.primary} />
+          </div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <p style={{ fontFamily: font, fontSize: 14, fontWeight: 700, color: C.textPrimary, margin: "0 0 3px" }}>{title}</p>
+            <p style={{ fontFamily: font, fontSize: 12, color: C.textSecondary, margin: 0, lineHeight: 1.5 }}>{desc}</p>
+          </div>
+          <ArrowRight size={16} color={C.secondary} style={{ flexShrink: 0 }} />
+        </button>
+      ))}
+    </ModalShell>
   );
 }
 
@@ -344,30 +661,30 @@ function HeroSection({ onSearch, isMobile }: { onSearch?: () => void; isMobile?:
    QUICK FILTER CHIPS
 ══════════════════════════════════════════ */
 function QuickFilterChips({
-  onSearch, mobile,
-}: { onSearch?: () => void; mobile?: boolean }) {
+  onSearch, mobile, stacked,
+}: { onSearch?: () => void; mobile?: boolean; stacked?: boolean }) {
   const [active, setActive] = useState("Tất cả");
+  const useStackedLayout = mobile || stacked;
 
   return (
-    <div style={{ background: C.white, borderBottom: `1px solid ${C.border}`, padding: mobile ? "10px 0" : "12px 32px" }}>
-      <div style={{
-        maxWidth: mobile ? "100%" : 1200, margin: "0 auto",
-        display: "flex", alignItems: "center", gap: 8,
-        overflowX: mobile ? "auto" : "visible",
-        padding: mobile ? "0 16px" : 0,
-        scrollbarWidth: "none",
-      }}>
+    <div style={{ display: "flex", flexDirection: useStackedLayout ? "column" : "row", alignItems: useStackedLayout ? "stretch" : "center", justifyContent: "space-between", gap: useStackedLayout ? 10 : 14, width: "100%", marginBottom: mobile ? 22 : 28 }}>
+      <div className={mobile ? "tn-scroll-x" : undefined} style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: mobile ? "nowrap" : "wrap", minWidth: 0 }}>
+        {!mobile && (
+          <span style={{ fontFamily: font, fontSize: 12, fontWeight: 700, color: C.textSecondary, whiteSpace: "nowrap", marginRight: 2 }}>
+            Lọc nhanh:
+          </span>
+        )}
         {CHIPS.map(chip => {
           const isActive = active === chip;
           return (
             <button key={chip}
               onClick={() => { setActive(chip); if (chip !== "Tất cả") onSearch?.(); }}
               style={{
-                flexShrink: 0, padding: mobile ? "9px 18px" : "7px 18px", minHeight: mobile ? 40 : undefined,
+                flexShrink: 0, padding: mobile ? "9px 17px" : "8px 16px", minHeight: mobile ? 42 : 40,
                 borderRadius: 999, cursor: "pointer",
                 fontFamily: font, fontSize: 13, fontWeight: isActive ? 600 : 400,
                 border: `1.5px solid ${isActive ? C.primary : C.border}`,
-                background: isActive ? C.primary : "transparent",
+                background: isActive ? C.primary : C.white,
                 color: isActive ? C.white : C.textSecondary,
                 transition: "all 0.12s", whiteSpace: "nowrap",
               }}>
@@ -375,13 +692,12 @@ function QuickFilterChips({
             </button>
           );
         })}
-        <div style={{ flex: 1 }} />
-        <button onClick={onSearch}
-          style={{ flexShrink: 0, display: "flex", alignItems: "center", gap: 6, padding: mobile ? "9px 16px" : "7px 16px", minHeight: mobile ? 40 : undefined, border: `1.5px solid ${C.border}`, borderRadius: 999, background: "transparent", fontFamily: font, fontSize: 13, color: C.textSecondary, cursor: "pointer", whiteSpace: "nowrap" }}>
-          <SlidersHorizontal size={13} />
-          Bộ lọc nâng cao
-        </button>
       </div>
+      <button onClick={onSearch}
+        style={{ flexShrink: 0, width: useStackedLayout ? "100%" : undefined, minHeight: 42, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, padding: "9px 16px", border: `1.5px solid ${C.primary}`, borderRadius: 999, background: "transparent", fontFamily: font, fontSize: 13, fontWeight: 600, color: C.primary, cursor: "pointer", whiteSpace: "nowrap" }}>
+        <SlidersHorizontal size={14} />
+        Bộ lọc nâng cao
+      </button>
     </div>
   );
 }
@@ -395,7 +711,7 @@ function FeaturedRoomsSection({
   return (
     <section style={{ padding: "60px 32px", maxWidth: 1200, margin: "0 auto" }}>
       {/* Section header */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 28 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 20 }}>
         <div>
           <h2 style={{ fontFamily: font, fontSize: 26, fontWeight: 800, color: C.textPrimary, margin: "0 0 5px", letterSpacing: "-0.015em" }}>
             Phòng mới đăng tải
@@ -409,6 +725,8 @@ function FeaturedRoomsSection({
           Xem tất cả <ArrowRight size={15} />
         </button>
       </div>
+
+      <QuickFilterChips onSearch={onSearch} stacked={cols === 2} />
 
       {/* Cards grid */}
       <div style={{ display: "grid", gridTemplateColumns: `repeat(${cols}, 1fr)`, gap: 20 }}>
@@ -460,7 +778,7 @@ function WhyUsSection({ mobile }: { mobile?: boolean }) {
 /* ══════════════════════════════════════════
    LANDLORD CTA BANNER
 ══════════════════════════════════════════ */
-function LandlordCTA({ mobile }: { mobile?: boolean }) {
+function LandlordCTA({ mobile, onPost }: { mobile?: boolean; onPost?: () => void }) {
   return (
     <section style={{
       background: `linear-gradient(135deg, #3E240E 0%, ${C.primaryDark} 50%, #4A2E14 100%)`,
@@ -481,7 +799,7 @@ function LandlordCTA({ mobile }: { mobile?: boolean }) {
         <p style={{ fontFamily: font, fontSize: mobile ? 14 : 16, color: "rgba(232,222,201,0.75)", margin: "0 0 36px", lineHeight: 1.7 }}>
           Tham gia cùng hàng ngàn chủ nhà khác để tiếp cận lượng khách hàng tiềm năng thông qua nền tảng này.
         </p>
-        <button style={{
+        <button onClick={onPost} style={{
           padding: "14px 32px", background: C.cream, color: C.primaryDark,
           border: "none", borderRadius: 12, fontFamily: font, fontSize: 15, fontWeight: 700,
           cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 8,
@@ -597,7 +915,18 @@ export function HomePage() {
   const onSearch = () => navigate("/search");
   const onRoomClick = () => navigate("/room/1");
   const onViewAll = () => navigate("/listings");
+  const onLandlordPost = () => navigate("/dang-tin");
   const { isMobile, isTablet } = useBreakpoint();
+  const [infoModal, setInfoModal] = useState<HomeModalContent>(null);
+  const [postTypeModal, setPostTypeModal] = useState(false);
+
+  const selectRenterPostType = (type: string) => {
+    setPostTypeModal(false);
+    setInfoModal({
+      title: type,
+      description: "Biểu mẫu đăng tin dành cho người thuê đang được hoàn thiện trong bản Demo Prototype.",
+    });
+  };
 
   /* ── MOBILE ─────────────────────────────────────── */
   if (isMobile) {
@@ -608,7 +937,6 @@ export function HomePage() {
 
         <div style={{ flex: 1, overflowY: "auto" }}>
           <HeroSection onSearch={onSearch} isMobile />
-          <QuickFilterChips onSearch={onSearch} mobile />
 
           <div style={{ padding: "40px 16px" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
@@ -620,18 +948,23 @@ export function HomePage() {
                 Xem tất cả →
               </button>
             </div>
+            <QuickFilterChips onSearch={onSearch} mobile />
             <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
               {FEATURED_ROOMS.map(r => <RoomCard key={r.id} room={r} mobile onClick={onRoomClick} />)}
             </div>
           </div>
 
+          <MarketplaceSections mobile onInfo={setInfoModal} />
           <WhyUsSection mobile />
-          <LandlordCTA mobile />
+          <PostingCTASection mobile onRenterPost={() => setPostTypeModal(true)} onLandlordPost={onLandlordPost} />
+          <LandlordCTA mobile onPost={onLandlordPost} />
           <SiteFooter mobile />
         </div>
 
         <BottomTabBar active={0} />
         <DemoFAB />
+        <InfoModal content={infoModal} onClose={() => setInfoModal(null)} />
+        {postTypeModal && <PostTypeModal onClose={() => setPostTypeModal(false)} onSelect={selectRenterPostType} />}
       </div>
     );
   }
@@ -642,19 +975,22 @@ export function HomePage() {
   return (
     <div style={{ background: C.bg, minHeight: "100vh", display: "flex", flexDirection: "column" }}>
       {/* MARKER-MAKE-KIT-INVOKED */}
-      <PublicNavbarDesktop onSearch={onSearch} />
+      {isTablet ? <PublicNavbarMobile onSearch={onSearch} /> : <PublicNavbarDesktop onSearch={onSearch} />}
       <DemoBanner />
 
       <main style={{ flex: 1 }}>
         <HeroSection onSearch={onSearch} />
-        <QuickFilterChips onSearch={onSearch} />
         <FeaturedRoomsSection onRoomClick={onRoomClick} onSearch={onSearch} onViewAll={onViewAll} cols={gridCols} />
+        <MarketplaceSections tablet={isTablet} onInfo={setInfoModal} />
         <WhyUsSection />
-        <LandlordCTA />
+        <PostingCTASection onRenterPost={() => setPostTypeModal(true)} onLandlordPost={onLandlordPost} />
+        <LandlordCTA onPost={onLandlordPost} />
       </main>
 
       <SiteFooter />
       <DemoFAB />
+      <InfoModal content={infoModal} onClose={() => setInfoModal(null)} />
+      {postTypeModal && <PostTypeModal onClose={() => setPostTypeModal(false)} onSelect={selectRenterPostType} />}
     </div>
   );
 }
