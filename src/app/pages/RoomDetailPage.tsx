@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router";
 import {
   ArrowLeft, Heart, Share2, MapPin, Users, Building2,
@@ -673,6 +673,50 @@ function ChatModal({ open, onClose }: { open: boolean; onClose: () => void }) {
 }
 
 /* ══════════════════════════════════════════
+   MOBILE — OWNER CONTACT
+══════════════════════════════════════════ */
+function MobileContactCard({ onChat, onPhone }: { onChat: () => void; onPhone: () => void }) {
+  return (
+    <div style={{ width: "100%", boxSizing: "border-box", background: C.white, border: `1px solid ${C.border}`, borderRadius: 16, padding: "15px", marginBottom: 24, boxShadow: "0 3px 14px rgba(92,70,50,0.07)" }}>
+      <h3 style={{ fontFamily: font, fontSize: 15, fontWeight: 700, color: C.textPrimary, margin: "0 0 13px" }}>
+        Liên hệ chủ phòng
+      </h3>
+
+      <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0, marginBottom: 14 }}>
+        <div style={{ width: 42, height: 42, borderRadius: "50%", background: `linear-gradient(135deg, ${C.sand}, ${C.secondary})`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+          <User size={19} color={C.white} />
+        </div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <p style={{ fontFamily: font, fontSize: 14, fontWeight: 700, color: C.textPrimary, margin: 0 }}>Anh Minh</p>
+          <p style={{ fontFamily: font, fontSize: 11, color: C.textSecondary, margin: "2px 0 0", whiteSpace: "nowrap" }}>Chủ trọ · Phản hồi nhanh</p>
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 3, flexShrink: 0, background: C.caramelSoft, borderRadius: 999, padding: "5px 8px" }}>
+          <Shield size={12} color={C.available} />
+          <span style={{ fontFamily: font, fontSize: 10, color: C.available, fontWeight: 700, whiteSpace: "nowrap" }}>Đã xác minh</span>
+        </div>
+      </div>
+
+      <div style={{ display: "flex", gap: 8, width: "100%" }}>
+        <button type="button" onClick={onChat}
+          style={{ flex: 3, minWidth: 0, minHeight: 44, display: "flex", alignItems: "center", justifyContent: "center", gap: 7, padding: "10px 8px", background: C.primary, color: C.white, border: "none", borderRadius: 11, fontFamily: font, fontSize: 13, fontWeight: 700, cursor: "pointer", boxShadow: "0 2px 8px rgba(138,106,69,0.22)" }}>
+          <MessageSquare size={16} />
+          Gửi tin nhắn
+        </button>
+        <button type="button" onClick={onPhone}
+          style={{ flex: 2, minWidth: 0, minHeight: 44, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, padding: "10px 7px", background: "transparent", color: C.primary, border: `1.5px solid ${C.primary}`, borderRadius: 11, fontFamily: font, fontSize: 13, fontWeight: 600, cursor: "pointer" }}>
+          <Phone size={16} />
+          Gọi điện
+        </button>
+      </div>
+
+      <p style={{ fontFamily: font, fontSize: 11, color: C.textSecondary, margin: "11px 0 0", lineHeight: 1.55 }}>
+        Nhắn tin trực tiếp trên Trọ Nhanh để hỏi thêm thông tin trước khi xem phòng.
+      </p>
+    </div>
+  );
+}
+
+/* ══════════════════════════════════════════
    MOBILE — DESCRIPTION SECTION
 ══════════════════════════════════════════ */
 function MobileDescriptionSection() {
@@ -781,8 +825,23 @@ export function RoomDetailPage() {
   const [lightboxIdx, setLightboxIdx]   = useState(0);
   const [phoneModal, setPhoneModal]     = useState(false);
   const [chatModal, setChatModal]       = useState(false);
+  const [showMobileStickyCta, setShowMobileStickyCta] = useState(false);
+  const mobileContactRef = useRef<HTMLDivElement>(null);
 
   const openLightbox = (idx: number) => { setLightboxIdx(idx); setLightboxOpen(true); };
+  const openChat = () => setChatModal(true);
+  const openPhone = () => setPhoneModal(true);
+
+  useEffect(() => {
+    if (!isMobile || !mobileContactRef.current) return;
+
+    const observer = new IntersectionObserver(([entry]) => {
+      setShowMobileStickyCta(entry.intersectionRatio < 0.2);
+    }, { threshold: [0, 0.2] });
+
+    observer.observe(mobileContactRef.current);
+    return () => observer.disconnect();
+  }, [isMobile]);
 
   /* ── MOBILE ─────────────────────────────────────────── */
   if (isMobile) {
@@ -799,8 +858,8 @@ export function RoomDetailPage() {
           />
           <DemoBanner mobile />
 
-          <div style={{ padding: "20px 16px 32px" }}>
-            {/* 2. Title + location + status + compact price */}
+          <div style={{ padding: "20px 16px calc(104px + env(safe-area-inset-bottom, 0px))" }}>
+            {/* 2–5. Status + price + title + location */}
             <div style={{ marginBottom: 20, paddingBottom: 20, borderBottom: `1px solid ${C.border}` }}>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10, flexWrap: "wrap", gap: 6 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
@@ -824,10 +883,15 @@ export function RoomDetailPage() {
               </div>
             </div>
 
-            {/* 3. Thông tin mô tả */}
+            {/* 6. Early contact action */}
+            <div ref={mobileContactRef}>
+              <MobileContactCard onChat={openChat} onPhone={openPhone} />
+            </div>
+
+            {/* 7. Thông tin mô tả */}
             <MobileDescriptionSection />
 
-            {/* 4. Thông tin cơ bản */}
+            {/* 8. Thông tin cơ bản */}
             <div style={{ marginBottom: 24, paddingBottom: 24, borderBottom: `1px solid ${C.border}` }}>
               <h3 style={{ fontFamily: font, fontSize: 15, fontWeight: 700, color: C.textPrimary, margin: "0 0 12px" }}>Thông tin cơ bản</h3>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
@@ -848,7 +912,7 @@ export function RoomDetailPage() {
               </div>
             </div>
 
-            {/* 5. Tiện ích căn hộ */}
+            {/* 9. Tiện ích căn hộ */}
             <div style={{ marginBottom: 24, paddingBottom: 24, borderBottom: `1px solid ${C.border}` }}>
               <h3 style={{ fontFamily: font, fontSize: 15, fontWeight: 700, color: C.textPrimary, margin: "0 0 12px" }}>Tiện ích căn hộ</h3>
               <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
@@ -861,13 +925,13 @@ export function RoomDetailPage() {
               </div>
             </div>
 
-            {/* 6–7. Vị trí & Tiện ích xung quanh + Map */}
+            {/* 10. Vị trí & Tiện ích xung quanh + Map */}
             <MobileNearbySection />
 
-            {/* 8. Phòng tương tự */}
+            {/* 11. Phòng tương tự */}
             <MobileSimilarRooms />
 
-            {/* Platform notice */}
+            {/* 12. Safety notice */}
             <div style={{ padding: "12px 14px", background: C.white, border: `1px solid ${C.border}`, borderRadius: 12, display: "flex", gap: 8 }}>
               <AlertTriangle size={13} color={C.secondary} style={{ flexShrink: 0, marginTop: 2 }} />
               <p style={{ fontFamily: font, fontSize: 12, color: C.textSecondary, margin: 0, lineHeight: 1.6 }}>
@@ -877,14 +941,14 @@ export function RoomDetailPage() {
           </div>
         </div>
 
-        {/* 9. Sticky bottom CTA */}
-        <div style={{ background: C.white, borderTop: `1px solid ${C.border}`, padding: "12px 16px", display: "flex", gap: 10, flexShrink: 0, boxShadow: "0 -2px 12px rgba(92,70,50,0.08)" }}>
-          <button onClick={() => setChatModal(true)}
-            style={{ flex: 60, display: "flex", alignItems: "center", justifyContent: "center", gap: 7, padding: "14px", background: C.primary, color: C.white, border: "none", borderRadius: 12, fontFamily: font, fontSize: 15, fontWeight: 700, cursor: "pointer", minHeight: 44 }}>
+        {/* Persistent mobile fallback CTA */}
+        <div style={{ position: "fixed", left: 0, right: 0, bottom: 0, zIndex: 20, background: C.white, borderTop: `1px solid ${C.border}`, padding: "10px 16px calc(10px + env(safe-area-inset-bottom, 0px))", display: "flex", gap: 8, boxShadow: "0 -2px 12px rgba(92,70,50,0.08)", opacity: showMobileStickyCta ? 1 : 0, visibility: showMobileStickyCta ? "visible" : "hidden", transform: showMobileStickyCta ? "translateY(0)" : "translateY(100%)", pointerEvents: showMobileStickyCta ? "auto" : "none", transition: "opacity 0.18s ease, transform 0.18s ease" }}>
+          <button type="button" onClick={openChat}
+            style={{ flex: 3, display: "flex", alignItems: "center", justifyContent: "center", gap: 7, padding: "10px", background: C.primary, color: C.white, border: "none", borderRadius: 11, fontFamily: font, fontSize: 14, fontWeight: 700, cursor: "pointer", minHeight: 44 }}>
             <MessageSquare size={17} /> Gửi tin nhắn
           </button>
-          <button onClick={() => setPhoneModal(true)}
-            style={{ flex: 40, display: "flex", alignItems: "center", justifyContent: "center", gap: 7, padding: "14px", background: "transparent", color: C.primary, border: `1.5px solid ${C.primary}`, borderRadius: 12, fontFamily: font, fontSize: 15, fontWeight: 600, cursor: "pointer", minHeight: 44 }}>
+          <button type="button" onClick={openPhone}
+            style={{ flex: 2, display: "flex", alignItems: "center", justifyContent: "center", gap: 7, padding: "10px", background: "transparent", color: C.primary, border: `1.5px solid ${C.primary}`, borderRadius: 11, fontFamily: font, fontSize: 14, fontWeight: 600, cursor: "pointer", minHeight: 44 }}>
             <Phone size={17} /> Gọi điện
           </button>
         </div>
@@ -926,8 +990,8 @@ export function RoomDetailPage() {
           <div style={{ width: 340, flexShrink: 0 }}>
             <div style={{ position: "sticky", top: 80 }}>
               <StickyContactCard
-                onChat={() => setChatModal(true)}
-                onPhone={() => setPhoneModal(true)}
+                onChat={openChat}
+                onPhone={openPhone}
               />
               <div style={{ marginTop: 14, padding: "12px 16px", background: C.white, border: `1px solid ${C.border}`, borderRadius: 12, display: "flex", gap: 9 }}>
                 <AlertTriangle size={14} color={C.secondary} style={{ flexShrink: 0, marginTop: 2 }} />
