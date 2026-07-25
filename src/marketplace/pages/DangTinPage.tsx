@@ -556,7 +556,8 @@ export function DangTinPage() {
       const { data } = await supabase
         .from("profiles")
         .select("full_name")
-        .eq("id", user.id)
+        // profiles.id là uuid độc lập; auth id nằm ở profiles.user_id
+        .eq("user_id", user.id)
         .single();
       if (data?.full_name) {
         setProfileName(data.full_name);
@@ -747,7 +748,8 @@ export function DangTinPage() {
         const { error: profileError } = await supabase
           .from("profiles")
           .update({ is_seller: true })
-          .eq("id", user.id);
+          // profiles.id là uuid độc lập; auth id nằm ở profiles.user_id
+          .eq("user_id", user.id);
         
         if (profileError) console.error("Error updating profile seller status:", profileError);
 

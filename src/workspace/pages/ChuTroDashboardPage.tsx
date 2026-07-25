@@ -66,19 +66,22 @@ function StatusChip({ status }: { status: RoomStatus }) {
   let bg = "#EBF2E8";
   let color = "#4F7A4A";
 
-  if (status === "available" || status === "Available") {
+  // Trước đây các nhánh này còn so sánh với "Available"/"Rented"/"Đã cọc" —
+  // luôn false vì RoomStatus là lowercase. Chuẩn hoá DB→local đã làm ở
+  // mapDbRoom (QuanLyPhongPage), nên ở đây chỉ cần 4 giá trị hợp lệ.
+  if (status === "available") {
     label = "Trống";
     bg = "#EBF2E8";
     color = "#4F7A4A";
-  } else if (status === "rented" || status === "Rented") {
+  } else if (status === "rented") {
     label = "Đang thuê";
     bg = "#F5EFE6";
     color = "#9B8C78";
-  } else if (status === "deposited" || status === "Deposited" || status === "Đã cọc" || status === "đã cọc") {
+  } else if (status === "deposited") {
     label = "Đã cọc";
     bg = "#FEF6EC";
     color = "#C99B65";
-  } else if (status === "hidden" || status === "Hidden") {
+  } else if (status === "hidden") {
     label = "Đã ẩn";
     bg = "#FCECEC";
     color = "#C07B4A";
@@ -665,7 +668,9 @@ export function ChuTroDashboardPage() {
       code: r.room_code || r.code || "",
       property: r.properties?.name || r.property || "Khu trọ",
       status: (r.status === "Available" ? "available" : r.status === "Deposited" ? "deposited" : r.status === "Rented" ? "rented" : r.status === "Hidden" ? "hidden" : r.status === "available" ? "available" : r.status === "deposited" ? "deposited" : r.status === "rented" ? "rented" : "available") as RoomStatus,
-      occupant: r.occupant_name || r.tenant_name || (r.occupant ? r.occupant.name : null),
+      // Thuật ngữ: Occupancy/Occupant. Từ "tenant" bị cấm (CLAUDE.md §1) và
+      // cột tenant_name không tồn tại — occupancies dùng full_name.
+      occupant: r.occupant_name || (r.occupant ? r.occupant.name : null),
       paid: r.payment_status === "Paid" ? true : r.payment_status === "Unpaid" ? false : (r.bill ? r.bill.paid : null),
       task: r.status === "Available" || r.status === "available" 
         ? "Tạo tin đăng" 

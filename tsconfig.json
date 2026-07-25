@@ -1,0 +1,50 @@
+{
+  // ══════════════════════════════════════════════════════════════════════════
+  // NẤC A — độ chặt khởi điểm. PHẢI về 0 lỗi.
+  //
+  // KHÔNG bật `strict: true` ở đây. ~11k dòng .tsx chưa TỪNG được type-check
+  // (esbuild chỉ strip type), bật strict ngay sẽ ra hàng trăm lỗi và task đầu
+  // tiên biến thành cuộc dọn dẹp vô hạn.
+  //
+  // Nấc A đã đáng giá ngay dù strict:false, vì nó bắt được:
+  //   1. CSS property vô nghĩa trong style={{}} — trên 1.950 style object
+  //   2. props component sai
+  //   3. (sau khi có Database generic) tên bảng/cột sai + status string bất hợp pháp
+  //      → tức đúng 3 bug đã hỏng demo ở T01
+  //
+  // Nấc B (noImplicitAny) → sau khi có service layer.
+  // Nấc C (strictNullChecks) → sau khi mọi page đọc qua src/*/services.
+  // Nấc D (strict cho code MỚI) → tsconfig.strict.json, đã có ngay từ CP4.
+  //
+  // Xem docs/cp4/04_FRONTEND_ARCH.md §1
+  // ══════════════════════════════════════════════════════════════════════════
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "jsx": "react-jsx",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "types": ["vite/client"],
+
+    "noEmit": true,
+    "isolatedModules": true,
+    "skipLibCheck": true,
+    "allowJs": false,
+    "resolveJsonModule": true,
+    "forceConsistentCasingInFileNames": true,
+    "allowSyntheticDefaultImports": true,
+    "esModuleInterop": true,
+
+    "baseUrl": ".",
+    "paths": { "@/*": ["./src/*"] },
+
+    "strict": false,
+    "noImplicitAny": false,
+    "strictNullChecks": false,
+    "noFallthroughCasesInSwitch": true,
+    "noImplicitReturns": false,
+    "noUnusedLocals": false,
+    "noUnusedParameters": false
+  },
+  "include": ["src", "vite.config.ts"]
+}

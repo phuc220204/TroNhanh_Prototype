@@ -35,6 +35,18 @@ const SORT_OPTIONS = ["Mới cập nhật", "Mã phòng", "Giá thuê", "Trạng
 const VND = (n: string) => n;
 
 type RoomActionModalType = "utility" | "paymentReminder" | "renewContract" | "occupantReminder" | "invoice" | "editRoom";
+
+/**
+ * Hợp đồng sắp hết hạn (≤30 ngày). Trạng thái DẪN XUẤT, không phải RoomStatus.
+ * BR-002 chỉ có 4 giá trị: available / deposited / rented / hidden.
+ */
+const isContractExpiringSoon = (room: Room): boolean => {
+  if (!room.contract?.end) return false;
+  const end = new Date(room.contract.end);
+  if (Number.isNaN(end.getTime())) return false;
+  const daysLeft = (end.getTime() - Date.now()) / 86_400_000;
+  return daysLeft >= 0 && daysLeft <= 30;
+};
 type RoomActionModalState = { type: RoomActionModalType; room: Room } | null;
 
 /* Helper map DB Room to UI Room */
@@ -285,7 +297,8 @@ function AddRoomModal({ roomToEdit, onClose, properties, currentId, onSave, isRe
       setFloor(roomToEdit.floor);
       setArea(roomToEdit.area.replace(/\D/g, ""));
       setPrice(roomToEdit.price.replace(/\D/g, ""));
-      setStatus(roomToEdit.status === "available" ? "Available" : roomToEdit.status === "repairing" ? "Repairing" : "Rented");
+      // BR-002: rooms.status chỉ có Available | Deposited | Rented | Hidden
+      setStatus(roomToEdit.status === "available" ? "Available" : roomToEdit.status === "hidden" ? "Hidden" : "Rented");
       setDescription(roomToEdit.note || "");
     }
   }, [roomToEdit]);
@@ -370,8 +383,9 @@ function AddRoomModal({ roomToEdit, onClose, properties, currentId, onSave, isRe
         <span style={{ fontFamily: font, fontSize: 13, fontWeight: 600, color: C.textPrimary }}>Trạng thái ban đầu</span>
         <select value={status} onChange={e => setStatus(e.target.value)} style={{ fontFamily: font, fontSize: 14, color: C.textPrimary, border: `1.5px solid ${C.border}`, borderRadius: 10, padding: "10px 13px", width: "100%", background: C.white, outline: "none" }}>
           <option value="Available">Trống</option>
+          <option value="Deposited">Đã cọc</option>
           <option value="Rented">Đang thuê</option>
-          <option value="Repairing">Đang sửa</option>
+          <option value="Hidden">Đang ẩn / bảo trì</option>
         </select>
       </label>
       <Field label="Ghi chú" value={description} onChange={setDescription} placeholder="Ghi chú nội bộ" textarea rows={3} />
@@ -747,6 +761,7 @@ function RoomActionPlaceholderModal({ state, onClose, isReadOnly }: { state: Exc
     renewContract: { title: "Gia hạn hợp đồng", body: `Mở luồng gia hạn hợp đồng cho phòng ${state.room.code}.`, cta: "Tiếp tục" },
     occupantReminder: { title: "Nhắc người thuê", body: `Gửi nhắc người thuê phòng ${state.room.code} về hợp đồng sắp hết hạn.`, cta: "Gửi nhắc" },
     invoice: { title: "Xem hóa đơn", body: "", cta: "Đóng" },
+    editRoom: { title: "Cập nhật phòng", body: "", cta: "Lưu" },
   };
   const c = copy[state.type];
   return (
@@ -837,10 +852,10 @@ function RoomDetailContent({ room, onCreateListing }: { room: Room; onCreateList
 
       <DetailSection icon={<StickyNote size={16} color={C.primary} />} title="Ghi chú & bảo trì">
         <p style={{ fontFamily: font, fontSize: 13, color: C.textPrimary, margin: 0, lineHeight: 1.6 }}>{room.note || "Không có ghi chú."}</p>
-        {room.status === "repairing" && (
+        {room.status === "hidden" && (
           <div style={{ marginTop: 10, background: "#FDF0E4", border: `1px solid #EAD2BC`, borderRadius: 10, padding: "10px 12px", display: "flex", gap: 8, alignItems: "flex-start" }}>
             <AlertTriangle size={15} color="#C07B4A" style={{ marginTop: 1, flexShrink: 0 }} />
-            <span style={{ fontFamily: font, fontSize: 12.5, color: "#8A5A30", lineHeight: 1.5 }}>Phòng đang trong quá trình sửa chữa.</span>
+            <span style={{ fontFamily: font, fontSize: 12.5, color: "#8A5A30", lineHeight: 1.5 }}>Phòng đang ẩn khỏi danh sách (bảo trì hoặc chưa cho thuê).</span>
           </div>
         )}
       </DetailSection>
@@ -919,13 +934,15 @@ function AttentionCards({ expiring, unpaid }: { expiring: number; unpaid: number
 function KpiCards({ rooms, scroll }: { rooms: Room[]; scroll?: boolean }) {
   const total = rooms.length;
   const empty = rooms.filter(r => r.status === "available").length;
-  const rented = rooms.filter(r => r.status === "rented" || r.status === "expiring" || r.status === "unpaid").length;
-  const repair = rooms.filter(r => r.status === "repairing").length;
+  // "expiring"/"unpaid" không phải RoomStatus — phòng sắp hết hạn hoặc chưa
+  // thanh toán VẪN là "rented", nên 2 nhánh cũ luôn false và vô nghĩa.
+  const rented = rooms.filter(r => r.status === "rented").length;
+  const hiddenCount = rooms.filter(r => r.status === "hidden").length;
   const items = [
     { label: "Tổng số phòng", value: total, accent: C.primary },
     { label: "Phòng trống", value: empty, accent: "#6B8E5A" },
     { label: "Đang thuê", value: rented, accent: C.secondary },
-    { label: "Đang sửa", value: repair, accent: "#C07B4A" },
+    { label: "Đang ẩn / bảo trì", value: hiddenCount, accent: "#C07B4A" },
   ];
   return (
     <div style={{ display: scroll ? "flex" : "grid", gridTemplateColumns: scroll ? undefined : "repeat(4, 1fr)", gap: 12, marginBottom: 16, overflowX: scroll ? "auto" : undefined, paddingBottom: scroll ? 4 : 0 }}>
@@ -1041,30 +1058,28 @@ function RoomActionMenu({ room, openActionMenuRoomId, setOpenActionMenuRoomId, o
       { icon: <Pencil size={15} />, label: "Cập nhật phòng", onClick: () => onActionModal("editRoom", room) },
       { icon: <ExternalLink size={15} />, label: "Tạo tin đăng", onClick: () => onCreateListing(room) },
     ],
+    deposited: [
+      { icon: <Eye size={15} />, label: "Xem chi tiết", onClick: () => onOpen(room) },
+      { icon: <FileText size={15} />, label: "Xem hợp đồng", onClick: () => onOpen(room) },
+      { icon: <Pencil size={15} />, label: "Cập nhật phòng", onClick: () => onActionModal("editRoom", room) },
+    ],
+    // "expiring" và "unpaid" KHÔNG phải RoomStatus (BR-002 chỉ có 4 giá trị):
+    // phòng sắp hết hạn hoặc chưa thanh toán VẪN ở trạng thái "rented". Thao tác
+    // của 2 nhánh cũ đó đã được gộp vào đây.
     rented: [
       { icon: <Eye size={15} />, label: "Xem chi tiết", onClick: () => onOpen(room) },
       { icon: <Zap size={15} />, label: "Ghi điện nước", onClick: () => onActionModal("utility", room) },
       { icon: <Wallet size={15} />, label: "Xem hóa đơn", onClick: () => onActionModal("invoice", room) },
+      { icon: <Bell size={15} />, label: "Nhắc thanh toán", onClick: () => onActionModal("paymentReminder", room) },
+      { icon: <RefreshCw size={15} />, label: "Gia hạn hợp đồng", onClick: () => onActionModal("renewContract", room) },
+      { icon: <Bell size={15} />, label: "Nhắc người ở", onClick: () => onActionModal("occupantReminder", room) },
       { icon: <FileText size={15} />, label: "Xem hợp đồng", onClick: () => onOpen(room) },
       { icon: <Pencil size={15} />, label: "Cập nhật phòng", onClick: () => onActionModal("editRoom", room) },
     ],
-    repairing: [
+    hidden: [
       { icon: <Eye size={15} />, label: "Xem chi tiết", onClick: () => onOpen(room) },
       { icon: <RefreshCw size={15} />, label: "Cập nhật trạng thái", onClick: () => onOpen(room) },
       { icon: <Pencil size={15} />, label: "Cập nhật phòng", onClick: () => onActionModal("editRoom", room) },
-    ],
-    unpaid: [
-      { icon: <Eye size={15} />, label: "Xem chi tiết", onClick: () => onOpen(room) },
-      { icon: <Bell size={15} />, label: "Nhắc thanh toán", onClick: () => onActionModal("paymentReminder", room) },
-      { icon: <Zap size={15} />, label: "Ghi điện nước", onClick: () => onActionModal("utility", room) },
-      { icon: <Wallet size={15} />, label: "Xem hóa đơn", onClick: () => onActionModal("invoice", room) },
-    ],
-    expiring: [
-      { icon: <Eye size={15} />, label: "Xem chi tiết", onClick: () => onOpen(room) },
-      { icon: <Wallet size={15} />, label: "Xem hóa đơn", onClick: () => onActionModal("invoice", room) },
-      { icon: <RefreshCw size={15} />, label: "Gia hạn hợp đồng", onClick: () => onActionModal("renewContract", room) },
-      { icon: <Bell size={15} />, label: "Nhắc người thuê", onClick: () => onActionModal("occupantReminder", room) },
-      { icon: <FileText size={15} />, label: "Xem hợp đồng", onClick: () => onOpen(room) },
     ],
   };
   const items = itemsByStatus[room.status] || itemsByStatus.available;
@@ -1928,9 +1943,14 @@ export function QuanLyPhongPage() {
     try {
       const dbPatch: any = {};
       if (patch.status) {
-        dbPatch.status = patch.status === "available" ? "Available" : patch.status === "rented" ? "Rented" : patch.status === "repairing" ? "Repairing" : "Deposited";
+        // BR-002: chỉ 4 giá trị hợp lệ. "Repairing" vi phạm CHECK constraint.
+        dbPatch.status = patch.status === "available" ? "Available"
+          : patch.status === "rented" ? "Rented"
+          : patch.status === "hidden" ? "Hidden"
+          : "Deposited";
       }
-      if (patch.code) dbPatch.code = patch.code;
+      // Cột thật là room_code, không phải code. `description` được thêm ở migration 0100.
+      if (patch.code) dbPatch.room_code = patch.code;
       if (patch.note !== undefined) dbPatch.description = patch.note;
 
       const { error } = await supabase
@@ -1976,9 +1996,12 @@ export function QuanLyPhongPage() {
     empty: p.rooms.filter(r => r.status === "available").length,
   });
 
+  // "expiring" / "unpaid" KHÔNG phải RoomStatus (BR-002 chỉ có 4 giá trị) — đó là
+  // trạng thái DẪN XUẤT từ hợp đồng và hóa đơn. Trước đây code so sánh
+  // r.status === "expiring" nên luôn ra 0.
   const propStats = selected ? {
-    expiring: selected.rooms.filter(r => r.status === "expiring").length,
-    unpaid: selected.rooms.filter(r => r.status === "unpaid").length,
+    expiring: selected.rooms.filter(r => isContractExpiringSoon(r)).length,
+    unpaid: selected.rooms.filter(r => r.bill != null && !r.bill.paid).length,
   } : { expiring: 0, unpaid: 0 };
 
   /* ───────────────────── PROPERTY LIST (desktop left panel) ──────── */

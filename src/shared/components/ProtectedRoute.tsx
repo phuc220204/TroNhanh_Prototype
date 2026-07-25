@@ -16,7 +16,6 @@ export const ProtectedRoute: React.FC = () => {
           minHeight: "100vh",
           display: "flex",
           alignItems: "center",
-          justifyinit: "center",
           justifyContent: "center",
           background: "#F5EFE4",
           fontFamily: "'Be Vietnam Pro', Inter, sans-serif",

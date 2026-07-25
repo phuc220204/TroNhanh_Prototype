@@ -176,6 +176,9 @@ function MobileHeader({ title }: { title: string }) {
 
 function MobileTabBar({ active, subStatus, onSaaSAccess }: { active: LandlordNavId; subStatus: string; onSaaSAccess: () => void }) {
   const navigate = useNavigate();
+  // signOut được gọi ở onLogout bên dưới nhưng trước đây không hề được lấy ra
+  // → đăng xuất từ tab bar mobile throw ReferenceError.
+  const { signOut } = useAuth();
   const [accountOpen, setAccountOpen] = useState(false);
   const [loggedOut, setLoggedOut] = useState(false);
 

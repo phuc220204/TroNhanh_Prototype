@@ -24,6 +24,7 @@ type DbListing = {
   room_id: string | null;
   district: string;
   price: number;
+  area: number;
   status: string;
   views: number;
   contacts: number;
@@ -39,7 +40,9 @@ const FILTERS = [
   { label: "Tất cả", value: "all" },
   { label: "Đang hiển thị", value: "Active" },
   { label: "Tin VIP nổi bật", value: "VIP" },
-  { label: "Đã ẩn", value: "Inactive" },
+  // BR-001: giá trị đúng là "Hidden". Trước đây là "Inactive" nên filter
+  // "Đã ẩn" không bao giờ khớp row nào.
+  { label: "Đã ẩn", value: "Hidden" },
 ];
 
 const SORTS = [
@@ -306,7 +309,8 @@ export function QuanLyPage() {
   }, [user]);
 
   const handleToggleStatus = async (id: string, currentStatus: string) => {
-    const nextStatus = currentStatus === "Active" ? "Inactive" : "Active";
+    // BR-001: rental_listings.status không có "Inactive" — ẩn tin là "Hidden".
+    const nextStatus = currentStatus === "Active" ? "Hidden" : "Active";
     try {
       setMutatingId(id);
       const { error } = await supabase
