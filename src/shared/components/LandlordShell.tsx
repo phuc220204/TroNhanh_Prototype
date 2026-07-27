@@ -494,8 +494,13 @@ export function LandlordShell({ active, mobileTitle, children }: { active: Landl
   }, [location.search, active]);
 
   // Inject subStatus and activeTab to children components so they can react to gating and tab switching
+  //
+  // CHỈ inject vào COMPONENT, không inject vào thẻ DOM thuần: `child.type` là
+  // string ("div", "section", …) nghĩa là DOM element — truyền prop lạ xuống đó
+  // làm React cảnh báo "does not recognize the prop on a DOM element".
+  // TODO(T10): xóa toàn bộ chỗ này khi SubscriptionContext thay prop-drilling.
   const childrenWithProps = Children.map(children, child => {
-    if (isValidElement(child)) {
+    if (isValidElement(child) && typeof child.type !== "string") {
       return cloneElement(child as ReactElement, { subStatus, activeTab } as any);
     }
     return child;

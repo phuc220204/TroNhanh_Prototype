@@ -45,6 +45,16 @@ export interface Property {
   address: string;
   district: string;
   rooms: Room[];
+  /**
+   * Cấu hình thu tiền của khu (nguồn sinh VietQR + đơn giá tính hóa đơn).
+   * Optional vì dữ liệu mock không có; bản map từ DB thì luôn có.
+   */
+  electricity_unit_price?: number;
+  water_unit_price?: number;
+  service_fee?: number;
+  bank_name?: string;
+  bank_account_number?: string;
+  bank_account_name?: string;
 }
 
 export const INIT_PROPERTIES: Property[] = [

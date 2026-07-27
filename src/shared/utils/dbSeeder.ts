@@ -393,51 +393,124 @@ export async function seedMockDataForUser(user: { id: string }, profile: any) {
         const contract_td_p01 = createdContracts?.find(c => c.room_id === td_p01.id);
 
         if (contract_pvt_p102 && contract_pvt_p202 && contract_pvt_p203 && contract_pvt_p301 && contract_q7_a01 && contract_td_p01) {
-          // 7. Seed Invoices for June (Kỳ 2026-06)
-          const invoicesToInsert = [
-            { room_id: pvt_p102.id, contract_id: contract_pvt_p102.id, owner_id: user.id, period: "2026-06", due_date: "2026-06-10", total_amount: 3170000, status: "Paid" },
-            { room_id: pvt_p202.id, contract_id: contract_pvt_p202.id, owner_id: user.id, period: "2026-06", due_date: "2026-06-10", total_amount: 3405000, status: "Unpaid" },
-            { room_id: pvt_p203.id, contract_id: contract_pvt_p203.id, owner_id: user.id, period: "2026-06", due_date: "2026-06-10", total_amount: 3230000, status: "Paid" },
-            { room_id: pvt_p301.id, contract_id: contract_pvt_p301.id, owner_id: user.id, period: "2026-06", due_date: "2026-06-10", total_amount: 4070000, status: "Paid" },
-            { room_id: q7_a01.id, contract_id: contract_q7_a01.id, owner_id: user.id, period: "2026-06", due_date: "2026-06-10", total_amount: 5770000, status: "Paid" },
-            { room_id: td_p01.id, contract_id: contract_td_p01.id, owner_id: user.id, period: "2026-06", due_date: "2026-06-10", total_amount: 2430000, status: "Paid" }
+          // ── 7. Seed 3 KỲ điện nước + hóa đơn + thanh toán ──────────────────
+          //
+          // Trước đây chỉ seed ĐÚNG MỘT kỳ hóa đơn và KHÔNG seed utility_readings
+          // nào — nên drawer "Chi tiết phòng" không có gì để hiển thị ở tab lịch
+          // sử, và chủ trọ không thấy được xu hướng tiêu thụ giữa các tháng.
+          //
+          // Sinh 3 kỳ gần nhất tính từ hôm nay để dữ liệu luôn còn thời sự.
+          const ELECTRIC_UNIT = 3500;
+          const WATER_UNIT = 15000;
+
+          /** 3 kỳ gần nhất dạng YYYY-MM, cũ → mới. */
+          const periods: string[] = [];
+          for (let back = 2; back >= 0; back--) {
+            const d = new Date();
+            d.setDate(1);
+            d.setMonth(d.getMonth() - back);
+            periods.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`);
+          }
+
+          // rent · chỉ số điện đầu · tiêu thụ điện/kỳ · chỉ số nước đầu · tiêu thụ nước/kỳ · phí dịch vụ
+          const billingPlan = [
+            { room: pvt_p102, contract: contract_pvt_p102, rent: 2800000, elecStart: 1180, elecUse: 52, waterStart: 240, waterUse: 6, svc: 100000 },
+            { room: pvt_p202, contract: contract_pvt_p202, rent: 3000000, elecStart: 940,  elecUse: 60, waterStart: 180, waterUse: 6, svc: 100000 },
+            { room: pvt_p203, contract: contract_pvt_p203, rent: 2900000, elecStart: 1520, elecUse: 43, waterStart: 310, waterUse: 5, svc: 100000 },
+            { room: pvt_p301, contract: contract_pvt_p301, rent: 3600000, elecStart: 2010, elecUse: 69, waterStart: 420, waterUse: 7, svc: 120000 },
+            { room: q7_a01,   contract: contract_q7_a01,   rent: 5200000, elecStart: 3300, elecUse: 86, waterStart: 610, waterUse: 8, svc: 150000 },
+            { room: td_p01,   contract: contract_td_p01,   rent: 2200000, elecStart: 760,  elecUse: 34, waterStart: 150, waterUse: 4, svc: 50000 },
           ];
 
+          const readingsToInsert: any[] = [];
+          const invoicesToInsert: any[] = [];
+
+          billingPlan.forEach(plan => {
+            periods.forEach((period, index) => {
+              // Tiêu thụ dao động nhẹ giữa các kỳ để biểu đồ so sánh có ý nghĩa
+              const drift = [0, 1.12, 0.93][index] ?? 1;
+              const elecUse = Math.round(plan.elecUse * (index === 0 ? 1 : drift));
+              const waterUse = Math.round(plan.waterUse * (index === 0 ? 1 : drift));
+
+              const elecPrev = plan.elecStart + plan.elecUse * index;
+              const waterPrev = plan.waterStart + plan.waterUse * index;
+
+              readingsToInsert.push(
+                { room_id: plan.room.id, owner_id: user.id, type: "Electricity", period,
+                  previous_reading: elecPrev, current_reading: elecPrev + elecUse, unit_price: ELECTRIC_UNIT },
+                { room_id: plan.room.id, owner_id: user.id, type: "Water", period,
+                  previous_reading: waterPrev, current_reading: waterPrev + waterUse, unit_price: WATER_UNIT },
+              );
+
+              const elecAmount = elecUse * ELECTRIC_UNIT;
+              const waterAmount = waterUse * WATER_UNIT;
+              const total = plan.rent + elecAmount + waterAmount + plan.svc;
+
+              // Kỳ cũ đã thu xong; riêng phòng P202 để nợ kỳ mới nhất → có công nợ để demo
+              const isLatest = index === periods.length - 1;
+              const leaveUnpaid = isLatest && plan.room.id === pvt_p202.id;
+
+              invoicesToInsert.push({
+                room_id: plan.room.id,
+                contract_id: plan.contract.id,
+                owner_id: user.id,
+                period,
+                due_date: `${period}-10`,
+                total_amount: total,
+                status: leaveUnpaid ? "Unpaid" : "Paid",
+                _rent: plan.rent, _elec: elecAmount, _water: waterAmount, _svc: plan.svc,
+                _elecUse: elecUse, _waterUse: waterUse, _paid: !leaveUnpaid,
+              });
+            });
+          });
+
+          const { error: readingsError } = await supabase
+            .from("utility_readings")
+            .insert(readingsToInsert);
+          if (readingsError) throw readingsError;
+
+          // Tách field nội bộ (_*) ra trước khi ghi — chúng chỉ để dựng items/payments
           const { data: createdInvoices, error: invoicesError } = await supabase
             .from("invoices")
-            .insert(invoicesToInsert)
+            .insert(invoicesToInsert.map(({ _rent, _elec, _water, _svc, _elecUse, _waterUse, _paid, ...row }) => row))
             .select();
 
           if (invoicesError) throw invoicesError;
 
-          // 8. Seed Invoice Items
+          // ── 8. Invoice items + payments ────────────────────────────────────
           const invoiceItemsToInsert: any[] = [];
+          const paymentsToInsert: any[] = [];
+
           createdInvoices.forEach((inv: any) => {
-            let rent = 0;
-            let elec = 0;
-            let water = 0;
-            let svc = 0;
-            
-            if (inv.room_id === pvt_p102.id) { rent = 2800000; elec = 180000; water = 90000; svc = 100000; }
-            else if (inv.room_id === pvt_p202.id) { rent = 3000000; elec = 210000; water = 95000; svc = 100000; }
-            else if (inv.room_id === pvt_p203.id) { rent = 2900000; elec = 150000; water = 80000; svc = 100000; }
-            else if (inv.room_id === pvt_p301.id) { rent = 3600000; elec = 240000; water = 110000; svc = 120000; }
-            else if (inv.room_id === q7_a01.id) { rent = 5200000; elec = 300000; water = 120000; svc = 150000; }
-            else if (inv.room_id === td_p01.id) { rent = 2200000; elec = 120000; water = 60000; svc = 50000; }
+            const plan = invoicesToInsert.find(
+              i => i.room_id === inv.room_id && i.period === inv.period,
+            );
+            if (!plan) return;
 
             invoiceItemsToInsert.push(
-              { invoice_id: inv.id, type: "Rent", description: "Tiền thuê phòng", quantity: 1, unit_price: rent, amount: rent },
-              { invoice_id: inv.id, type: "Electricity", description: "Tiền điện", quantity: elec / 3500, unit_price: 3500, amount: elec },
-              { invoice_id: inv.id, type: "Water", description: "Tiền nước", quantity: water / 15000, unit_price: 15000, amount: water },
-              { invoice_id: inv.id, type: "Service", description: "Phí dịch vụ cố định", quantity: 1, unit_price: svc, amount: svc }
+              { invoice_id: inv.id, type: "Rent", description: "Tiền thuê phòng", quantity: 1, unit_price: plan._rent, amount: plan._rent },
+              { invoice_id: inv.id, type: "Electricity", description: `Tiền điện (${plan._elecUse} kWh)`, quantity: plan._elecUse, unit_price: ELECTRIC_UNIT, amount: plan._elec },
+              { invoice_id: inv.id, type: "Water", description: `Tiền nước (${plan._waterUse} m³)`, quantity: plan._waterUse, unit_price: WATER_UNIT, amount: plan._water },
+              { invoice_id: inv.id, type: "Service", description: "Phí dịch vụ cố định", quantity: 1, unit_price: plan._svc, amount: plan._svc },
             );
+
+            if (plan._paid) {
+              paymentsToInsert.push({
+                invoice_id: inv.id, owner_id: user.id, amount: inv.total_amount,
+                method: "BankTransfer", paid_at: `${inv.period}-08T09:00:00Z`, purpose: "RentInvoice",
+              });
+            }
           });
 
           const { error: itemsError } = await supabase
             .from("invoice_items")
             .insert(invoiceItemsToInsert);
-
           if (itemsError) throw itemsError;
+
+          const { error: paymentsError } = await supabase
+            .from("payments")
+            .insert(paymentsToInsert);
+          if (paymentsError) throw paymentsError;
         }
       }
     }

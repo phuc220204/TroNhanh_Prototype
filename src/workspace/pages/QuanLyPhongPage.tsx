@@ -13,6 +13,7 @@ import { LandlordShell, type LandlordNavId, useLandlordShell } from "../../share
 import type { RoomStatus } from "../../shared/types/status";
 import { parseFloorNumber, toSubscriptionStatus } from "../../shared/types/status";
 import { ROOM_STATUS_META } from "../../shared/utils/statusMaps";
+import { RoomDetailTabs } from "../components/RoomDetailTabs";
 import { INIT_PROPERTIES, type Room, type Property } from "../../shared/data/mockProperties";
 import { ModalShell } from "../../shared/components/common/ModalShell";
 import { Field, SelectField } from "../../shared/components/common/FormField";
@@ -2035,8 +2036,10 @@ export function QuanLyPhongPage() {
     if (!detailRoom) return null;
     return (
       <div onClick={() => setDetailRoom(null)} style={{ position: "fixed", inset: 0, background: "rgba(42,26,12,0.5)", zIndex: 300, display: "flex", justifyContent: isMobile ? "center" : "flex-end", alignItems: isMobile ? "flex-end" : "stretch" }}>
+        {/* 620px thay vì 440: drawer giờ chứa bảng lịch sử điện nước / hóa đơn
+            nhiều kỳ — 440px làm cột "Thành tiền" bị cắt và tab bar phải cuộn ngang. */}
         <div onClick={e => e.stopPropagation()}
-          style={{ background: C.bg, width: isMobile ? "100%" : 440, maxHeight: isMobile ? "92vh" : "100%", height: isMobile ? undefined : "100%", borderTopLeftRadius: isMobile ? 20 : 0, borderTopRightRadius: isMobile ? 20 : 0, display: "flex", flexDirection: "column", boxShadow: "-8px 0 32px rgba(42,26,12,0.25)" }}>
+          style={{ background: C.bg, width: isMobile ? "100%" : 620, maxWidth: "100vw", maxHeight: isMobile ? "92vh" : "100%", height: isMobile ? undefined : "100%", borderTopLeftRadius: isMobile ? 20 : 0, borderTopRightRadius: isMobile ? 20 : 0, display: "flex", flexDirection: "column", boxShadow: "-8px 0 32px rgba(42,26,12,0.25)" }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "18px 22px", background: C.white, borderBottom: `1px solid ${C.border}`, flexShrink: 0 }}>
             <div>
               <h3 style={{ fontFamily: font, fontSize: 19, fontWeight: 800, color: C.textPrimary, margin: 0 }}>Chi tiết phòng {detailRoom.code}</h3>
@@ -2045,7 +2048,14 @@ export function QuanLyPhongPage() {
             <button onClick={() => setDetailRoom(null)} style={{ background: "none", border: "none", cursor: "pointer", display: "flex" }}><X size={22} color={C.textSecondary} /></button>
           </div>
           <div style={{ flex: 1, overflowY: "auto", padding: "4px 22px 22px" }}>
-            <RoomDetailContent room={detailRoom} onCreateListing={() => handleCreateListing(detailRoom)} />
+            {/* Drawer dạng tab: đọc lịch sử NHIỀU KỲ từ DB thay vì chỉ 1 tháng
+                trong object Room. Xem workspace/services/room-history-service.ts */}
+            <RoomDetailTabs
+              room={detailRoom}
+              electricityUnitPrice={selected?.electricity_unit_price}
+              waterUnitPrice={selected?.water_unit_price}
+              serviceFee={selected?.service_fee}
+            />
           </div>
           <div style={{ padding: "16px 22px", background: C.white, borderTop: `1px solid ${C.border}`, flexShrink: 0 }}>
             <DetailActions room={detailRoom} isReadOnly={isReadOnly} onUpdate={patch => updateRoom(detailRoom.id, patch)} onCreateListing={() => { setDetailRoom(null); handleCreateListing(detailRoom); }} onActionModal={(type, r) => { setDetailRoom(null); setRoomActionModal({ type, room: r }); }} />
