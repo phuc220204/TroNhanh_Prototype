@@ -5,6 +5,29 @@ import { supabase } from "../supabaseClient";
  * into Supabase for the current authenticated user.
  */
 export async function seedMockDataForUser(user: { id: string }, profile: any) {
+  // ── Chống chạy trùng ────────────────────────────────────────────────────
+  // Seeder KHÔNG idempotent: bấm lần 2 sẽ nhân đôi toàn bộ dữ liệu. Và nếu một
+  // bước giữa chừng fail, các bước trước đã kịp ghi — nên lần bấm sau phải bị
+  // chặn thay vì chồng thêm.
+  const { count: existingListings } = await supabase
+    .from("rental_listings")
+    .select("id", { count: "exact", head: true })
+    .eq("seller_id", user.id)
+    .is("deleted_at", null);
+
+  const { count: existingProperties } = await supabase
+    .from("properties")
+    .select("id", { count: "exact", head: true })
+    .eq("owner_id", user.id)
+    .is("deleted_at", null);
+
+  if ((existingListings ?? 0) > 0 || (existingProperties ?? 0) > 0) {
+    throw new Error(
+      "Tài khoản này đã có dữ liệu. Xóa dữ liệu cũ trước khi khởi tạo lại " +
+      "(xem docs/cp4/06_QA_CHECKLIST.md — mục dọn dữ liệu demo).",
+    );
+  }
+
   // 1. Seed Listings
   const listingsToSeed = [
     {
@@ -98,18 +121,47 @@ export async function seedMockDataForUser(user: { id: string }, profile: any) {
   }
 
   // 2. Seed Demand Posts
-  // `title` là NOT NULL từ migration 0600 — thiếu nó thì insert fail.
+  //
+  // ⚠️ MỌI OBJECT PHẢI CÓ ĐỦ CÙNG BỘ KEY — kể cả khi giá trị là mảng rỗng.
+  // Khi bulk insert, PostgREST lấy HỢP của tất cả key trong mảng và điền NULL
+  // cho object thiếu key, thay vì bỏ qua để DEFAULT của cột áp dụng. Nên một
+  // object RoommateWanted không khai `desired_amenities` sẽ ghi NULL vào cột
+  // `text[] not null default '{}'` → lỗi not-null.
+  // (Insert từng dòng một thì không dính, vì key vắng mặt mới dùng DEFAULT.)
+  const emptyDemandFields = {
+    description: null as string | null,
+    contact_name: null as string | null,
+    contact_phone: null as string | null,
+    property_type: null as string | null,
+    min_area: null as number | null,
+    desired_amenities: [] as string[],
+    move_in_date: null as string | null,
+    occupant_count: null as number | null,
+    current_address: null as string | null,
+    district: null as string | null,
+    share_price: null as number | null,
+    needed_count: null as number | null,
+    gender_requirement: null as string | null,
+    requirements: [] as string[],
+  };
+
   const demandPostsToSeed = [
     {
+      ...emptyDemandFields,
       renter_id: user.id,
       kind: "RoomWanted",
       title: "Tìm phòng trọ khu Bình Thạnh / Gò Vấp, ưu tiên gần trường",
       desired_districts: ["Bình Thạnh", "Gò Vấp"],
       price_min: 2500000,
       price_max: 3500000,
+      property_type: "Phòng trọ",
+      min_area: 18,
+      desired_amenities: ["Wifi", "WC riêng"],
+      occupant_count: 1,
       status: "Active",
     },
     {
+      ...emptyDemandFields,
       renter_id: user.id,
       kind: "RoomWanted",
       title: "Cần thuê căn hộ mini Quận 7, có chỗ để xe",
@@ -123,6 +175,7 @@ export async function seedMockDataForUser(user: { id: string }, profile: any) {
       status: "Active",
     },
     {
+      ...emptyDemandFields,
       renter_id: user.id,
       kind: "RoomWanted",
       title: "Tìm phòng trọ Tân Bình / Quận 10 cho sinh viên",
@@ -136,6 +189,7 @@ export async function seedMockDataForUser(user: { id: string }, profile: any) {
       status: "Active",
     },
     {
+      ...emptyDemandFields,
       renter_id: user.id,
       kind: "RoomWanted",
       title: "Tìm phòng Gò Vấp, cần gác lửng",
@@ -149,6 +203,7 @@ export async function seedMockDataForUser(user: { id: string }, profile: any) {
       status: "Active",
     },
     {
+      ...emptyDemandFields,
       renter_id: user.id,
       kind: "RoommateWanted",
       title: "Tìm 1 bạn nữ ở ghép Quận 10, phòng đã có sẵn",
@@ -163,6 +218,7 @@ export async function seedMockDataForUser(user: { id: string }, profile: any) {
       status: "Active",
     },
     {
+      ...emptyDemandFields,
       renter_id: user.id,
       kind: "RoommateWanted",
       title: "Cần 2 bạn ở ghép Bình Thạnh, gần Hàng Xanh",
@@ -177,6 +233,7 @@ export async function seedMockDataForUser(user: { id: string }, profile: any) {
       status: "Active",
     },
     {
+      ...emptyDemandFields,
       renter_id: user.id,
       kind: "RoommateWanted",
       title: "Tìm bạn ở ghép Bình Thạnh, phòng rộng có ban công",

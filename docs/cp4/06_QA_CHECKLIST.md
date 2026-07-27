@@ -40,6 +40,34 @@ on conflict (user_id, role) do nothing;
 
 > ❌ **KHÔNG tạo hàm client-callable kiểu `claim_admin`.** Đó là backdoor sẽ sống sót vào production.
 
+### Dọn dữ liệu demo (khi cần seed lại)
+
+Seeder **không idempotent** — nó chặn nếu tài khoản đã có dữ liệu. Muốn seed lại,
+xóa sạch dữ liệu của tài khoản đó trước. Chạy trong SQL Editor, thay email:
+
+```sql
+do $$
+declare v_uid uuid;
+begin
+  select id into v_uid from auth.users where email = 'seller.a@tronhanh.demo';
+
+  delete from public.payments        where owner_id = v_uid;
+  delete from public.invoice_items   where invoice_id in (select id from public.invoices where owner_id = v_uid);
+  delete from public.invoices        where owner_id = v_uid;
+  delete from public.utility_readings where owner_id = v_uid;
+  delete from public.contracts       where owner_id = v_uid;
+  delete from public.occupancies     where owner_id = v_uid;
+  delete from public.rooms           where owner_id = v_uid;
+  delete from public.properties      where owner_id = v_uid;
+  delete from public.listing_media   where listing_id in (select id from public.rental_listings where seller_id = v_uid);
+  delete from public.listing_amenities where listing_id in (select id from public.rental_listings where seller_id = v_uid);
+  delete from public.rental_listings where seller_id = v_uid;
+  delete from public.demand_posts    where renter_id = v_uid;
+end $$;
+```
+
+Giữ nguyên `auth.users`, `profiles`, `user_roles` — không cần đăng ký lại tài khoản.
+
 ### Làm review demo được
 Login `renter.a` → `DemoFAB` → **"Tôi là người ở demo"** → gọi `demo_link_me_to_seeded_occupancy()`.
 Rồi login `seller.a` → gọi `demo_enable_public_profiles()` (nút trong DemoFAB) để BR-024 cho phép review hiện công khai.
