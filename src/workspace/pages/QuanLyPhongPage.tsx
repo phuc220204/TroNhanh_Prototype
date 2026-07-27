@@ -11,6 +11,7 @@ import { C, font } from "../../shared/theme";
 import { useBreakpoint } from "../../shared/components/useBreakpoint";
 import { LandlordShell, type LandlordNavId, useLandlordShell } from "../../shared/components/LandlordShell";
 import type { RoomStatus } from "../../shared/types/status";
+import { parseFloorNumber, toSubscriptionStatus } from "../../shared/types/status";
 import { ROOM_STATUS_META } from "../../shared/utils/statusMaps";
 import { INIT_PROPERTIES, type Room, type Property } from "../../shared/data/mockProperties";
 import { ModalShell } from "../../shared/components/common/ModalShell";
@@ -322,8 +323,10 @@ function AddRoomModal({ roomToEdit, onClose, properties, currentId, onSave, isRe
             .from("rooms")
             .update({
               property_id: propertyId,
-              code,
-              floor: floor || "Tầng 1",
+              // Cột thật là room_code (text) và floor (integer) — không phải
+              // `code` và không phải chuỗi "Tầng 1".
+              room_code: code,
+              floor: parseFloorNumber(floor),
               area: cleanArea,
               price: cleanPrice,
               status,
@@ -339,8 +342,8 @@ function AddRoomModal({ roomToEdit, onClose, properties, currentId, onSave, isRe
           .insert({
             owner_id: user?.id,
             property_id: propertyId,
-            code,
-            floor: floor || "Tầng 1",
+            room_code: code,
+            floor: parseFloorNumber(floor),
             area: cleanArea,
             price: cleanPrice,
             status,
@@ -1807,7 +1810,7 @@ export function QuanLyPhongPage() {
           .order("created_at", { ascending: false })
           .limit(1);
         if (data && data.length > 0) {
-          setSubStatus(data[0].status);
+          setSubStatus(toSubscriptionStatus(data[0].status));
         } else {
           setSubStatus("NONE");
         }

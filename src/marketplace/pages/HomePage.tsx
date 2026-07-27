@@ -1162,7 +1162,7 @@ export function HomePage() {
               id: l.id,
               title: l.title,
               price: l.price.toLocaleString("vi-VN"),
-              area: parseFloat(l.area),
+              area: Number(l.area),
               loc: l.district,
               amenities: ["wifi", "ac"],
               badge: isVIP ? "Nổi bật" : "Mới đăng",

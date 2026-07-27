@@ -9,8 +9,8 @@
     "build:ci": "pnpm typecheck && pnpm typecheck:strict && vite build",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "typecheck:strict": "tsc -p tsconfig.strict.json --noEmit",
-    "db:push": "supabase db push",
-    "db:types": "supabase gen types typescript --linked --schema public > src/shared/types/database.types.ts"
+    "db:push": "npx supabase db push",
+    "db:types": "npx supabase gen types typescript --linked --schema public > src/shared/types/database.types.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.110.0",

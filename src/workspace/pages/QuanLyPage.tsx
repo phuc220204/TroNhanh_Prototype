@@ -26,8 +26,13 @@ type DbListing = {
   price: number;
   area: number;
   status: string;
-  views: number;
-  contacts: number;
+  /** Từ cột thật `view_count` (thêm ở migration 0100). */
+  views?: number;
+  /**
+   * Chưa có nguồn dữ liệu — bảng rental_listings không có cột này.
+   * TODO(T11a): đếm từ `conversations` where ref_type='RentalListing' and ref_id=id.
+   */
+  contacts?: number;
   updated_at: string;
   created_at: string;
   boost_expire_at: string | null;
@@ -293,7 +298,8 @@ export function QuanLyPage() {
       
       if (error) throw error;
       if (data) {
-        setDbListings(data);
+        // `views` map từ cột thật view_count; `contacts` chưa có nguồn (xem type).
+        setDbListings(data.map(l => ({ ...l, views: l.view_count ?? 0 })));
       }
     } catch (err: any) {
       console.error("Error loading owner listings:", err);

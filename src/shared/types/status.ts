@@ -46,3 +46,26 @@ export type SubscriptionStatus =
   | "TRIAL"
   | "ACTIVE"
   | "READ_ONLY";
+
+const SUBSCRIPTION_STATUSES: readonly string[] = ["NONE", "TRIAL", "ACTIVE", "READ_ONLY"];
+
+/**
+ * Thu hẹp giá trị đọc từ DB về SubscriptionStatus.
+ *
+ * Vì sao cần: cột `user_subscriptions.status` là `text` + CHECK constraint, và
+ * Supabase chỉ sinh literal union cho ENUM thật của Postgres — CHECK thì ra
+ * `string`. Nên mọi giá trị đọc lên phải đi qua hàm này thay vì ép kiểu bừa.
+ */
+export function toSubscriptionStatus(value: string | null | undefined): SubscriptionStatus {
+  return SUBSCRIPTION_STATUSES.includes(value ?? "")
+    ? (value as SubscriptionStatus)
+    : "NONE";
+}
+
+/** "Tầng 1" / "1" / "  2 " → 1 | 2. Cột rooms.floor là integer. */
+export function parseFloorNumber(value: string | number | null | undefined): number {
+  if (typeof value === "number") return Number.isFinite(value) ? value : 1;
+  const digits = String(value ?? "").replace(/\D/g, "");
+  const parsed = Number.parseInt(digits, 10);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : 1;
+}

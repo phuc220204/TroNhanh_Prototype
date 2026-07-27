@@ -10,6 +10,7 @@ import { DemoBanner } from "./common/DemoBanner";
 import { BrandLogo } from "./brand/BrandLogo";
 import { useAuth } from "../contexts/AuthContext";
 import { supabase } from "../supabaseClient";
+import { toSubscriptionStatus } from "../types/status";
 
 export type LandlordNavId = "overview" | "rooms" | "listings" | "occupants" | "payments" | "settings";
 
@@ -362,7 +363,7 @@ export function LandlordShell({ active, mobileTitle, children }: { active: Landl
 
       if (data && data.length > 0) {
         const sub = data[0];
-        updateSubStatus(sub.status);
+        updateSubStatus(toSubscriptionStatus(sub.status));
         if (sub.status === "TRIAL") {
           const exp = new Date(sub.expire_date);
           const now = new Date();
