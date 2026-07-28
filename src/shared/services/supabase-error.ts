@@ -36,6 +36,7 @@ const ERROR_MESSAGES: Record<string, string> = {
   ROOM_HAS_ACTIVE_CONTRACT:
     "Phòng này đã có hợp đồng còn hiệu lực trong khoảng thời gian đó.",
   INVALID_CONTRACT_PERIOD: "Ngày kết thúc hợp đồng phải sau ngày bắt đầu.",
+  USER_NOT_FOUND_BY_EMAIL: "Không tìm thấy tài khoản người dùng với email này.",
 
   // Điện nước & hóa đơn
   READING_LOWER_THAN_PREVIOUS:

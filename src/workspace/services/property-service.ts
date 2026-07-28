@@ -13,6 +13,9 @@ export interface PropertyItem {
   electricity_unit_price?: number;
   water_unit_price?: number;
   service_fee?: number;
+  bank_name?: string;
+  bank_account_number?: string;
+  bank_account_name?: string;
 }
 
 /**
@@ -54,5 +57,57 @@ export async function getPropertyById(id: string): Promise<PropertyItem | null> 
   } catch (err) {
     logError("property-service.getPropertyById", err);
     return null;
+  }
+}
+
+/** Đúng những cột màn Cài đặt khu trọ được phép ghi. */
+export interface PropertySettingsInput {
+  name?: string;
+  address?: string;
+  electricity_unit_price?: number;
+  water_unit_price?: number;
+  service_fee?: number;
+  bank_name?: string;
+  bank_account_number?: string;
+  bank_account_name?: string;
+}
+
+const EDITABLE_SETTING_KEYS = [
+  "name",
+  "address",
+  "electricity_unit_price",
+  "water_unit_price",
+  "service_fee",
+  "bank_name",
+  "bank_account_number",
+  "bank_account_name",
+] as const;
+
+/**
+ * Update property settings (pricing & banking info).
+ * Chỉ ghi các cột trong allow-list — không nhận object tùy ý từ caller,
+ * để một field thừa lọt vào form không thành một lệnh UPDATE cột khác.
+ */
+export async function updatePropertySettings(
+  id: string,
+  settings: PropertySettingsInput
+): Promise<void> {
+  if (!id) return;
+  const patch: PropertySettingsInput = {};
+  for (const key of EDITABLE_SETTING_KEYS) {
+    const value = settings[key];
+    if (value !== undefined) (patch as Record<string, unknown>)[key] = value;
+  }
+  if (Object.keys(patch).length === 0) return;
+
+  try {
+    const { error } = await supabase
+      .from("properties")
+      .update(patch)
+      .eq("id", id);
+    if (error) throw error;
+  } catch (err) {
+    logError("property-service.updatePropertySettings", err);
+    throw err;
   }
 }
