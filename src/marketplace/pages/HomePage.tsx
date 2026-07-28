@@ -17,8 +17,9 @@ import { AppSelect } from "../../shared/components/common/AppSelect";
 import { ModalShell } from "../../shared/components/common/ModalShell";
 import { EmptyState, Skeleton, Button } from "../../shared/components/common";
 import { logError } from "../../shared/services/supabase-error";
-import { supabase } from "../../shared/supabaseClient";
-import { getListingImage } from "./AllListingsPage";
+import { getListingImage } from "../services/listing-mappers";
+import { getFeaturedListings } from "../services/listing-queries";
+import { getActiveDemandPosts } from "../services/demand-queries";
 import { PROPERTY_TYPES, PRICE_RANGES, TAGLINE } from "../../shared/constants/catalog";
 
 /* Hero Search — option lists */
@@ -1085,40 +1086,24 @@ export function HomePage() {
   useEffect(() => {
     const loadHomeData = async () => {
       try {
-        // Fetch active listings
-        const { data: listingsData } = await supabase
-          .from("rental_listings")
-          .select("*")
-          .eq("status", "Active")
-          .is("deleted_at", null)
-          .order("boost_expire_at", { ascending: false, nullsFirst: false })
-          .order("created_at", { ascending: false })
-          .limit(4);
-
-        if (listingsData && listingsData.length > 0) {
-          const formatted = listingsData.map(l => {
-            const isVIP = l.boost_expire_at && new Date(l.boost_expire_at) > new Date();
-            return {
-              id: l.id,
-              title: l.title,
-              price: l.price.toLocaleString("vi-VN"),
-              area: Number(l.area),
-              loc: l.district,
-              amenities: ["wifi", "ac"],
-              badge: isVIP ? "Nổi bật" : "Mới đăng",
-              img: getListingImage(l.id),
-            };
-          });
+        // Fetch active listings via service layer
+        const featuredCards = await getFeaturedListings(4);
+        if (featuredCards && featuredCards.length > 0) {
+          const formatted = featuredCards.map(l => ({
+            id: l.id,
+            title: l.title,
+            price: l.priceNum.toLocaleString("vi-VN"),
+            area: l.area,
+            loc: l.loc,
+            amenities: ["wifi", "ac"],
+            badge: l.badge || "Mới đăng",
+            img: l.img,
+          }));
           setDbRooms(formatted);
         }
 
-        // Fetch demand posts
-        const { data: demandData } = await supabase
-          .from("demand_posts")
-          .select("*")
-          .eq("status", "Active")
-          .is("deleted_at", null)
-          .order("created_at", { ascending: false });
+        // Fetch demand posts via service layer
+        const demandData = await getActiveDemandPosts();
 
         if (demandData && demandData.length > 0) {
           const roomWants = demandData

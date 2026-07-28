@@ -16,8 +16,8 @@ import { useBreakpoint } from "../../shared/components/useBreakpoint";
 import { PublicNavbarDesktop, DemoFAB } from "../../shared/components/PublicNavbar";
 import { DemoBanner } from "../../shared/components/common/DemoBanner";
 import { useAuth } from "../../shared/contexts/AuthContext";
-import { supabase } from "../../shared/supabaseClient";
-import { getListingImage } from "./AllListingsPage";
+import { getListingImage } from "../services/listing-mappers";
+import { getListingById, incrementViewCount } from "../services/listing-queries";
 import { parseMetadataFromDescription, ListingMetadata } from "../utils/listingMetadata";
 import { logError } from "../../shared/services/supabase-error";
 
@@ -1052,19 +1052,11 @@ export function RoomDetailPage() {
     const fetchListing = async () => {
       setIsLoading(true);
       try {
-        const { data, error } = await supabase
-          .from("rental_listings")
-          .select(`
-            *,
-            listing_amenities (
-              amenity
-            )
-          `)
-          .eq("id", id)
-          .single();
-
-        if (error) throw error;
+        const data = await getListingById(id);
         setListing(data);
+        if (data) {
+          incrementViewCount(id);
+        }
       } catch (err) {
         logError("RoomDetailPage.fetchListing", err);
       } finally {

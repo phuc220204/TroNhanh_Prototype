@@ -9,9 +9,10 @@ import { C, font } from "../../shared/theme";
 import { useBreakpoint } from "../../shared/components/useBreakpoint";
 import { PublicNavbarDesktop, PublicNavbarMobile, DemoFAB } from "../../shared/components/PublicNavbar";
 import { DemoBanner } from "../../shared/components/common/DemoBanner";
-import { supabase } from "../../shared/supabaseClient";
 import { PROPERTY_TYPES, PRICE_RANGES, AMENITIES as CATALOG_AMENITIES, REGIONS, AREA_RANGES } from "../../shared/constants/catalog";
-import { getListingImage, mapAmenityToKey, mapTypeToKey } from "./AllListingsPage";
+import { getListingImage, mapAmenityToKey, mapTypeToKey } from "../services/listing-mappers";
+import { searchListings } from "../services/listing-queries";
+import { parsePriceRangeLabel, parseAreaRangeLabel } from "../../shared/utils/catalog-bounds";
 import { logError } from "../../shared/services/supabase-error";
 
 /* ══════════════════════════════════════════
@@ -661,49 +662,43 @@ export function SearchResultsPage() {
   const [viewMode, setViewMode]        = useState<"list" | "map">("list");
   const [isLoading, setIsLoading]      = useState(true);
 
-  // 1. Fetch data from Supabase
+  // 1. Fetch data from Supabase via service layer
   useEffect(() => {
     const fetchRooms = async () => {
       setIsLoading(true);
       try {
-        const { data, error } = await supabase
-          .from("rental_listings")
-          .select(`
-            *,
-            listing_amenities (
-              amenity
-            )
-          `)
-          .eq("status", "Active")
-          .is("deleted_at", null)
-          .order("created_at", { ascending: false });
+        const { priceMin, priceMax } = parsePriceRangeLabel(filters.priceLabel);
+        const { areaMin, areaMax } = parseAreaRangeLabel(filters.area);
 
-        if (error) throw error;
+        const result = await searchListings({
+          districts: filters.region ? [filters.region] : undefined,
+          priceMin,
+          priceMax,
+          areaMin,
+          areaMax,
+          propertyTypes: filters.type && filters.type !== "Tất cả" ? [filters.type] : undefined,
+          amenities: filters.amenities.length > 0 ? filters.amenities : undefined,
+          sort: sortBy as any,
+          page: 1,
+          pageSize: 50,
+        });
 
-        if (data) {
-          const mapped: Room[] = data.map((item: any) => {
-            const priceVal = Number(item.price);
-            const formattedPrice = priceVal.toLocaleString("vi-VN");
-            const ams = (item.listing_amenities || []).map((la: any) => mapAmenityToKey(la.amenity));
-            const isBoosted = item.boost_expire_at && new Date(item.boost_expire_at) > new Date();
+        const mapped: Room[] = result.data.map((item) => ({
+          id: item.id,
+          title: item.title,
+          price: item.price,
+          priceNum: item.priceNum,
+          area: item.area,
+          loc: item.loc,
+          amenities: item.amenities.map(mapAmenityToKey),
+          type: mapTypeToKey(item.type),
+          badge: item.badge,
+          img: item.img,
+          contact_phone: item.contact_phone,
+          boost_expire_at: item.boost_expire_at,
+        }));
 
-            return {
-              id: item.id,
-              title: item.title,
-              price: formattedPrice,
-              priceNum: priceVal,
-              area: Number(item.area),
-              loc: item.district,
-              amenities: ams,
-              type: mapTypeToKey(item.property_type),
-              badge: isBoosted ? "Nổi bật" : null,
-              img: getListingImage(item.id),
-              contact_phone: item.contact_phone || "",
-              boost_expire_at: item.boost_expire_at,
-            };
-          });
-          setDbRooms(mapped);
-        }
+        setDbRooms(mapped);
       } catch (err) {
         logError("SearchResultsPage.fetchRooms", err);
       } finally {
@@ -711,7 +706,7 @@ export function SearchResultsPage() {
       }
     };
     fetchRooms();
-  }, []);
+  }, [filters, sortBy]);
 
   // 2. Parse URL search parameters on load
   useEffect(() => {

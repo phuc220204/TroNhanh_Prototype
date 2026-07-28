@@ -15,7 +15,7 @@ import { useBreakpoint } from "../../shared/components/useBreakpoint";
 import { PublicNavbarDesktop, DemoFAB } from "../../shared/components/PublicNavbar";
 import { DemoBanner } from "../../shared/components/common/DemoBanner";
 import { useAuth } from "../../shared/contexts/AuthContext";
-import { supabase } from "../../shared/supabaseClient";
+import { createListing } from "../services/listing-mutations";
 import { PROPERTY_TYPES, REGIONS } from "../../shared/constants/catalog";
 import { formatVND, cleanVND, appendMetadataToDescription, ListingMetadata } from "../utils/listingMetadata";
 import { logError } from "../../shared/services/supabase-error";
@@ -535,7 +535,8 @@ export function DangTinPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const { isMobile } = useBreakpoint();
-  const { user } = useAuth();
+  // `profile` được dùng ở profileName bên dưới — thiếu nó thì ReferenceError.
+  const { user, profile } = useAuth();
 
   const prefill = (location.state as { prefill?: any } | null)?.prefill ?? {};
 
@@ -548,24 +549,7 @@ export function DangTinPage() {
   const [showPayment, setShowPayment] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [newRoomId, setNewRoomId] = useState("");
-  const [profileName, setProfileName] = useState("");
-
-  // Get current user profile name
-  useEffect(() => {
-    if (!user) return;
-    const fetchProfile = async () => {
-      const { data } = await supabase
-        .from("profiles")
-        .select("full_name")
-        // profiles.id là uuid độc lập; auth id nằm ở profiles.user_id
-        .eq("user_id", user.id)
-        .single();
-      if (data?.full_name) {
-        setProfileName(data.full_name);
-      }
-    };
-    fetchProfile();
-  }, [user]);
+  const profileName = profile?.full_name || "";
 
   const showToast = (msg: string) => {
     setToastMsg(msg);
@@ -705,55 +689,27 @@ export function DangTinPage() {
 
       const finalDescription = appendMetadataToDescription(formik.values.description, metadata);
 
-      // 1. Insert to rental_listings
-      const { data: listingData, error: listingError } = await supabase
-        .from("rental_listings")
-        .insert({
-          seller_id: user.id,
-          title: formik.values.title,
-          description: finalDescription,
-          property_type: formik.values.roomType,
-          price: parseFloat(cleanVND(formik.values.price)),
-          area: parseFloat(formik.values.area),
-          address: formik.values.address,
-          district: formik.values.district,
-          contact_phone: formik.values.phone,
-          contact_name: profileName || user.email || "Chủ trọ",
-          status: "Active",
-          boost_expire_at: boostExpire,
-        })
-        .select()
-        .single();
+      const amenityLabels = formik.values.amenities.map(key => {
+        return AMENITIES_LIST.find(a => a.key === key)?.label || key;
+      });
 
-      if (listingError) throw listingError;
+      const listingData = await createListing({
+        sellerId: user.id,
+        title: formik.values.title,
+        description: finalDescription,
+        propertyType: formik.values.roomType,
+        price: parseFloat(cleanVND(formik.values.price)),
+        area: parseFloat(formik.values.area),
+        address: formik.values.address,
+        district: formik.values.district,
+        contactPhone: formik.values.phone,
+        contactName: profileName || user.email || "Chủ trọ",
+        boostExpireAt: boostExpire,
+        amenities: amenityLabels,
+      });
 
       if (listingData) {
         setNewRoomId(listingData.id);
-
-        // 2. Insert amenities
-        if (formik.values.amenities.length > 0) {
-          const ams = formik.values.amenities.map(key => {
-            const label = AMENITIES_LIST.find(a => a.key === key)?.label || key;
-            return {
-              listing_id: listingData.id,
-              amenity: label,
-            };
-          });
-          const { error: amError } = await supabase
-            .from("listing_amenities")
-            .insert(ams);
-          if (amError) logError("DangTinPage.insertAmenities", amError);
-        }
-
-        // 3. Update profile is_seller = true
-        const { error: profileError } = await supabase
-          .from("profiles")
-          .update({ is_seller: true })
-          // profiles.id là uuid độc lập; auth id nằm ở profiles.user_id
-          .eq("user_id", user.id);
-        
-        if (profileError) logError("DangTinPage.updateProfileSeller", profileError);
-
         setSuccess(true);
       }
     } catch (err) {

@@ -10,9 +10,11 @@ import { C, font } from "../../shared/theme";
 import { useBreakpoint } from "../../shared/components/useBreakpoint";
 import { PublicNavbarDesktop, PublicNavbarMobile, DemoFAB } from "../../shared/components/PublicNavbar";
 import { DemoBanner } from "../../shared/components/common/DemoBanner";
-import { supabase } from "../../shared/supabaseClient";
 import { logError } from "../../shared/services/supabase-error";
 import { PROPERTY_TYPES, PRICE_RANGES, AMENITIES as CATALOG_AMENITIES, REGIONS, AREA_RANGES } from "../../shared/constants/catalog";
+import { parsePriceRangeLabel, parseAreaRangeLabel } from "../../shared/utils/catalog-bounds";
+import { searchListings } from "../services/listing-queries";
+import { getListingImage, mapAmenityToKey, mapTypeToKey } from "../services/listing-mappers";
 
 /* ══════════════════════════════════════════
    TYPES & CONSTANTS
@@ -72,118 +74,15 @@ const AMENITY_META: Record<string, { Icon: React.ElementType; label: string }> =
   loft:    { Icon: Layers, label: "Gác lửng" },
 };
 
-const DEFAULT_IMAGES = [
-  "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=600&q=80",
-  "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=600&q=80",
-  "https://images.unsplash.com/photo-1493809842364-78817add7ffb?w=600&q=80",
-  "https://images.unsplash.com/photo-1512918728675-ed5a9ecdebfd?w=600&q=80",
-  "https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=600&q=80",
-  "https://images.unsplash.com/photo-1555854877-bab0e564b8d5?w=600&q=80",
-  "https://images.unsplash.com/photo-1484154218962-a197022b5858?w=600&q=80",
-  "https://images.unsplash.com/photo-1489171078254-c3365d6e359f?w=600&q=80",
-  "https://images.unsplash.com/photo-1598928506311-c55ded91a20c?w=600&q=80",
-];
-
-export const getListingImage = (idStr: string) => {
-  let hash = 0;
-  for (let i = 0; i < idStr.length; i++) {
-    hash = idStr.charCodeAt(i) + ((hash << 5) - hash);
-  }
-  const idx = Math.abs(hash) % DEFAULT_IMAGES.length;
-  return DEFAULT_IMAGES[idx];
-};
-
-export const mapAmenityToKey = (amenity: string): string => {
-  const norm = amenity.toLowerCase().trim();
-  if (norm.includes("wifi")) return "wifi";
-  if (norm.includes("máy lạnh") || norm.includes("ac") || norm.includes("điều hòa")) return "ac";
-  if (norm.includes("gác")) return "loft";
-  if (norm.includes("xe")) return "parking";
-  if (norm.includes("wc") || norm.includes("phòng tắm") || norm.includes("toilet") || norm.includes("khép kín")) return "bath";
-  if (norm.includes("tự do") || norm.includes("giờ giấc")) return "clock";
-  return "wifi";
-};
-
-export const mapTypeToKey = (type: string): string => {
-  const norm = type.toLowerCase().trim();
-  if (norm.includes("trọ")) return "room";
-  if (norm.includes("mini")) return "mini";
-  if (norm.includes("dịch vụ")) return "apartment";
-  if (norm.includes("ký túc xá") || norm.includes("ktx")) return "ktx";
-  if (norm.includes("nguyên căn")) return "house";
-  return "room";
-};
+export { getListingImage, mapAmenityToKey, mapTypeToKey } from "../services/listing-mappers";
 
 /* ══════════════════════════════════════════
-   FILTER & SORT HELPERS
+   FILTER HELPERS
+   Lọc và sắp xếp CHẠY Ở SERVER (marketplace/services/listing-queries.ts).
+   Khối runFilters / runSort / matchPrice / matchArea client-side đã bị xóa ở
+   T11a — chúng đã thành dead code sau khi chuyển sang service layer, và để lại
+   thì agent sau dễ tưởng còn dùng rồi lọc hai lần.
 ══════════════════════════════════════════ */
-function matchPrice(priceNum: number, label: string): boolean {
-  switch (label) {
-    case "Dưới 2 triệu": return priceNum < 2_000_000;
-    case "2 – 4 triệu":  return priceNum >= 2_000_000 && priceNum <= 4_000_000;
-    case "4 – 6 triệu":  return priceNum > 4_000_000 && priceNum <= 6_000_000;
-    case "Trên 6 triệu": return priceNum > 6_000_000;
-    default:             return true;
-  }
-}
-
-function matchArea(a: number, label: string): boolean {
-  switch (label) {
-    case "Dưới 20 m²":  return a < 20;
-    case "20 – 30 m²":  return a >= 20 && a <= 30;
-    case "30 – 45 m²":  return a > 30 && a <= 45;
-    case "Trên 45 m²":  return a > 45;
-    default:            return true;
-  }
-}
-
-function runFilters(rooms: Room[], f: AllFilters): Room[] {
-  return rooms.filter(r => {
-    if (f.region) {
-      const q = f.region.toLowerCase();
-      const matchLoc = r.loc.toLowerCase().includes(q);
-      const matchTitle = r.title.toLowerCase().includes(q);
-      if (!matchLoc && !matchTitle) return false;
-    }
-    if (f.priceLabel && !matchPrice(r.priceNum, f.priceLabel)) return false;
-    if (f.area && !matchArea(r.area, f.area)) return false;
-    if (f.roomTypes.length > 0 && !f.roomTypes.includes(r.type)) return false;
-    const known = f.amenities.filter(a => AMENITY_CODE[a]);
-    if (known.some(a => !r.amenities.includes(AMENITY_CODE[a]))) return false;
-    if (f.status.length > 0) {
-      const ok = f.status.some(s =>
-        (s === "Còn trống") ||
-        (s === "Mới đăng" && r.badge === "Mới đăng") ||
-        (s === "Nổi bật" && r.badge === "Nổi bật")
-      );
-      if (!ok) return false;
-    }
-    return true;
-  });
-}
-
-function runSort(rooms: Room[], sort: string): Room[] {
-  const s = [...rooms];
-  const isBoosted = (r: Room) => r.boost_expire_at && new Date(r.boost_expire_at) > new Date();
-  
-  const compareBase = (a: Room, b: Room) => {
-    switch (sort) {
-      case "price-asc":  return a.priceNum - b.priceNum;
-      case "price-desc": return b.priceNum - a.priceNum;
-      case "area-desc":  return b.area - a.area;
-      default:           return 0; // standard fallback
-    }
-  };
-
-  return s.sort((a, b) => {
-    const aB = isBoosted(a);
-    const bB = isBoosted(b);
-    if (aB && !bB) return -1;
-    if (!aB && bB) return 1;
-    return compareBase(a, b);
-  });
-}
-
 function getChips(f: AllFilters): string[] {
   const c: string[] = [];
   if (f.region) c.push(f.region);
@@ -745,6 +644,8 @@ export function AllListingsPage() {
   const { isMobile, isTablet } = useBreakpoint();
 
   const [dbRooms, setDbRooms]        = useState<Room[]>([]);
+  const [totalCount, setTotalCount]  = useState(0);
+  const [totalPages, setTotalPages]  = useState(1);
   const [filters, setFilters]        = useState<AllFilters>(EMPTY_FILTERS);
   const [pending, setPending]        = useState<AllFilters>(EMPTY_FILTERS);
   const [sortBy, setSortBy]          = useState("newest");
@@ -758,44 +659,40 @@ export function AllListingsPage() {
     const fetchRooms = async () => {
       setIsLoading(true);
       try {
-        const { data, error } = await supabase
-          .from("rental_listings")
-          .select(`
-            *,
-            listing_amenities (
-              amenity
-            )
-          `)
-          .eq("status", "Active")
-          .is("deleted_at", null)
-          .order("created_at", { ascending: false });
+        const { priceMin, priceMax } = parsePriceRangeLabel(filters.priceLabel);
+        const { areaMin, areaMax } = parseAreaRangeLabel(filters.area);
 
-        if (error) throw error;
+        const result = await searchListings({
+          districts: filters.region ? [filters.region] : undefined,
+          priceMin,
+          priceMax,
+          areaMin,
+          areaMax,
+          propertyTypes: filters.roomTypes.length > 0 ? filters.roomTypes : undefined,
+          amenities: filters.amenities.length > 0 ? filters.amenities : undefined,
+          sort: sortBy as any,
+          page,
+          pageSize: ROOMS_PER_PAGE,
+        });
 
-        if (data) {
-          const mapped: Room[] = data.map((item: any) => {
-            const priceVal = Number(item.price);
-            const formattedPrice = priceVal.toLocaleString("vi-VN");
-            const ams = (item.listing_amenities || []).map((la: any) => mapAmenityToKey(la.amenity));
-            const isBoosted = item.boost_expire_at && new Date(item.boost_expire_at) > new Date();
+        const mapped: Room[] = result.data.map((item) => ({
+          id: item.id,
+          title: item.title,
+          price: item.price,
+          priceNum: item.priceNum,
+          area: item.area,
+          loc: item.loc,
+          amenities: item.amenities.map(mapAmenityToKey),
+          type: mapTypeToKey(item.type),
+          badge: item.badge,
+          img: item.img,
+          contact_phone: item.contact_phone,
+          boost_expire_at: item.boost_expire_at,
+        }));
 
-            return {
-              id: item.id,
-              title: item.title,
-              price: formattedPrice,
-              priceNum: priceVal,
-              area: Number(item.area),
-              loc: item.district,
-              amenities: ams,
-              type: mapTypeToKey(item.property_type),
-              badge: isBoosted ? "Nổi bật" : null,
-              img: getListingImage(item.id),
-              contact_phone: item.contact_phone || "",
-              boost_expire_at: item.boost_expire_at,
-            };
-          });
-          setDbRooms(mapped);
-        }
+        setDbRooms(mapped);
+        setTotalCount(result.totalCount);
+        setTotalPages(result.totalPages);
       } catch (err) {
         logError("AllListingsPage.fetchRooms", err);
       } finally {
@@ -803,7 +700,7 @@ export function AllListingsPage() {
       }
     };
     fetchRooms();
-  }, []);
+  }, [filters, sortBy, page]);
 
   const applyFilters = () => {
     setFilters({ ...pending });
@@ -830,10 +727,7 @@ export function AllListingsPage() {
     setPage(1);
   };
 
-  const filtered  = runFilters(dbRooms, filters);
-  const sorted    = runSort(filtered, sortBy);
-  const paginated = sorted.slice((page - 1) * ROOMS_PER_PAGE, page * ROOMS_PER_PAGE);
-  const chips     = getChips(filters);
+  const chips = getChips(filters);
 
   /* ── MOBILE ──────────────────────────────────── */
   if (isMobile) {
@@ -842,7 +736,7 @@ export function AllListingsPage() {
         <PublicNavbarMobile onSearch={onBack} />
         <DemoBanner mobile />
         <MobileSearchBar />
-        <MobileToolbar count={filtered.length} onFilter={() => { setPending({ ...filters }); setMobileFilter(true); }} onSort={() => setMobileSort(true)} onMap={() => setViewMode(v => v === "map" ? "grid" : "map")} />
+        <MobileToolbar count={totalCount} onFilter={() => { setPending({ ...filters }); setMobileFilter(true); }} onSort={() => setMobileSort(true)} onMap={() => setViewMode(v => v === "map" ? "grid" : "map")} />
         <MobileActiveChips chips={chips} onRemove={removeChip} />
 
         <div style={{ flex: 1, overflowY: "auto" }}>
@@ -852,9 +746,9 @@ export function AllListingsPage() {
             <div style={{ display: "flex", flexDirection: "column", gap: 12, padding: "16px 16px 24px" }}>
               {Array.from({ length: 4 }).map((_, i) => <SkeletonCard key={i} />)}
             </div>
-          ) : sorted.length > 0 ? (
+          ) : dbRooms.length > 0 ? (
             <div style={{ display: "flex", flexDirection: "column", gap: 14, padding: "14px 16px 32px" }}>
-              {sorted.map(r => <RoomCard key={r.id} room={r} onClick={() => navigate(`/phong/${r.id}`)} />)}
+              {dbRooms.map(r => <RoomCard key={r.id} room={r} onClick={() => navigate(`/phong/${r.id}`)} />)}
             </div>
           ) : (
             <div style={{ padding: 16 }}><EmptyState onClear={clearAll} /></div>
@@ -876,7 +770,7 @@ export function AllListingsPage() {
       {/* MARKER-MAKE-KIT-INVOKED */}
       <PublicNavbarDesktop onSearch={onBack} />
       <DemoBanner />
-      <PageHeader count={filtered.length} onHome={() => navigate("/")} />
+      <PageHeader count={totalCount} onHome={() => navigate("/")} />
 
       <div style={{ flex: 1, maxWidth: 1280, margin: "0 auto", width: "100%", padding: "28px 32px 80px", display: "flex", gap: 28, alignItems: "flex-start" }}>
         {/* Sticky sidebar */}
@@ -889,7 +783,7 @@ export function AllListingsPage() {
         {/* Results */}
         <main style={{ flex: 1, minWidth: 0 }}>
           <ListingToolbar
-             count={filtered.length}
+             count={totalCount}
              sortBy={sortBy}
              onSort={setSortBy}
              viewMode={viewMode === "map" ? "grid" : viewMode}
@@ -905,15 +799,15 @@ export function AllListingsPage() {
             <div style={{ display: "grid", gridTemplateColumns: `repeat(${gridCols}, 1fr)`, gap: 20 }}>
               {Array.from({ length: ROOMS_PER_PAGE }).map((_, i) => <SkeletonCard key={i} listView={viewMode === "list"} />)}
             </div>
-          ) : paginated.length > 0 ? (
+          ) : dbRooms.length > 0 ? (
             <>
               <div style={viewMode === "list"
                 ? { display: "flex", flexDirection: "column", gap: 14 }
                 : { display: "grid", gridTemplateColumns: `repeat(${gridCols}, 1fr)`, gap: 20 }}>
-                {paginated.map(r => <RoomCard key={r.id} room={r} onClick={() => navigate(`/phong/${r.id}`)} listView={viewMode === "list"} />)}
+                {dbRooms.map(r => <RoomCard key={r.id} room={r} onClick={() => navigate(`/phong/${r.id}`)} listView={viewMode === "list"} />)}
               </div>
-              {filtered.length > ROOMS_PER_PAGE && (
-                <Pagination current={page} total={Math.min(TOTAL_PAGES, Math.ceil(filtered.length / ROOMS_PER_PAGE))} onChange={p => { setPage(p); setIsLoading(true); setTimeout(() => setIsLoading(false), 500); }} />
+              {totalPages > 1 && (
+                <Pagination current={page} total={totalPages} onChange={p => setPage(p)} />
               )}
             </>
           ) : (
