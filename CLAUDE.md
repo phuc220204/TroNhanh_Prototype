@@ -66,7 +66,19 @@ Một page render bên trong `LandlordShell` nhưng chạy 100% trên `rental_li
 
 Helper đã có (dùng, đừng viết lại): `has_role(uuid,text)` · `is_moderator()` · `can_review_contract(uuid,uuid)` · `is_linked_occupant(uuid)` · `is_property_public(uuid)` · `owns_property(uuid)` · `owns_room(uuid)`.
 
-Mọi helper: `language sql stable security definer set search_path = public`, kèm `revoke execute from public, anon` + `grant execute to authenticated`.
+Mọi helper: `language sql stable security definer set search_path = public`.
+
+> ⚠️ **Helper dùng TRONG POLICY phải `grant execute` cho MỌI role có thể chạm bảng đó — kể cả `anon`.**
+>
+> Postgres đánh giá **TẤT CẢ** policy permissive rồi mới OR kết quả. Một policy không ghi mệnh đề `TO` thì mặc định `TO PUBLIC`, nên `anon` vẫn phải chạy predicate của nó. Nếu `anon` thiếu EXECUTE trên hàm trong đó → **`permission denied` và CẢ câu SELECT bị chặn**, không phải trả về rỗng.
+>
+> Đây từng làm **toàn bộ marketplace công khai chết** (anon không xem được tin nào) vì `is_moderator()` bị `revoke ... from anon` — xem migration `20260728090000`.
+>
+> An toàn vì các hàm này chỉ trả boolean về **chính người gọi**; với anon thì `auth.uid()` là null nên luôn false.
+>
+> Kèm theo: **luôn ghi `to authenticated` tường minh** cho policy chỉ dành cho người đã đăng nhập.
+
+Hàm nhận uuid tùy ý (`has_role(uuid,text)`) thì **không** cấp cho anon — tránh dò thông tin.
 
 **Ngoại lệ duy nhất** được inline `exists`: khi cả hai phía đều đọc được row đó bằng RLS của chính họ (ví dụ policy trên `messages` nhìn `conversations` — cả 2 participant đều SELECT được conversation).
 
