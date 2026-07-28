@@ -12,12 +12,12 @@ import type { RoomStatus } from "../../shared/types/status";
 import { ModalShell } from "../../shared/components/common/ModalShell";
 import { Field, SelectField } from "../../shared/components/common/FormField";
 import { EmptyState, Skeleton, Button } from "../../shared/components/common";
-import { logError } from "../../shared/services/supabase-error";
+import { logError, toUserMessage } from "../../shared/services/supabase-error";
 import { useAuth } from "../../shared/contexts/AuthContext";
 import { supabase } from "../../shared/supabaseClient";
 import { getPropertiesByOwner } from "../services/property-service";
 import { getRoomsByOwner, getRoomsByProperty } from "../services/room-service";
-import { getLatestReading } from "../services/billing-service";
+import { getLatestReading, recordUtilityReading } from "../services/billing-service";
 import { getDashboardMetrics, type DashboardKPIs } from "../services/dashboard-service";
 import { getMyListings } from "../../marketplace/services/listing-queries";
 
@@ -146,7 +146,6 @@ function PropertySelector({ value, onChange, options, mobile }: { value: string;
 }
 
 function UtilityModal({ onClose, properties, isReadOnly, onSave }: { onClose: () => void; properties: any[]; isReadOnly: boolean; onSave: () => void }) {
-  const { user } = useAuth();
   const [propId, setPropId] = useState(properties[0]?.id || "");
   const [rooms, setRooms] = useState<any[]>([]);
   const [roomId, setRoomId] = useState("");
@@ -237,36 +236,18 @@ function UtilityModal({ onClose, properties, isReadOnly, onSave }: { onClose: ()
       setSaving(true);
       const period = new Date().toISOString().substring(0, 7);
 
-      // Save electricity
-      const { error: elecErr } = await supabase.from("utility_readings").insert({
-        room_id: roomId,
-        owner_id: user?.id,
-        type: "Electricity",
-        period,
-        previous_reading: previousElec,
-        current_reading: currElec,
-        unit_price: elecPrice
-      });
-      if (elecErr) throw elecErr;
+      // Save electricity via RPC
+      await recordUtilityReading(roomId, "Electricity", period, currElec);
 
-      // Save water
-      const { error: watErr } = await supabase.from("utility_readings").insert({
-        room_id: roomId,
-        owner_id: user?.id,
-        type: "Water",
-        period,
-        previous_reading: previousWater,
-        current_reading: currWater,
-        unit_price: waterPrice
-      });
-      if (watErr) throw watErr;
+      // Save water via RPC
+      await recordUtilityReading(roomId, "Water", period, currWater);
 
       alert(`Đã ghi nhận chỉ số thành công!`);
       onSave();
       onClose();
-    } catch (err: any) {
+    } catch (err: unknown) {
       logError("ChuTroDashboardPage.UtilityModal.handleSave", err);
-      alert("Lỗi khi ghi nhận: " + err.message);
+      alert(toUserMessage(err));
     } finally {
       setSaving(false);
     }

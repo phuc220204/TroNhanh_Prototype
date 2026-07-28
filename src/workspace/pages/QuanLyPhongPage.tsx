@@ -15,7 +15,7 @@ import { parseFloorNumber, toSubscriptionStatus } from "../../shared/types/statu
 import { ROOM_STATUS_META } from "../../shared/utils/statusMaps";
 import { RoomDetailTabs } from "../components/RoomDetailTabs";
 import type { Room, Property } from "../types/room";
-import { logError } from "../../shared/services/supabase-error";
+import { logError, toUserMessage } from "../../shared/services/supabase-error";
 import { ModalShell } from "../../shared/components/common/ModalShell";
 import { Field, SelectField } from "../../shared/components/common/FormField";
 import { useAuth } from "../../shared/contexts/AuthContext";
@@ -24,7 +24,7 @@ import { supabase } from "../../shared/supabaseClient";
 import { getPropertiesByOwner } from "../services/property-service";
 import { getRoomsByOwner, getRoomsByProperty } from "../services/room-service";
 import { getActiveContractByRoom } from "../services/contract-service";
-import { getLatestReading, getInvoices } from "../services/billing-service";
+import { getLatestReading, getInvoices, recordUtilityReading, createInvoiceWithItems, recordPayment, type CreateInvoiceItemPayload } from "../services/billing-service";
 
 /* ══════════════════════════════════════════
    TYPES & CONSTANTS
@@ -404,7 +404,6 @@ function AddRoomModal({ roomToEdit, onClose, properties, currentId, onSave, isRe
 }
 
 function UtilityMeterModal({ room, property, onClose, isReadOnly }: { room: Room; property: any; onClose: () => void; isReadOnly: boolean }) {
-  const { user } = useAuth();
   const [electric, setElectric] = useState("");
   const [water, setWater] = useState("");
   const [saving, setSaving] = useState(false);
@@ -458,35 +457,17 @@ function UtilityMeterModal({ room, property, onClose, isReadOnly }: { room: Room
       setSaving(true);
       const period = new Date().toISOString().substring(0, 7);
 
-      // Save electricity
-      const { error: elecErr } = await supabase.from("utility_readings").insert({
-        room_id: room.id,
-        owner_id: user?.id,
-        type: "Electricity",
-        period,
-        previous_reading: previousElec,
-        current_reading: currElec,
-        unit_price: elecPrice
-      });
-      if (elecErr) throw elecErr;
+      // Save electricity via RPC
+      await recordUtilityReading(room.id, "Electricity", period, currElec);
 
-      // Save water
-      const { error: watErr } = await supabase.from("utility_readings").insert({
-        room_id: room.id,
-        owner_id: user?.id,
-        type: "Water",
-        period,
-        previous_reading: previousWater,
-        current_reading: currWater,
-        unit_price: waterPrice
-      });
-      if (watErr) throw watErr;
+      // Save water via RPC
+      await recordUtilityReading(room.id, "Water", period, currWater);
 
       alert(`Đã ghi nhận chỉ số thành công cho phòng ${room.code}!`);
       onClose();
-    } catch (err: any) {
+    } catch (err: unknown) {
       logError("QuanLyPhongPage.UtilityModal.handleSave", err);
-      alert("Lỗi khi ghi nhận điện nước: " + err.message);
+      alert(toUserMessage(err));
     } finally {
       setSaving(false);
     }
@@ -620,29 +601,16 @@ function RoomInvoiceModal({ room, property, onClose, isReadOnly, onSave }: { roo
         onClose();
         return;
       }
-      const { error } = await supabase
-        .from("invoices")
-        .update({ status: "Paid" })
-        .eq("id", invoice.id);
-      if (error) throw error;
-
-      await supabase
-        .from("payments")
-        .insert({
-          invoice_id: invoice.id,
-          owner_id: user?.id,
-          amount: invoice.total_amount,
-          method: "BankTransfer",
-          purpose: "RentInvoice"
-        });
+      // RPC tự tính lại status theo BR-004 từ tổng payments — không ép "Paid" ở client.
+      await recordPayment(invoice.id, Number(invoice.total_amount));
 
       // No rooms table update needed as payment status is calculated dynamically from invoices
       alert("Ghi nhận đã thu tiền thành công!");
       onSave();
       onClose();
-    } catch (err: any) {
+    } catch (err: unknown) {
       logError("QuanLyPhongPage.PaymentModal.handleRecordPayment", err);
-      alert("Lỗi khi ghi nhận thanh toán: " + err.message);
+      alert(toUserMessage(err));
     } finally {
       setConfirming(false);
     }
@@ -1435,29 +1403,16 @@ function PaymentsView({ property, isReadOnly, user, loadDbData, mobile }: { prop
     }
 
     try {
-      const { error } = await supabase
-        .from("invoices")
-        .update({ status: "Paid" })
-        .eq("id", selectedInvoice.id);
-      if (error) throw error;
-
-      await supabase
-        .from("payments")
-        .insert({
-          invoice_id: selectedInvoice.id,
-          owner_id: user.id,
-          amount: selectedInvoice.total_amount,
-          method: "BankTransfer",
-          purpose: "RentInvoice"
-        });
+      // RPC tự tính lại status theo BR-004 từ tổng payments — không ép "Paid" ở client.
+      await recordPayment(selectedInvoice.id, Number(selectedInvoice.total_amount));
 
       alert("Ghi nhận đã thu tiền thành công!");
       setSelectedInvoice(null);
       loadInvoices();
       loadDbData();
-    } catch (err: any) {
+    } catch (err: unknown) {
       logError("QuanLyPhongPage.OccupantModal", err);
-      alert("Lỗi khi ghi nhận: " + err.message);
+      alert(toUserMessage(err));
     }
   };
 
@@ -1532,41 +1487,28 @@ function PaymentsView({ property, isReadOnly, user, loadDbData, mobile }: { prop
         const elecAmt = elecQty * elecPrice;
         const waterAmt = waterR ? (waterQty * waterPrice) : (occupants * waterPrice);
         const rentAmt = Number(r.price);
-        const total = rentAmt + elecAmt + waterAmt + serviceFee;
+        // total_amount do RPC tự cộng từ items — không tính ở client nữa.
 
-        // Insert invoice
-        const { data: newInv, error: invErr } = await supabase
-          .from("invoices")
-          .insert({
-            room_id: r.id,
-            contract_id: activeContract?.id || null,
-            owner_id: user.id,
-            period,
-            due_date: dueDate,
-            total_amount: total,
-            status: "Unpaid"
-          })
-          .select()
-          .single();
-
-        if (invErr) throw invErr;
-
-        // Insert items
-        const items = [
-          { invoice_id: newInv.id, type: "Rent", description: "Tiền thuê phòng", quantity: 1, unit_price: rentAmt, amount: rentAmt },
-          { invoice_id: newInv.id, type: "Electricity", description: `Tiền điện (${elecQty} kWh)`, quantity: elecQty, unit_price: elecPrice, amount: elecAmt },
+        const items: CreateInvoiceItemPayload[] = [
+          { type: "Rent", description: "Tiền thuê phòng", quantity: 1, unit_price: rentAmt, amount: rentAmt },
+          { type: "Electricity", description: `Tiền điện (${elecQty} kWh)`, quantity: elecQty, unit_price: elecPrice, amount: elecAmt },
           { 
-            invoice_id: newInv.id, 
             type: "Water", 
             description: waterR ? `Tiền nước (${waterQty} m³)` : `Tiền nước (${occupants} người)`, 
             quantity: waterR ? waterQty : occupants, 
             unit_price: waterPrice, 
             amount: waterAmt 
           },
-          { invoice_id: newInv.id, type: "Service", description: "Phí dịch vụ cố định", quantity: 1, unit_price: serviceFee, amount: serviceFee }
+          { type: "Service", description: "Phí dịch vụ cố định", quantity: 1, unit_price: serviceFee, amount: serviceFee }
         ];
 
-        await supabase.from("invoice_items").insert(items);
+        await createInvoiceWithItems({
+          roomId: r.id,
+          contractId: activeContract?.id || null,
+          period,
+          dueDate,
+          items,
+        });
 
         // No rooms table update needed as payment status is calculated dynamically from invoices
         count++;

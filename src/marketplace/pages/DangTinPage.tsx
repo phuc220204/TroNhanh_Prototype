@@ -693,8 +693,7 @@ export function DangTinPage() {
         return AMENITIES_LIST.find(a => a.key === key)?.label || key;
       });
 
-      const listingData = await createListing({
-        sellerId: user.id,
+      const listingId = await createListing({
         title: formik.values.title,
         description: finalDescription,
         propertyType: formik.values.roomType,
@@ -708,8 +707,8 @@ export function DangTinPage() {
         amenities: amenityLabels,
       });
 
-      if (listingData) {
-        setNewRoomId(listingData.id);
+      if (listingId) {
+        setNewRoomId(listingId);
         setSuccess(true);
       }
     } catch (err) {
