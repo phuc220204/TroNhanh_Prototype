@@ -19,6 +19,7 @@ import { logError } from "../../shared/services/supabase-error";
 import { ModalShell } from "../../shared/components/common/ModalShell";
 import { Field, SelectField } from "../../shared/components/common/FormField";
 import { useAuth } from "../../shared/contexts/AuthContext";
+import { useSubscriptionContext } from "../../shared/contexts/SubscriptionContext";
 import { supabase } from "../../shared/supabaseClient";
 
 /* ══════════════════════════════════════════
@@ -1792,42 +1793,13 @@ export function QuanLyPhongPage() {
   const { isMobile } = useBreakpoint();
   const { user } = useAuth();
 
-  const [subStatus, setSubStatus] = useState<"NONE" | "TRIAL" | "ACTIVE" | "READ_ONLY">("NONE");
+  const { status: subStatus, isReadOnly } = useSubscriptionContext();
 
   // Read activeTab directly from location query parameters to support sub-page tabs reactively
   const activeTab = useMemo(() => {
     const params = new URLSearchParams(location.search);
     return (params.get("tab") || "rooms") as LandlordNavId;
   }, [location.search]);
-
-  // Fetch initial subStatus and subscribe to updates
-  useEffect(() => {
-    const fetchSub = async () => {
-      if (!user) return;
-      try {
-        const { data } = await supabase
-          .from("user_subscriptions")
-          .select("status")
-          .eq("seller_id", user.id)
-          .order("created_at", { ascending: false })
-          .limit(1);
-        if (data && data.length > 0) {
-          setSubStatus(toSubscriptionStatus(data[0].status));
-        } else {
-          setSubStatus("NONE");
-        }
-      } catch (err) {
-        logError("QuanLyPhongPage.subStatus", err);
-      }
-    };
-    fetchSub();
-
-    const handleSubChange = (e: any) => {
-      setSubStatus(e.detail);
-    };
-    window.addEventListener("tronhanh_sub_status", handleSubChange);
-    return () => window.removeEventListener("tronhanh_sub_status", handleSubChange);
-  }, [user]);
 
   const [properties, setProperties] = useState<Property[]>([]);
   const [selectedId, setSelectedId] = useState<string>("");
@@ -1840,8 +1812,6 @@ export function QuanLyPhongPage() {
   const [openActionMenuRoomId, setOpenActionMenuRoomId] = useState<string | null>(null);
   const [roomActionModal, setRoomActionModal] = useState<RoomActionModalState>(null);
   const [loading, setLoading] = useState(true);
-
-  const isReadOnly = subStatus === "READ_ONLY";
 
   const loadDbData = async () => {
     if (!user) return;

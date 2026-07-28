@@ -1,3 +1,5 @@
+import { logError } from "../../shared/services/supabase-error";
+
 export interface CurfewInfo {
   type: "free" | "curfew";
   time?: string;
@@ -93,7 +95,7 @@ export function parseMetadataFromDescription(description: string): {
         }
       };
     } catch (e) {
-      console.error("Failed to parse listing metadata", e);
+      logError("listingMetadata.parseMetadataFromDescription", e);
     }
   }
 
@@ -112,7 +114,7 @@ export function parseMetadataFromDescription(description: string): {
         }
       };
     } catch (e) {
-      console.error("Failed to parse legacy curfew info", e);
+      logError("listingMetadata.parseLegacyCurfew", e);
     }
   }
 
