@@ -19,9 +19,10 @@ function clearDemoAuth() {
   } catch { /* storage unavailable — ignore */ }
 }
 
-const NAV_FREE: { id: LandlordNavId; icon: typeof LayoutGrid; label: string; to?: string }[] = [
+const NAV_FREE: { id: LandlordNavId | "messages"; icon: typeof LayoutGrid; label: string; to?: string }[] = [
   { id: "overview", icon: LayoutGrid, label: "Tổng quan", to: "/chu-tro" },
   { id: "listings", icon: FileText, label: "Quản lý tin đăng", to: "/chu-tro/tin-dang" },
+  { id: "messages", icon: MessageSquare, label: "Tin nhắn in-app", to: "/tin-nhan" },
 ];
 
 const NAV_SAAS: { id: LandlordNavId; icon: typeof LayoutGrid; label: string; to?: string }[] = [

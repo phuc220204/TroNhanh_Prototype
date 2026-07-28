@@ -1186,6 +1186,10 @@ export type Database = {
       is_linked_occupant: { Args: { p_occupancy: string }; Returns: boolean }
       is_moderator: { Args: never; Returns: boolean }
       is_property_public: { Args: { p_property: string }; Returns: boolean }
+      link_renter_account: {
+        Args: { p_email: string; p_occupancy_id: string }
+        Returns: undefined
+      }
       mark_conversation_read: {
         Args: { p_conversation_id: string }
         Returns: undefined
@@ -1239,6 +1243,10 @@ export type Database = {
       start_conversation: {
         Args: { p_first_message?: string; p_ref_id: string; p_ref_type: string }
         Returns: string
+      }
+      terminate_contract: {
+        Args: { p_contract_id: string; p_end_date?: string }
+        Returns: undefined
       }
       update_listing_with_details: {
         Args: {

@@ -20,6 +20,7 @@ import { getListingImage, listingImageUrls } from "../services/listing-mappers";
 import { getListingById, incrementViewCount } from "../services/listing-queries";
 import { parseMetadataFromDescription, ListingMetadata } from "../utils/listingMetadata";
 import { logError } from "../../shared/services/supabase-error";
+import { startConversation } from "../../shared/services/messaging-service";
 
 /* ══════════════════════════════════════════
    CURFEW HELPER FUNCTIONS
@@ -1067,7 +1068,20 @@ export function RoomDetailPage() {
   }, [id]);
 
   const openLightbox = (idx: number) => { setLightboxIdx(idx); setLightboxOpen(true); };
-  const openChat = () => setChatModal(true);
+  const openChat = async () => {
+    if (!listing) return;
+    if (!user) {
+      navigate(`/dang-nhap?redirect=/phong/${listing.id}`);
+      return;
+    }
+    if (listing.seller_id === user.id) return;
+    try {
+      const convId = await startConversation("RentalListing", listing.id);
+      navigate(`/tin-nhan/${convId}`);
+    } catch (err: any) {
+      logError("RoomDetailPage.openChat", err);
+    }
+  };
   const openPhone = () => setPhoneModal(true);
 
   useEffect(() => {

@@ -5,15 +5,15 @@ import {
   Search, Heart, User, ChevronDown,
   Key, UserSearch,
   LayoutGrid, LayoutDashboard, Building2, FileText, BookOpen, HelpCircle, X,
-  Bell, Menu, Database
+  Bell, Menu, Database, MessageSquare
 } from "lucide-react";
 import { C, font } from "../theme";
 import { BrandLogo } from "./brand/BrandLogo";
 import { useAuth } from "../contexts/AuthContext";
 import { supabase } from "../supabaseClient";
 import { seedMockDataForUser } from "../utils/dbSeeder";
-
 import { logError } from "../services/supabase-error";
+import { getTotalUnreadCount } from "../services/messaging-service";
 
 /* ══════════════════════════════════════════
    ĐĂNG TIN DROPDOWN
@@ -114,9 +114,18 @@ export function PublicNavbarDesktop({
   const [accountOpen, setAccountOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [localQuery, setLocalQuery] = useState(searchQuery || "");
+  const [unreadCount, setUnreadCount] = useState(0);
   const dangTinRef = useRef<HTMLDivElement>(null);
   const accountRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (!user) {
+      setUnreadCount(0);
+      return;
+    }
+    getTotalUnreadCount().then(setUnreadCount);
+  }, [user]);
 
   useEffect(() => {
     setLocalQuery(searchQuery || "");
@@ -224,6 +233,23 @@ export function PublicNavbarDesktop({
           <Heart size={15} color={C.textSecondary} strokeWidth={1.8} />
           <span style={{ fontFamily: font, fontSize: 13.5, color: C.textSecondary, whiteSpace: "nowrap" }}>Yêu thích</span>
         </button>
+
+        {user && (
+          <button
+            onClick={() => navigate("/tin-nhan")}
+            style={{ display: "flex", alignItems: "center", gap: 5, background: "none", border: "none", cursor: "pointer", padding: "8px 12px", borderRadius: 8, position: "relative" }}
+            onMouseEnter={e => (e.currentTarget.style.background = C.cream)}
+            onMouseLeave={e => (e.currentTarget.style.background = "none")}
+          >
+            <MessageSquare size={15} color={C.textSecondary} strokeWidth={1.8} />
+            <span style={{ fontFamily: font, fontSize: 13.5, color: C.textSecondary, whiteSpace: "nowrap" }}>Tin nhắn</span>
+            {unreadCount > 0 && (
+              <span data-testid="unread-badge" style={{ background: C.repairing, color: "white", fontSize: 10, fontWeight: 800, borderRadius: 999, padding: "1px 6px", marginLeft: 2 }}>
+                {unreadCount}
+              </span>
+            )}
+          </button>
+        )}
 
         <div style={{ width: 1, height: 20, background: C.border, margin: "0 4px" }} />
 

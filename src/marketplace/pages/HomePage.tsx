@@ -17,10 +17,11 @@ import { AppSelect } from "../../shared/components/common/AppSelect";
 import { ModalShell } from "../../shared/components/common/ModalShell";
 import { EmptyState, Skeleton, Button } from "../../shared/components/common";
 import { logError } from "../../shared/services/supabase-error";
-import { getListingImage } from "../services/listing-mappers";
-import { getFeaturedListings } from "../services/listing-queries";
+import { getFeaturedListings, getListingById, incrementViewCount } from "../services/listing-queries";
 import { getActiveDemandPosts } from "../services/demand-queries";
 import { PROPERTY_TYPES, PRICE_RANGES, TAGLINE } from "../../shared/constants/catalog";
+import { useAuth } from "../../shared/contexts/AuthContext";
+import { startConversation } from "../../shared/services/messaging-service";
 
 /* Hero Search — option lists */
 const LOAI_PHONG = [...PROPERTY_TYPES];
@@ -300,6 +301,23 @@ function MarketplaceSections({
   const fullList = activeTab === "RoomWanted" ? roomWants : roommateWants;
   const list = fullList.slice(0, PREVIEW_LIMIT);
 
+  const navigate = useNavigate();
+  const { user } = useAuth();
+
+  const handleMessage = async (post: any) => {
+    if (!user) {
+      navigate("/dang-nhap");
+      return;
+    }
+    if (post.renter_id === user.id) return;
+    try {
+      const convId = await startConversation("DemandPost", post.id);
+      navigate(`/tin-nhan/${convId}`);
+    } catch (err: any) {
+      logError("HomePage.handleMessage", err);
+    }
+  };
+
   return (
     <section style={{ background: C.caramelSoft, borderTop: `1px solid ${C.border}`, borderBottom: `1px solid ${C.border}` }}>
       <div style={{ maxWidth: 1200, margin: "0 auto", padding: mobile ? "48px 16px" : "64px 32px" }}>
@@ -310,7 +328,7 @@ function MarketplaceSections({
             <Home size={28} color={C.primary} style={{ flexShrink: 0, marginTop: 4 }} />
             <div>
               <h2 style={{ fontFamily: font, fontSize: mobile ? 22 : 30, fontWeight: 900, color: C.textPrimary, margin: 0 }}>
-                Nhu cầu khách thuê & Ở ghép
+                Nhu cầu khách thuê &amp; Ở ghép
               </h2>
               <p style={{ fontFamily: font, fontSize: mobile ? 13 : 15, color: C.textSecondary, margin: "4px 0 0", lineHeight: 1.5 }}>
                 Tìm kiếm khách thuê đang tìm phòng hoặc các tin tìm người ở ghép cùng chia sẻ chi phí.
@@ -368,7 +386,7 @@ function MarketplaceSections({
                 key={post.id}
                 post={post}
                 kind={activeTab}
-                onMessage={() => onInfo({ title: `[Nhắn tin — UI only, V1]`, description: `Bạn đang kết nối với ${post.name}. Tính năng nhắn tin thời gian thực giữa chủ trọ và khách thuê đang được tích hợp.` })}
+                onMessage={() => handleMessage(post)}
                 onView={() => onInfo({
                   title: post.title,
                   description: activeTab === "RoomWanted"

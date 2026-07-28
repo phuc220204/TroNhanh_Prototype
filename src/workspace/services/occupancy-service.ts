@@ -93,9 +93,7 @@ export async function createOccupancyWithContract(
  */
 export async function endOccupancy(contractId: string, endDate?: string): Promise<void> {
   try {
-    // TODO: bỏ `as any` sau khi chạy `supabase db push` + `pnpm db:types` —
-    // terminate_contract chưa có trong database.types.ts nên strict không kiểm được param.
-    const { error } = await (supabase.rpc as any)("terminate_contract", {
+    const { error } = await supabase.rpc("terminate_contract", {
       p_contract_id: contractId,
       p_end_date: endDate || new Date().toISOString().split("T")[0],
     });
@@ -113,8 +111,7 @@ export async function endOccupancy(contractId: string, endDate?: string): Promis
  */
 export async function linkRenterAccount(occupancyId: string, email: string): Promise<void> {
   try {
-    // TODO: bỏ `as any` sau khi chạy `supabase db push` + `pnpm db:types`.
-    const { error } = await (supabase.rpc as any)("link_renter_account", {
+    const { error } = await supabase.rpc("link_renter_account", {
       p_occupancy_id: occupancyId,
       p_email: email,
     });
