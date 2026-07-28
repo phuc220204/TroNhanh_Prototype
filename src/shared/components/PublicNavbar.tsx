@@ -511,3 +511,9 @@ export function DemoFAB() {
     </div>
   );
 }
+
+export function PublicNavbar(props: { onSearch?: () => void; searchQuery?: string; onSearchChange?: (v: string) => void }) {
+  const { isMobile } = useBreakpoint();
+  return isMobile ? <PublicNavbarMobile onSearch={props.onSearch} /> : <PublicNavbarDesktop {...props} />;
+}
+
