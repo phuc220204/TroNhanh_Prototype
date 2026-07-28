@@ -368,10 +368,14 @@ function MarketplaceSections({
 }: { roomWants: any[]; roommateWants: any[]; mobile?: boolean; tablet?: boolean; onInfo: (content: HomeModalContent) => void }) {
   const [activeTab, setActiveTab] = useState<"RoomWanted" | "RoommateWanted">("RoomWanted");
 
-  const roomWantedCols = mobile ? 1 : tablet ? 2 : 4;
-  const roommateCols = mobile ? 1 : tablet ? 2 : 3;
-  const cols = activeTab === "RoomWanted" ? roomWantedCols : roommateCols;
-  const list = activeTab === "RoomWanted" ? roomWants : roommateWants;
+  // Landing chỉ là khối GIỚI THIỆU: hiển thị đúng 1 hàng, xem đầy đủ thì bấm
+  // "Xem tất cả nhu cầu". Trước đây render toàn bộ danh sách (24 + 16 card) làm
+  // trang chủ dài lê thê và lấn át các khối bên dưới.
+  const PREVIEW_LIMIT = 4;
+
+  const cols = mobile ? 1 : tablet ? 2 : PREVIEW_LIMIT;
+  const fullList = activeTab === "RoomWanted" ? roomWants : roommateWants;
+  const list = fullList.slice(0, PREVIEW_LIMIT);
 
   return (
     <section style={{ background: C.caramelSoft, borderTop: `1px solid ${C.border}`, borderBottom: `1px solid ${C.border}` }}>
