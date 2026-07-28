@@ -12,6 +12,7 @@ import { useAuth } from "../../../shared/contexts/AuthContext";
 import { supabase } from "../../../shared/supabaseClient";
 import { DemoFAB } from "../../../shared/components/PublicNavbar";
 import { searchListings } from "../../services/listing-queries";
+import { updateListingStatus, deleteListing, boostListing } from "../../services/listing-mutations";
 import { formatVND } from "../../utils/listingMetadata";
 import { logError } from "../../../shared/services/supabase-error";
 import { MyListingsTable, type DbListing } from "./MyListingsTable";
@@ -172,11 +173,7 @@ export function QuanLyPage() {
     const nextStatus = currentStatus === "Active" ? "Hidden" : "Active";
     try {
       setMutatingId(id);
-      const { error } = await supabase
-        .from("rental_listings")
-        .update({ status: nextStatus })
-        .eq("id", id);
-      if (error) throw error;
+      await updateListingStatus(id, nextStatus);
       setDbListings(prev => prev.map(l => l.id === id ? { ...l, status: nextStatus } : l));
       showToast(nextStatus === "Active" ? "Đã hiển thị tin đăng thành công" : "Đã ẩn tin đăng thành công");
     } catch (err: any) {
@@ -191,11 +188,7 @@ export function QuanLyPage() {
     if (!window.confirm("Bạn có chắc chắn muốn xóa tin đăng này? Thao tác này không thể hoàn tác.")) return;
     try {
       setMutatingId(id);
-      const { error } = await supabase
-        .from("rental_listings")
-        .update({ deleted_at: new Date().toISOString() })
-        .eq("id", id);
-      if (error) throw error;
+      await deleteListing(id);
       setDbListings(prev => prev.filter(l => l.id !== id));
       showToast("Đã xóa tin đăng thành công");
     } catch (err: any) {
@@ -209,13 +202,7 @@ export function QuanLyPage() {
   const handleConfirmBoost = async () => {
     if (!boostTarget) return;
     try {
-      const futureDate = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
-      const { error } = await supabase
-        .from("rental_listings")
-        .update({ boost_expire_at: futureDate })
-        .eq("id", boostTarget.id);
-      
-      if (error) throw error;
+      const futureDate = await boostListing(boostTarget.id, 7);
       setDbListings(prev => prev.map(l => l.id === boostTarget.id ? { ...l, boost_expire_at: futureDate } : l));
       setBoostTarget(null);
       showToast("Đã đẩy tin VIP nổi bật thành công!");

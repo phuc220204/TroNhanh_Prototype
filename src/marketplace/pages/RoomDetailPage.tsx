@@ -16,7 +16,7 @@ import { useBreakpoint } from "../../shared/components/useBreakpoint";
 import { PublicNavbarDesktop, DemoFAB } from "../../shared/components/PublicNavbar";
 import { DemoBanner } from "../../shared/components/common/DemoBanner";
 import { useAuth } from "../../shared/contexts/AuthContext";
-import { getListingImage } from "../services/listing-mappers";
+import { getListingImage, listingImageUrls } from "../services/listing-mappers";
 import { getListingById, incrementViewCount } from "../services/listing-queries";
 import { parseMetadataFromDescription, ListingMetadata } from "../utils/listingMetadata";
 import { logError } from "../../shared/services/supabase-error";
@@ -1098,14 +1098,19 @@ export function RoomDetailPage() {
     );
   }
 
-  // Generate deterministic images based on listing ID
-  const detailImages = [
-    getListingImage(listing.id),
-    getListingImage(listing.id + "_1"),
-    getListingImage(listing.id + "_2"),
-    getListingImage(listing.id + "_3"),
-    getListingImage(listing.id + "_4"),
-  ];
+  // Ảnh thật từ listing_media theo sort_order; tin cũ chưa có media thì
+  // listingImageUrls() tự trả về 1 ảnh Unsplash deterministic làm fallback.
+  const mediaImages = listingImageUrls(listing);
+  const detailImages =
+    mediaImages.length > 1
+      ? mediaImages
+      : [
+          mediaImages[0] ?? getListingImage(listing.id),
+          getListingImage(listing.id + "_1"),
+          getListingImage(listing.id + "_2"),
+          getListingImage(listing.id + "_3"),
+          getListingImage(listing.id + "_4"),
+        ];
 
   /* ── MOBILE ─────────────────────────────────────────── */
   if (isMobile) {

@@ -46,17 +46,19 @@ export const mapTypeToKey = (type: string): string => {
   return "room";
 };
 
+import { publicUrl } from "../../shared/services/media-service";
+
 /**
  * Return listing image URLs prioritizing listing_media database table, or falling back to deterministic Unsplash images.
  */
 export function listingImageUrls(row: any): string[] {
   if (row?.listing_media && Array.isArray(row.listing_media) && row.listing_media.length > 0) {
     const sorted = [...row.listing_media].sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0));
-    const paths = sorted.map((m: any) => m.storage_path).filter(Boolean);
+    const paths = sorted.map((m: any) => publicUrl(m.storage_path)).filter(Boolean);
     if (paths.length > 0) return paths;
   }
   if (row?.images && Array.isArray(row.images) && row.images.length > 0) {
-    return row.images;
+    return row.images.map((img: string) => publicUrl(img));
   }
   return [getListingImage(row?.id ? String(row.id) : "fallback")];
 }

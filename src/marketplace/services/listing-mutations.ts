@@ -1,17 +1,9 @@
 import { supabase } from "../../shared/supabaseClient";
 import { logError } from "../../shared/services/supabase-error";
+import type { UploadedMedia } from "../../shared/services/media-service";
 
-/**
- * Input tạo tin đăng.
- *
- * ⚠️ CỐ Ý KHÔNG có `sellerId` và `status`.
- * RPC `create_listing_with_details` derive server-side:
- *   - `seller_id` = auth.uid()
- *   - `status`    = Draft / PendingApproval / Active theo `p_submit` + platform_settings.auto_approve_listings
- *   - `expire_at` = now() + listing_ttl_days (BR-026)
- * Nhận 2 giá trị này từ client = cho client tự phong quyền và tự bỏ qua kiểm duyệt (BR-001).
- */
 export interface CreateListingInput {
+  id?: string;
   title: string;
   description: string;
   propertyType: string;
@@ -23,18 +15,20 @@ export interface CreateListingInput {
   contactName: string;
   boostExpireAt?: string | null;
   amenities?: string[];
+  media?: UploadedMedia[];
   /** false = lưu nháp (Draft). Mặc định true = gửi đăng. */
   submit?: boolean;
 }
 
 /**
- * Tạo tin đăng + amenities + kích hoạt Seller trong MỘT lời gọi RPC (atomic).
+ * Tạo tin đăng + amenities + media + kích hoạt Seller trong MỘT lời gọi RPC (atomic).
  * @returns id của tin vừa tạo.
  */
 export async function createListing(input: CreateListingInput): Promise<string> {
   try {
     const { data, error } = await supabase.rpc("create_listing_with_details", {
       p_listing: {
+        id: input.id ?? null,
         title: input.title,
         description: input.description,
         property_type: input.propertyType,
@@ -47,12 +41,63 @@ export async function createListing(input: CreateListingInput): Promise<string> 
         boost_expire_at: input.boostExpireAt ?? null,
       } as any,
       p_amenities: input.amenities ?? [],
+      p_media: (input.media ?? []) as any,
       p_submit: input.submit ?? true,
     });
     if (error) throw error;
     return data as string;
   } catch (err) {
     logError("listing-mutations.createListing", err);
+    throw err;
+  }
+}
+
+/**
+ * Update listing status (e.g. Active <-> Hidden).
+ */
+export async function updateListingStatus(id: string, status: string): Promise<void> {
+  try {
+    const { error } = await supabase
+      .from("rental_listings")
+      .update({ status })
+      .eq("id", id);
+    if (error) throw error;
+  } catch (err) {
+    logError("listing-mutations.updateListingStatus", err);
+    throw err;
+  }
+}
+
+/**
+ * Soft delete listing.
+ */
+export async function deleteListing(id: string): Promise<void> {
+  try {
+    const { error } = await supabase
+      .from("rental_listings")
+      .update({ deleted_at: new Date().toISOString() })
+      .eq("id", id);
+    if (error) throw error;
+  } catch (err) {
+    logError("listing-mutations.deleteListing", err);
+    throw err;
+  }
+}
+
+/**
+ * Boost listing VIP.
+ */
+export async function boostListing(id: string, days = 7): Promise<string> {
+  try {
+    const futureDate = new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString();
+    const { error } = await supabase
+      .from("rental_listings")
+      .update({ boost_expire_at: futureDate })
+      .eq("id", id);
+    if (error) throw error;
+    return futureDate;
+  } catch (err) {
+    logError("listing-mutations.boostListing", err);
     throw err;
   }
 }

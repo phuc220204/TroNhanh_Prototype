@@ -2,7 +2,7 @@ import React from "react";
 import { useNavigate } from "react-router";
 import { Eye, EyeOff, Pencil, ArrowUpCircle, Trash2, MessageSquare, AlertTriangle, FileText, Plus } from "lucide-react";
 import { C, font } from "../../../shared/theme";
-import { getListingImage } from "../../services/listing-mappers";
+import { getListingImage, listingImageUrls } from "../../services/listing-mappers";
 import { formatVND } from "../../utils/listingMetadata";
 import { StatusChip, IconAction, ListingActionGroup } from "./ListingRowActions";
 
@@ -19,6 +19,8 @@ export type DbListing = {
   updated_at: string;
   created_at: string;
   boost_expire_at: string | null;
+  /** Ảnh thật của tin; searchListings select kèm. Vắng mặt ở tin cũ → fallback. */
+  listing_media?: { storage_path: string; sort_order: number }[];
   property_type?: string;
   address?: string;
   description?: string;
@@ -97,7 +99,8 @@ export function MyListingsTable({
     return (
       <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
         {paginatedRows.map(l => {
-          const imageSrc = getListingImage(l.id);
+          // l.img đã do toListingCard() derive từ listing_media (fallback Unsplash bên trong).
+          const imageSrc = listingImageUrls(l)[0] || getListingImage(l.id);
           const isVIP = !!(l.boost_expire_at && new Date(l.boost_expire_at) > new Date());
           const isBlocked = mutatingId === l.id;
           
@@ -161,7 +164,8 @@ export function MyListingsTable({
           </thead>
           <tbody>
             {paginatedRows.map((l, idx) => {
-              const imageSrc = getListingImage(l.id);
+              // l.img đã do toListingCard() derive từ listing_media (fallback Unsplash bên trong).
+          const imageSrc = listingImageUrls(l)[0] || getListingImage(l.id);
               const isVIP = !!(l.boost_expire_at && new Date(l.boost_expire_at) > new Date());
               const isBlocked = mutatingId === l.id;
 
