@@ -15,6 +15,8 @@ import { PublicNavbarDesktop, PublicNavbarMobile, DemoFAB } from "../../shared/c
 import { DemoBanner } from "../../shared/components/common/DemoBanner";
 import { AppSelect } from "../../shared/components/common/AppSelect";
 import { ModalShell } from "../../shared/components/common/ModalShell";
+import { EmptyState, Skeleton, Button } from "../../shared/components/common";
+import { logError } from "../../shared/services/supabase-error";
 import { supabase } from "../../shared/supabaseClient";
 import { getListingImage } from "./AllListingsPage";
 import { PROPERTY_TYPES, PRICE_RANGES, TAGLINE } from "../../shared/constants/catalog";
@@ -23,87 +25,7 @@ import { PROPERTY_TYPES, PRICE_RANGES, TAGLINE } from "../../shared/constants/ca
 const LOAI_PHONG = [...PROPERTY_TYPES];
 const GIA_THUE = [...PRICE_RANGES];
 
-/* ══════════════════════════════════════════
-   MOCK DATA
-   ══════════════════════════════════════════ */
-const FEATURED_ROOMS = [
-  {
-    id: 1, title: "Căn Hộ Mini Full Nội Thất Thủ Đức",
-    price: "4.800.000", area: 28, loc: "Thủ Đức",
-    amenities: ["furniture", "ac", "wifi"], badge: "Nổi bật",
-    img: "https://images.unsplash.com/photo-1493809842364-78817add7ffb?w=600&q=80",
-  },
-  {
-    id: 2, title: "Studio Full Nội Thất gần ĐH RMIT",
-    price: "5.500.000", area: 30, loc: "Quận 7",
-    amenities: ["furniture", "ac", "wifi"], badge: "Nổi bật",
-    img: "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=600&q=80",
-  },
-  {
-    id: 3, title: "Duplex Ban Công View Đẹp, Full Nội Thất",
-    price: "7.200.000", area: 45, loc: "Bình Thạnh",
-    amenities: ["washer", "balcony", "wifi"], badge: "Nổi bật",
-    img: "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=600&q=80",
-  },
-  {
-    id: 4, title: "Phòng Master Rộng, Có Ban Công Riêng",
-    price: "8.000.000", area: 38, loc: "Gò Vấp",
-    amenities: ["ac", "balcony", "wifi"], badge: "Nổi bật",
-    img: "https://images.unsplash.com/photo-1512918728675-ed5a9ecdebfd?w=600&q=80",
-  },
-];
 
-const ROOM_WANTED_POSTS = [
-  {
-    id: 1, initials: "MA", name: "Nguyễn Minh Anh",
-    title: "Tìm phòng gần ĐH Hutech, Bình Thạnh",
-    locations: "Bình Thạnh, Gò Vấp", budget: "2.5 – 3.5 triệu/tháng",
-    roomType: "Phòng trọ / Căn hộ mini", moveIn: "Dọn vào trong tháng này",
-    amenities: ["Wifi", "WC riêng", "Giờ giấc tự do"],
-  },
-  {
-    id: 2, initials: "QB", name: "Trần Quốc Bảo",
-    title: "Cần căn hộ mini khu Quận 7",
-    locations: "Quận 7, Nhà Bè", budget: "4 – 6 triệu/tháng",
-    roomType: "Căn hộ mini", moveIn: "Dọn vào đầu tháng tới",
-    amenities: ["Máy lạnh", "Có bếp", "Chỗ để xe"],
-  },
-  {
-    id: 3, initials: "TN", name: "Lê Thảo Nhi",
-    title: "Tìm phòng có WC riêng gần Tân Bình",
-    locations: "Tân Bình, Quận 10", budget: "Dưới 3 triệu/tháng",
-    roomType: "Phòng trọ", moveIn: "Có thể dọn vào ngay",
-    amenities: ["WC riêng", "An ninh", "Không chung chủ"],
-  },
-  {
-    id: 4, initials: "GH", name: "Phạm Gia Huy",
-    title: "Tìm phòng ở Gò Vấp, cho người đi làm",
-    locations: "Gò Vấp", budget: "3 – 4 triệu/tháng",
-    roomType: "Phòng trọ / Studio", moveIn: "Trong 2 tuần tới",
-    amenities: ["Giờ tự do", "Wifi", "Yên tĩnh"],
-  },
-];
-
-const ROOMMATE_WANTED_POSTS = [
-  {
-    id: 1, initials: "TH", name: "Trần Thu Hà",
-    title: "Cần 1 bạn nữ ở ghép tại Quận 10",
-    location: "Quận 10, TP.HCM", price: "1.8 – 2.5 triệu/người",
-    needed: "Cần 1 người", requirements: ["Nữ", "Sinh viên", "Gọn gàng"],
-  },
-  {
-    id: 2, initials: "DA", name: "Hoàng Đức Anh",
-    title: "Tìm 1 bạn nam ở ghép gần ĐH Văn Lang",
-    location: "Bình Thạnh, TP.HCM", price: "2.2 – 3.0 triệu/người",
-    needed: "Cần 1 người", requirements: ["Nam", "Không hút thuốc", "Giờ tự do"],
-  },
-  {
-    id: 3, initials: "HN", name: "Lê Hoài Nam",
-    title: "Cần người ở ghép căn hộ mini Bình Thạnh",
-    location: "Bình Thạnh, TP.HCM", price: "2.5 – 3.5 triệu/người",
-    needed: "Cần 2 người", requirements: ["Người đi làm", "Sạch sẽ", "Ở lâu dài"],
-  },
-];
 
 const AMENITY_META: Record<string, { Icon: React.ElementType; label: string }> = {
   wifi:      { Icon: Wifi,          label: "WiFi" },
@@ -181,7 +103,7 @@ function Btn({
 }
 
 function RoomCard({ room, mobile, onClick }: {
-  room: typeof FEATURED_ROOMS[0]; mobile?: boolean; onClick?: () => void;
+  room: { id: any; title: string; price: string; area: number | string; loc: string; amenities: string[]; badge?: string | null; img: string }; mobile?: boolean; onClick?: () => void;
 }) {
   const [saved, setSaved] = useState(false);
   const [hov, setHov] = useState(false);
@@ -433,22 +355,29 @@ function MarketplaceSections({
         </div>
 
         {/* Grid */}
-        <div style={{ display: "grid", gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))`, gap: mobile ? 14 : 16 }}>
-          {list.map(post => (
-            <DemandPostCard
-              key={post.id}
-              post={post}
-              kind={activeTab}
-              onMessage={() => onInfo({ title: `[Nhắn tin — UI only, V1]`, description: `Bạn đang kết nối với ${post.name}. Tính năng nhắn tin thời gian thực giữa chủ trọ và khách thuê đang được tích hợp.` })}
-              onView={() => onInfo({
-                title: post.title,
-                description: activeTab === "RoomWanted"
-                  ? `${post.name} đang tìm ${post.roomType.toLowerCase()} tại ${post.locations}, ngân sách ${post.budget}.`
-                  : `${post.name} tìm bạn ở ghép tại ${post.location}, giá ${post.price}. Yêu cầu: ${post.requirements.join(", ")}.`
-              })}
-            />
-          ))}
-        </div>
+        {list.length === 0 ? (
+          <EmptyState
+            title={activeTab === "RoomWanted" ? "Chưa có nhu cầu tìm phòng nào" : "Chưa có nhu cầu tìm bạn ở ghép nào"}
+            description="Hiện chưa có tin đăng nhu cầu nào thuộc danh mục này."
+          />
+        ) : (
+          <div style={{ display: "grid", gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))`, gap: mobile ? 14 : 16 }}>
+            {list.map(post => (
+              <DemandPostCard
+                key={post.id}
+                post={post}
+                kind={activeTab}
+                onMessage={() => onInfo({ title: `[Nhắn tin — UI only, V1]`, description: `Bạn đang kết nối với ${post.name}. Tính năng nhắn tin thời gian thực giữa chủ trọ và khách thuê đang được tích hợp.` })}
+                onView={() => onInfo({
+                  title: post.title,
+                  description: activeTab === "RoomWanted"
+                    ? `${post.name} đang tìm ${post.roomType.toLowerCase()} tại ${post.locations}, ngân sách ${post.budget}.`
+                    : `${post.name} tìm bạn ở ghép tại ${post.location}, giá ${post.price}. Yêu cầu: ${post.requirements.join(", ")}.`
+                })}
+              />
+            ))}
+          </div>
+        )}
       </div>
     </section>
   );
@@ -905,9 +834,16 @@ function FeaturedRoomsSection({
       <QuickFilterChips onSearch={onSearch} mobile={isMobile} />
 
       {/* Cards grid */}
-      <div style={{ display: "grid", gridTemplateColumns: `repeat(${cols}, 1fr)`, gap: 20 }}>
-        {rooms.map(r => <RoomCard key={r.id} room={r} onClick={() => onRoomClick?.(r.id)} />)}
-      </div>
+      {rooms.length === 0 ? (
+        <EmptyState
+          title="Chưa có tin đăng phòng trọ nào"
+          description="Hiện chưa có tin đăng phòng trọ công khai nào trên hệ thống."
+        />
+      ) : (
+        <div style={{ display: "grid", gridTemplateColumns: `repeat(${cols}, 1fr)`, gap: 20 }}>
+          {rooms.map(r => <RoomCard key={r.id} room={r} onClick={() => onRoomClick?.(r.id)} />)}
+        </div>
+      )}
     </section>
   );
 }
@@ -1214,15 +1150,15 @@ export function HomePage() {
           setDbRoommateWants(roommateWants);
         }
       } catch (err) {
-        console.error("Error loading home page database data:", err);
+        logError("HomePage.loadHomeData", err);
       }
     };
     loadHomeData();
   }, []);
 
-  const rooms = dbRooms.length > 0 ? dbRooms : FEATURED_ROOMS;
-  const roomWants = dbRoomWants.length > 0 ? dbRoomWants : ROOM_WANTED_POSTS;
-  const roommateWants = dbRoommateWants.length > 0 ? dbRoommateWants : ROOMMATE_WANTED_POSTS;
+  const rooms = dbRooms;
+  const roomWants = dbRoomWants;
+  const roommateWants = dbRoommateWants;
 
   const selectRenterPostType = (type: string) => {
     setPostTypeModal(false);
@@ -1253,9 +1189,17 @@ export function HomePage() {
               </button>
             </div>
             <QuickFilterChips onSearch={onSearch} mobile />
-            <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-              {rooms.map(r => <RoomCard key={r.id} room={r} mobile onClick={() => onRoomClick(r.id)} />)}
-            </div>
+            {rooms.length === 0 ? (
+              <EmptyState
+                title="Chưa có tin đăng phòng trọ nào"
+                description="Hiện chưa có tin đăng phòng trọ công khai nào trên hệ thống."
+                action={<Button variant="primary" onClick={onLandlordPost}>Đăng tin ngay</Button>}
+              />
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+                {rooms.map(r => <RoomCard key={r.id} room={r} mobile onClick={() => onRoomClick(r.id)} />)}
+              </div>
+            )}
           </div>
 
           <MarketplaceSections roomWants={roomWants} roommateWants={roommateWants} mobile onInfo={setInfoModal} />

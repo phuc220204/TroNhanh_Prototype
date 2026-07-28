@@ -5,6 +5,8 @@ import { useAuth } from "../../contexts/AuthContext";
 import { supabase } from "../../supabaseClient";
 import { seedMockDataForUser } from "../../utils/dbSeeder";
 
+import { logError } from "../../services/supabase-error";
+
 /* ══════════════════════════════════════════
    DEMO / PROTOTYPE NOTICE BAR — Trọ Nhanh
    Thanh thông báo "bản demo" dùng chung cho mọi
@@ -37,7 +39,7 @@ export function DemoBanner({ mobile }: { mobile?: boolean }) {
           setHasProperties(data && data.length > 0);
         }
       } catch (e) {
-        console.error("Error checking properties count in DemoBanner:", e);
+        logError("DemoBanner.checkProperties", e);
       }
     };
     checkProperties();
@@ -55,7 +57,7 @@ export function DemoBanner({ mobile }: { mobile?: boolean }) {
       alert("Khởi tạo dữ liệu mẫu thành công! Trình duyệt sẽ tải lại trang.");
       window.location.reload();
     } catch (err: any) {
-      console.error(err);
+      logError("DemoBanner.handleSeedClick", err);
       alert("Lỗi khi khởi tạo dữ liệu mẫu: " + err.message);
     } finally {
       setSeeding(false);

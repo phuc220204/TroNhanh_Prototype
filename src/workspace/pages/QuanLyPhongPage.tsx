@@ -14,7 +14,8 @@ import type { RoomStatus } from "../../shared/types/status";
 import { parseFloorNumber, toSubscriptionStatus } from "../../shared/types/status";
 import { ROOM_STATUS_META } from "../../shared/utils/statusMaps";
 import { RoomDetailTabs } from "../components/RoomDetailTabs";
-import { INIT_PROPERTIES, type Room, type Property } from "../../shared/data/mockProperties";
+import type { Room, Property } from "../types/room";
+import { logError } from "../../shared/services/supabase-error";
 import { ModalShell } from "../../shared/components/common/ModalShell";
 import { Field, SelectField } from "../../shared/components/common/FormField";
 import { useAuth } from "../../shared/contexts/AuthContext";
@@ -235,7 +236,7 @@ function AddPropertyModal({ onClose, onSave, isReadOnly }: { onClose: () => void
       onSave();
       onClose();
     } catch (err: any) {
-      console.error(err);
+      logError("QuanLyPhongPage.AddPropertyModal", err);
       alert("Lỗi khi thêm khu trọ: " + err.message);
     } finally {
       setSaving(false);
@@ -356,7 +357,7 @@ function AddRoomModal({ roomToEdit, onClose, properties, currentId, onSave, isRe
       onSave();
       onClose();
     } catch (err: any) {
-      console.error(err);
+      logError("QuanLyPhongPage.AddRoomModal", err);
       alert("Lỗi khi lưu phòng: " + err.message);
     } finally {
       setSaving(false);
@@ -430,7 +431,7 @@ function UtilityMeterModal({ room, property, onClose, isReadOnly }: { room: Room
         if (elec && elec.length > 0) setPreviousElec(Number(elec[0].current_reading));
         if (wat && wat.length > 0) setPreviousWater(Number(wat[0].current_reading));
       } catch (e) {
-        console.error(e);
+        logError("QuanLyPhongPage.UtilityModal.loadPrevious", e);
       }
     };
     loadPrevious();
@@ -493,7 +494,7 @@ function UtilityMeterModal({ room, property, onClose, isReadOnly }: { room: Room
       alert(`Đã ghi nhận chỉ số thành công cho phòng ${room.code}!`);
       onClose();
     } catch (err: any) {
-      console.error(err);
+      logError("QuanLyPhongPage.UtilityModal.handleSave", err);
       alert("Lỗi khi ghi nhận điện nước: " + err.message);
     } finally {
       setSaving(false);
@@ -586,7 +587,7 @@ function RoomInvoiceModal({ room, property, onClose, isReadOnly, onSave }: { roo
           ]);
         }
       } catch (e) {
-        console.error(e);
+        logError("QuanLyPhongPage.InvoiceModal.loadReadings", e);
       } finally {
         setLoading(false);
       }
@@ -657,7 +658,7 @@ function RoomInvoiceModal({ room, property, onClose, isReadOnly, onSave }: { roo
       onSave();
       onClose();
     } catch (err: any) {
-      console.error(err);
+      logError("QuanLyPhongPage.PaymentModal.handleRecordPayment", err);
       alert("Lỗi khi ghi nhận thanh toán: " + err.message);
     } finally {
       setConfirming(false);
@@ -1272,7 +1273,7 @@ function SettingsView({ property, isReadOnly, onSave }: { property: any; isReadO
       alert("Đã cập nhật cấu hình dịch vụ và tài khoản nhận tiền thành công!");
       onSave();
     } catch (err: any) {
-      console.error(err);
+      logError("QuanLyPhongPage.ContractModal", err);
       alert("Lỗi khi lưu cấu hình: " + err.message);
     } finally {
       setSaving(false);
@@ -1396,7 +1397,7 @@ function PaymentsView({ property, isReadOnly, user, loadDbData, mobile }: { prop
       if (error) throw error;
       setInvoices(data || []);
     } catch (e) {
-      console.error(e);
+      logError("QuanLyPhongPage.OccupantModal", e);
       setInvoices([]);
     } finally {
       setLoading(false);
@@ -1427,7 +1428,7 @@ function PaymentsView({ property, isReadOnly, user, loadDbData, mobile }: { prop
         .eq("invoice_id", inv.id);
       setInvoiceItems(data || []);
     } catch (e) {
-      console.error(e);
+      logError("QuanLyPhongPage.OccupantModal", e);
       setInvoiceItems([
         { type: "Rent", description: "Tiền thuê phòng", amount: inv.total_amount - 500000 },
         { type: "Electricity", description: "Tiền điện", amount: 350000 },
@@ -1472,7 +1473,7 @@ function PaymentsView({ property, isReadOnly, user, loadDbData, mobile }: { prop
       loadInvoices();
       loadDbData();
     } catch (err: any) {
-      console.error(err);
+      logError("QuanLyPhongPage.OccupantModal", err);
       alert("Lỗi khi ghi nhận: " + err.message);
     }
   };
@@ -1607,7 +1608,7 @@ function PaymentsView({ property, isReadOnly, user, loadDbData, mobile }: { prop
       loadInvoices();
       loadDbData();
     } catch (err: any) {
-      console.error(err);
+      logError("QuanLyPhongPage.InvoiceModal.handleCreateInvoice", err);
       alert("Lỗi khi tạo hóa đơn: " + err.message);
     }
   };
@@ -1816,7 +1817,7 @@ export function QuanLyPhongPage() {
           setSubStatus("NONE");
         }
       } catch (err) {
-        console.error("Error fetching sub status in QuanLyPhongPage:", err);
+        logError("QuanLyPhongPage.subStatus", err);
       }
     };
     fetchSub();
@@ -1914,11 +1915,11 @@ export function QuanLyPhongPage() {
           setSelectedId(mapped[0].id);
         }
       } else {
-        setProperties(INIT_PROPERTIES);
-        setSelectedId(INIT_PROPERTIES[0].id);
+        setProperties([]);
+        setSelectedId("");
       }
     } catch (err) {
-      console.error("Error loading properties/rooms:", err);
+      logError("QuanLyPhongPage.loadDbData", err);
     } finally {
       setLoading(false);
     }
@@ -1963,7 +1964,7 @@ export function QuanLyPhongPage() {
         .eq("id", roomId);
       if (error) throw error;
     } catch (err: any) {
-      console.error("Error updating room in DB:", err);
+      logError("QuanLyPhongPage.updateRoom", err);
     }
   };
 

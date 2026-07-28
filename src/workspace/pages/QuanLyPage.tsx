@@ -14,6 +14,7 @@ import { supabase } from "../../shared/supabaseClient";
 import { DemoFAB } from "../../shared/components/PublicNavbar";
 import { getListingImage } from "../../marketplace/pages/AllListingsPage";
 import { formatVND } from "../../marketplace/utils/listingMetadata";
+import { logError } from "../../shared/services/supabase-error";
 
 /* ══════════════════════════════════════════
    TYPES & CONTANTS
@@ -302,7 +303,7 @@ export function QuanLyPage() {
         setDbListings(data.map(l => ({ ...l, views: l.view_count ?? 0 })));
       }
     } catch (err: any) {
-      console.error("Error loading owner listings:", err);
+      logError("QuanLyPage.fetchListings", err);
       setIsError(true);
       setErrorMessage(err.message || "Không thể kết nối đến cơ sở dữ liệu.");
     } finally {
@@ -327,7 +328,7 @@ export function QuanLyPage() {
       setDbListings(prev => prev.map(l => l.id === id ? { ...l, status: nextStatus } : l));
       showToast(nextStatus === "Active" ? "Đã hiển thị tin đăng thành công" : "Đã ẩn tin đăng thành công");
     } catch (err: any) {
-      console.error(err);
+      logError("QuanLyPage.handleToggleStatus", err);
       showToast("Có lỗi xảy ra: " + err.message);
     } finally {
       setMutatingId(null);
@@ -346,7 +347,7 @@ export function QuanLyPage() {
       setDbListings(prev => prev.filter(l => l.id !== id));
       showToast("Đã xóa tin đăng thành công");
     } catch (err: any) {
-      console.error(err);
+      logError("QuanLyPage.handleDeleteListing", err);
       showToast("Có lỗi xảy ra: " + err.message);
     } finally {
       setMutatingId(null);
@@ -367,7 +368,7 @@ export function QuanLyPage() {
       setBoostTarget(null);
       showToast("Đã đẩy tin VIP nổi bật thành công!");
     } catch (err: any) {
-      console.error("Error boosting listing:", err);
+      logError("QuanLyPage.handleConfirmBoost", err);
       showToast("Có lỗi xảy ra: " + err.message);
     }
   };

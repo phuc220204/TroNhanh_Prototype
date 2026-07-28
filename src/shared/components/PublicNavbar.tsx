@@ -13,6 +13,8 @@ import { useAuth } from "../contexts/AuthContext";
 import { supabase } from "../supabaseClient";
 import { seedMockDataForUser } from "../utils/dbSeeder";
 
+import { logError } from "../services/supabase-error";
+
 /* ══════════════════════════════════════════
    ĐĂNG TIN DROPDOWN
 ══════════════════════════════════════════ */
@@ -436,7 +438,7 @@ export function DemoFAB() {
       alert("Đã khởi tạo dữ liệu Marketplace & 3 Khu trọ SaaS cùng danh sách phòng, người ở, hợp đồng mẫu thành công! Trình duyệt sẽ tự động tải lại.");
       window.location.reload();
     } catch (err: any) {
-      console.error(err);
+      logError("PublicNavbar.handleSeed", err);
       alert("Lỗi khi seed dữ liệu: " + err.message);
     }
   };

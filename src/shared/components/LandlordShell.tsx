@@ -11,6 +11,7 @@ import { BrandLogo } from "./brand/BrandLogo";
 import { useAuth } from "../contexts/AuthContext";
 import { supabase } from "../supabaseClient";
 import { toSubscriptionStatus } from "../types/status";
+import { logError } from "../services/supabase-error";
 
 export type LandlordNavId = "overview" | "rooms" | "listings" | "occupants" | "payments" | "settings";
 
@@ -375,7 +376,7 @@ export function LandlordShell({ active, mobileTitle, children }: { active: Landl
         updateSubStatus("NONE");
       }
     } catch (err) {
-      console.error("Error fetching sub:", err);
+      logError("LandlordShell.fetchSub", err);
     } finally {
       setLoadingSub(false);
     }
@@ -436,7 +437,7 @@ export function LandlordShell({ active, mobileTitle, children }: { active: Landl
         setTrialDaysLeft(30);
       }
     } catch (err) {
-      console.error(err);
+      logError("LandlordShell.handleToggleSub", err);
       alert("Lỗi khi cập nhật gói dịch vụ");
     } finally {
       setLoadingSub(false);
@@ -488,7 +489,7 @@ export function LandlordShell({ active, mobileTitle, children }: { active: Landl
       const tab = params.get("tab");
       if (tab) return tab as LandlordNavId;
     } catch (e) {
-      console.error(e);
+      logError("LandlordShell.activeTab", e);
     }
     return active;
   }, [location.search, active]);

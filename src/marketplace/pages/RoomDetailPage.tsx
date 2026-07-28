@@ -19,6 +19,7 @@ import { useAuth } from "../../shared/contexts/AuthContext";
 import { supabase } from "../../shared/supabaseClient";
 import { getListingImage } from "./AllListingsPage";
 import { parseMetadataFromDescription, ListingMetadata } from "../utils/listingMetadata";
+import { logError } from "../../shared/services/supabase-error";
 
 /* ══════════════════════════════════════════
    CURFEW HELPER FUNCTIONS
@@ -1065,7 +1066,7 @@ export function RoomDetailPage() {
         if (error) throw error;
         setListing(data);
       } catch (err) {
-        console.error("Error loading room details:", err);
+        logError("RoomDetailPage.fetchListing", err);
       } finally {
         setIsLoading(false);
       }

@@ -9,9 +9,10 @@ import { C, font } from "../../shared/theme";
 import { useBreakpoint } from "../../shared/components/useBreakpoint";
 import { LandlordShell, useLandlordShell } from "../../shared/components/LandlordShell";
 import type { RoomStatus } from "../../shared/types/status";
-import { PROPERTIES, ATTENTION, KPIS, STATUS_DIST, PREVIEW_ROOMS, RECENT_LISTINGS } from "../../shared/data/mockLandlord";
 import { ModalShell } from "../../shared/components/common/ModalShell";
 import { Field, SelectField } from "../../shared/components/common/FormField";
+import { EmptyState, Skeleton, Button } from "../../shared/components/common";
+import { logError } from "../../shared/services/supabase-error";
 import { useAuth } from "../../shared/contexts/AuthContext";
 import { supabase } from "../../shared/supabaseClient";
 
@@ -175,7 +176,7 @@ function UtilityModal({ onClose, properties, isReadOnly, onSave }: { onClose: ()
           setRoomId("");
         }
       } catch (e) {
-        console.error(e);
+        logError("ChuTroDashboardPage.UtilityModal.fetchRooms", e);
       }
     };
     fetchRooms();
@@ -208,7 +209,7 @@ function UtilityModal({ onClose, properties, isReadOnly, onSave }: { onClose: ()
         setPreviousElec(elec && elec.length > 0 ? Number(elec[0].current_reading) : 0);
         setPreviousWater(wat && wat.length > 0 ? Number(wat[0].current_reading) : 0);
       } catch (e) {
-        console.error(e);
+        logError("ChuTroDashboardPage.UtilityModal.fetchPrevious", e);
       }
     };
     fetchPrevious();
@@ -276,7 +277,7 @@ function UtilityModal({ onClose, properties, isReadOnly, onSave }: { onClose: ()
       onSave();
       onClose();
     } catch (err: any) {
-      console.error(err);
+      logError("ChuTroDashboardPage.UtilityModal.handleSave", err);
       alert("Lỗi khi ghi nhận: " + err.message);
     } finally {
       setSaving(false);
@@ -388,7 +389,7 @@ function AddRoomModal({ onClose, properties, isReadOnly, onSave }: { onClose: ()
       onSave();
       onClose();
     } catch (e: any) {
-      console.error(e);
+      logError("ChuTroDashboardPage.AddRoomModal.handleSave", e);
       alert("Lỗi khi thêm phòng: " + e.message);
     } finally {
       setSaving(false);
@@ -435,10 +436,12 @@ function AddRoomModal({ onClose, properties, isReadOnly, onSave }: { onClose: ()
 /* ══════════════════════════════════════════
    REUSABLE SECTIONS
    ══════════════════════════════════════════ */
-function SegmentedBar({ rooms, mockData, property }: { rooms: any[]; mockData: typeof STATUS_DIST; property: string }) {
-  const activeRooms = rooms.length > 0 
-    ? (property === "Tất cả khu trọ" ? rooms : rooms.filter(r => r.properties?.name === property))
-    : (property === "Tất cả khu trọ" ? PREVIEW_ROOMS : PREVIEW_ROOMS.filter(r => r.property === property));
+function SegmentedBar({ rooms, property }: { rooms: any[]; property: string }) {
+  // Không có nhánh fallback: DB rỗng thì `rooms` rỗng và biểu đồ hiển thị 0 —
+  // đúng sự thật. Trước T09 chỗ này rơi về PREVIEW_ROOMS (dữ liệu giả).
+  const activeRooms = property === "Tất cả khu trọ"
+    ? rooms
+    : rooms.filter(r => r.properties?.name === property);
 
   const total = activeRooms.length;
   
@@ -634,7 +637,7 @@ export function ChuTroDashboardPage() {
       
       setRealListings(listings || []);
     } catch (err) {
-      console.error("Error loading dashboard data:", err);
+      logError("ChuTroDashboardPage.loadDashboardData", err);
     } finally {
       setLoading(false);
     }
@@ -645,7 +648,7 @@ export function ChuTroDashboardPage() {
   }, [user]);
 
   const displayProperties = useMemo(() => {
-    return ["Tất cả khu trọ", ...(properties.length > 0 ? properties.map(p => p.name) : PROPERTIES.filter(p => p !== "Tất cả khu trọ"))];
+    return ["Tất cả khu trọ", ...properties.map(p => p.name)];
   }, [properties]);
 
   // Filter rooms based on the selected property name
@@ -657,10 +660,8 @@ export function ChuTroDashboardPage() {
   }, [rooms, property]);
 
   const activeRoomsList = useMemo(() => {
-    return rooms.length > 0 
-      ? filteredRooms 
-      : (property === "Tất cả khu trọ" ? PREVIEW_ROOMS : PREVIEW_ROOMS.filter(r => r.property === property));
-  }, [rooms, filteredRooms, property]);
+    return filteredRooms;
+  }, [filteredRooms]);
 
   // Convert rooms data
   const displayRooms = useMemo(() => {
@@ -668,8 +669,6 @@ export function ChuTroDashboardPage() {
       code: r.room_code || r.code || "",
       property: r.properties?.name || r.property || "Khu trọ",
       status: (r.status === "Available" ? "available" : r.status === "Deposited" ? "deposited" : r.status === "Rented" ? "rented" : r.status === "Hidden" ? "hidden" : r.status === "available" ? "available" : r.status === "deposited" ? "deposited" : r.status === "rented" ? "rented" : "available") as RoomStatus,
-      // Thuật ngữ: Occupancy/Occupant. Từ "tenant" bị cấm (CLAUDE.md §1) và
-      // cột tenant_name không tồn tại — occupancies dùng full_name.
       occupant: r.occupant_name || (r.occupant ? r.occupant.name : null),
       paid: r.payment_status === "Paid" ? true : r.payment_status === "Unpaid" ? false : (r.bill ? r.bill.paid : null),
       task: r.status === "Available" || r.status === "available" 
@@ -684,19 +683,12 @@ export function ChuTroDashboardPage() {
 
   // Convert listings
   const displayListings = useMemo(() => {
-    return realListings.length > 0 
-      ? realListings.map(l => ({
-          title: l.title,
-          sub: `${l.property_type} · ${l.district} · ${Number(l.price || 0).toLocaleString("vi-VN")}đ`,
-          status: (l.status === "Active" ? "active" : l.status === "Inactive" ? "hidden" : l.status) as any,
-          canDelete: true
-        }))
-      : RECENT_LISTINGS.map(l => ({
-          title: l.title,
-          sub: l.sub,
-          status: l.status,
-          canDelete: l.canDelete
-        }));
+    return realListings.map(l => ({
+      title: l.title,
+      sub: `${l.property_type || "Tin cho thuê"} · ${l.district || ""} · ${Number(l.price || 0).toLocaleString("vi-VN")}đ`,
+      status: (l.status === "Active" ? "active" : l.status === "Inactive" ? "hidden" : l.status) as any,
+      canDelete: true
+    }));
   }, [realListings]);
 
   // Dynamic KPIs calculations
@@ -765,6 +757,25 @@ export function ChuTroDashboardPage() {
       {modal === "room" && <AddRoomModal onClose={() => setModal(null)} properties={properties} isReadOnly={isReadOnly} onSave={loadDashboardData} />}
     </>
   );
+
+  if (!loading && properties.length === 0) {
+    return (
+      <LandlordShell active="overview" mobileTitle="Dashboard">
+        <div style={{ maxWidth: 600, margin: "60px auto", width: "100%", padding: "0 24px" }}>
+          <EmptyState
+            icon={<Building2 size={36} color={C.primary} />}
+            title="Bạn chưa có khu trọ nào"
+            description="Tạo khu trọ đầu tiên để bắt đầu quản lý danh sách phòng, người ở và hóa đơn."
+            action={
+              <Button variant="primary" onClick={() => navigate("/chu-tro/quan-ly-phong")}>
+                Tạo khu trọ đầu tiên
+              </Button>
+            }
+          />
+        </div>
+      </LandlordShell>
+    );
+  }
 
   /* ═══════════ MOBILE ═══════════ */
   if (isMobile) {
@@ -1011,7 +1022,7 @@ export function ChuTroDashboardPage() {
               <button onClick={toRooms} style={{ fontFamily: font, fontSize: 13, fontWeight: 700, color: C.primary, background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: 4 }}>Xem tất cả phòng <ChevronRight size={15} /></button>
             </div>
             
-            <SegmentedBar rooms={rooms} mockData={STATUS_DIST} property={property} />
+            <SegmentedBar rooms={rooms} property={property} />
             
             <div style={{ overflowX: "auto", marginTop: 12 }}>
               <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 720 }}>

@@ -11,6 +11,7 @@ import { useBreakpoint } from "../../shared/components/useBreakpoint";
 import { PublicNavbarDesktop, PublicNavbarMobile, DemoFAB } from "../../shared/components/PublicNavbar";
 import { DemoBanner } from "../../shared/components/common/DemoBanner";
 import { supabase } from "../../shared/supabaseClient";
+import { logError } from "../../shared/services/supabase-error";
 import { PROPERTY_TYPES, PRICE_RANGES, AMENITIES as CATALOG_AMENITIES, REGIONS, AREA_RANGES } from "../../shared/constants/catalog";
 
 /* ══════════════════════════════════════════
@@ -796,7 +797,7 @@ export function AllListingsPage() {
           setDbRooms(mapped);
         }
       } catch (err) {
-        console.error("Error loading listings:", err);
+        logError("AllListingsPage.fetchRooms", err);
       } finally {
         setIsLoading(false);
       }

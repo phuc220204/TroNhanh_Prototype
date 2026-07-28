@@ -18,6 +18,7 @@ import { useAuth } from "../../shared/contexts/AuthContext";
 import { supabase } from "../../shared/supabaseClient";
 import { PROPERTY_TYPES, REGIONS } from "../../shared/constants/catalog";
 import { formatVND, cleanVND, appendMetadataToDescription, ListingMetadata } from "../utils/listingMetadata";
+import { logError } from "../../shared/services/supabase-error";
 
 /* ══════════════════════════════════════════
    CONSTANTS & DATA SUGGESTIONS
@@ -741,7 +742,7 @@ export function DangTinPage() {
           const { error: amError } = await supabase
             .from("listing_amenities")
             .insert(ams);
-          if (amError) console.error("Error inserting amenities:", amError);
+          if (amError) logError("DangTinPage.insertAmenities", amError);
         }
 
         // 3. Update profile is_seller = true
@@ -751,12 +752,12 @@ export function DangTinPage() {
           // profiles.id là uuid độc lập; auth id nằm ở profiles.user_id
           .eq("user_id", user.id);
         
-        if (profileError) console.error("Error updating profile seller status:", profileError);
+        if (profileError) logError("DangTinPage.updateProfileSeller", profileError);
 
         setSuccess(true);
       }
     } catch (err) {
-      console.error("Error posting listing:", err);
+      logError("DangTinPage.handleSubmit", err);
       showToast("Đã xảy ra lỗi khi lưu thông tin.");
     } finally {
       setIsSubmitting(false);

@@ -12,6 +12,7 @@ import { DemoBanner } from "../../shared/components/common/DemoBanner";
 import { supabase } from "../../shared/supabaseClient";
 import { PROPERTY_TYPES, PRICE_RANGES, AMENITIES as CATALOG_AMENITIES, REGIONS, AREA_RANGES } from "../../shared/constants/catalog";
 import { getListingImage, mapAmenityToKey, mapTypeToKey } from "./AllListingsPage";
+import { logError } from "../../shared/services/supabase-error";
 
 /* ══════════════════════════════════════════
    TYPES & CONSTANTS
@@ -704,7 +705,7 @@ export function SearchResultsPage() {
           setDbRooms(mapped);
         }
       } catch (err) {
-        console.error("Error loading listings:", err);
+        logError("SearchResultsPage.fetchRooms", err);
       } finally {
         setIsLoading(false);
       }
