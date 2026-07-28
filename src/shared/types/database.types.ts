@@ -1174,6 +1174,26 @@ export type Database = {
         Args: { p_property_id?: string }
         Returns: string
       }
+      get_my_conversations: {
+        Args: never
+        Returns: {
+          created_at: string
+          id: string
+          initiator_id: string
+          initiator_unread: number
+          last_message_at: string
+          last_message_preview: string
+          partner_id: string
+          partner_name: string
+          poster_id: string
+          poster_unread: number
+          ref_id: string
+          ref_title: string
+          ref_type: string
+          status: string
+          updated_at: string
+        }[]
+      }
       grant_role: {
         Args: { p_role: string; p_user_id: string }
         Returns: undefined

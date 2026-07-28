@@ -77,8 +77,7 @@ export async function listMyConversations(): Promise<ConversationSummary[]> {
     const user = userData.user;
     if (!user) return [];
 
-    // TODO: bỏ `as any` sau khi chạy `supabase db push` + `pnpm db:types`.
-    const { data, error } = await (supabase.rpc as any)("get_my_conversations");
+    const { data, error } = await supabase.rpc("get_my_conversations");
 
     if (error) throw error;
     if (!data || data.length === 0) return [];
