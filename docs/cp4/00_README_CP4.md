@@ -31,7 +31,8 @@ docs/
     03_RPC_CONTRACTS.md       14 RPC: signature + assert quyền bên trong
     04_FRONTEND_ARCH.md       service layer, React Query, ~20 route mới, guard, styling
     05_BUILD_PLAN_CP4.md      LÀM THEO THỨ TỰ NÀO: 31 task, phụ thuộc, đường tới hạn
-    06_QA_CHECKLIST.md        KIỂM THẾ NÀO: 4 account demo, click-path 5 luồng, RLS test
+    DEMO_ACCOUNTS.md          ĐĂNG NHẬP BẰNG GÌ: 4 account demo + dữ liệu đã seed
+    06_QA_CHECKLIST.md        KIỂM THẾ NÀO: click-path 5 luồng, RLS test
     07_RISKS.md               12 rủi ro + cách xử lý
     tasks/T01..T31_*.md       31 task, mỗi file = 1 phiên agent ≈ 1 PR
 .claude/skills/
