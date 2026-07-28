@@ -3,7 +3,7 @@ import { useNavigate } from "react-router";
 import {
   Search, Heart, MapPin,
   Wifi, Wind, Car, Bath, Clock, Layers,
-  Home, Star, Bell, User, Users, Calendar,
+  Home, Star, Bell, User, Users,
   SlidersHorizontal, ArrowRight,
   Shield, ShieldCheck, UserCheck, CreditCard, MessageSquare, Headphones,
   Mail, TrendingUp, Building2, Banknote, Phone,
@@ -18,7 +18,8 @@ import { ModalShell } from "../../shared/components/common/ModalShell";
 import { EmptyState, Skeleton, Button } from "../../shared/components/common";
 import { logError } from "../../shared/services/supabase-error";
 import { getFeaturedListings, getListingById, incrementViewCount } from "../services/listing-queries";
-import { getActiveDemandPosts } from "../services/demand-queries";
+import { listActiveDemandPosts } from "../services/demand-post-service";
+import { DemandPostCard } from "../components/DemandPostCard";
 import { PROPERTY_TYPES, PRICE_RANGES, TAGLINE } from "../../shared/constants/catalog";
 import { useAuth } from "../../shared/contexts/AuthContext";
 import { startConversation } from "../../shared/services/messaging-service";
@@ -168,121 +169,6 @@ function RoomCard({ room, mobile, onClick }: {
 
 type HomeModalContent = { title: string; description: string } | null;
 
-/* ══════════════════════════════════════════
-   DEMAND POST CARD
-   ══════════════════════════════════════════ */
-function DemandPostCard({
-  post, kind, onMessage, onView,
-}: {
-  post: any; kind: "RoomWanted" | "RoommateWanted";
-  onMessage?: () => void; onView?: () => void;
-}) {
-  const isWanted = kind === "RoomWanted";
-  return (
-    <article
-      style={{
-        background: `linear-gradient(160deg, ${C.white} 0%, #FBF8F1 100%)`,
-        border: `1px solid ${C.border}`, borderRadius: 16, padding: 18,
-        boxShadow: "0 3px 14px rgba(92,70,50,0.05)",
-        display: "flex", flexDirection: "column", minWidth: 0,
-        transition: "transform 0.2s, box-shadow 0.2s",
-      }}
-      onMouseEnter={e => {
-        e.currentTarget.style.transform = "translateY(-2px)";
-        e.currentTarget.style.boxShadow = "0 6px 20px rgba(92,70,50,0.09)";
-      }}
-      onMouseLeave={e => {
-        e.currentTarget.style.transform = "none";
-        e.currentTarget.style.boxShadow = "0 3px 14px rgba(92,70,50,0.05)";
-      }}
-    >
-      {/* User Header */}
-      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
-        <div style={{ width: 38, height: 38, borderRadius: "50%", background: `linear-gradient(135deg, ${C.primary}, ${C.sand})`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-          <span style={{ fontFamily: font, fontSize: 12, fontWeight: 800, color: C.white }}>
-            {post.initials || "ND"}
-          </span>
-        </div>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <p style={{ fontFamily: font, fontSize: 13, fontWeight: 700, color: C.textPrimary, margin: 0, lineHeight: 1.35 }}>
-            {post.name || "Khách thuê"}
-          </p>
-          <p style={{ fontFamily: font, fontSize: 11, color: C.textSecondary, margin: "2px 0 0" }}>
-            Người thuê
-          </p>
-        </div>
-        <span style={{
-          fontFamily: font, fontSize: 10.5, fontWeight: 700,
-          color: isWanted ? C.primaryDark : C.secondary,
-          background: isWanted ? C.caramelSoft : "#F0E7D6",
-          borderRadius: 999, padding: "4px 9px", whiteSpace: "nowrap",
-          border: `1px solid ${isWanted ? "rgba(138,106,69,0.2)" : "rgba(210,199,183,0.3)"}`,
-        }}>
-          {isWanted ? "Tìm phòng" : "Ở ghép"}
-        </span>
-      </div>
-
-      {/* Post Title */}
-      <h3 style={{ fontFamily: font, fontSize: 14.5, fontWeight: 800, color: C.textPrimary, margin: "0 0 12px", lineHeight: 1.45, minHeight: 44 }}>
-        {post.title}
-      </h3>
-
-      {/* Structured Details */}
-      <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 14 }}>
-        <div style={{ display: "flex", alignItems: "flex-start", gap: 7 }}>
-          <MapPin size={13} color={C.secondary} strokeWidth={1.9} style={{ flexShrink: 0, marginTop: 2 }} />
-          <span style={{ fontFamily: font, fontSize: 12, color: C.textSecondary, lineHeight: 1.45 }}>
-            {isWanted ? post.locations : post.location}
-          </span>
-        </div>
-        <div style={{ display: "flex", alignItems: "flex-start", gap: 7 }}>
-          <Banknote size={13} color={C.secondary} strokeWidth={1.9} style={{ flexShrink: 0, marginTop: 2 }} />
-          <span style={{ fontFamily: font, fontSize: 12, fontWeight: 700, color: C.primary, lineHeight: 1.45 }}>
-            {isWanted ? post.budget : post.price}
-          </span>
-        </div>
-        <div style={{ display: "flex", alignItems: "flex-start", gap: 7 }}>
-          {isWanted ? (
-            <>
-              <Building2 size={13} color={C.secondary} strokeWidth={1.9} style={{ flexShrink: 0, marginTop: 2 }} />
-              <span style={{ fontFamily: font, fontSize: 12, color: C.textSecondary, lineHeight: 1.45 }}>{post.roomType}</span>
-            </>
-          ) : (
-            <>
-              <Users size={13} color={C.secondary} strokeWidth={1.9} style={{ flexShrink: 0, marginTop: 2 }} />
-              <span style={{ fontFamily: font, fontSize: 12, color: C.textSecondary, lineHeight: 1.45 }}>{post.needed}</span>
-            </>
-          )}
-        </div>
-      </div>
-
-      {/* Chips/Tags */}
-      <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 16, marginTop: "auto" }}>
-        {(isWanted ? post.amenities : post.requirements).slice(0, 3).map((item: string) => (
-          <span key={item} style={{ fontFamily: font, fontSize: 10, fontWeight: 600, color: C.textSecondary, background: C.bg, border: `1px solid ${C.border}`, borderRadius: 8, padding: "4px 8px" }}>
-            {item}
-          </span>
-        ))}
-      </div>
-
-      {/* Actions */}
-      <div style={{ display: "flex", gap: 8 }}>
-        <button type="button" onClick={onMessage}
-          style={{ flex: 1, minWidth: 0, minHeight: 38, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, padding: "8px", background: C.primary, color: C.white, border: "none", borderRadius: 10, fontFamily: font, fontSize: 12, fontWeight: 700, cursor: "pointer", transition: "background 0.12s" }}
-          onMouseEnter={e => (e.currentTarget.style.background = C.primaryHover)}
-          onMouseLeave={e => (e.currentTarget.style.background = C.primary)}>
-          <MessageSquare size={13} /> Nhắn tin
-        </button>
-        <button type="button" onClick={onView}
-          style={{ flex: 1, minWidth: 0, minHeight: 38, padding: "8px", background: "transparent", color: C.primary, border: `1.5px solid ${C.primary}`, borderRadius: 10, fontFamily: font, fontSize: 12, fontWeight: 700, cursor: "pointer", transition: "background 0.12s" }}
-          onMouseEnter={e => (e.currentTarget.style.background = C.caramelSoft)}
-          onMouseLeave={e => (e.currentTarget.style.background = "transparent")}>
-          Xem chi tiết
-        </button>
-      </div>
-    </article>
-  );
-}
 
 /* ══════════════════════════════════════════
    MARKETPLACE SECTIONS
@@ -335,7 +221,7 @@ function MarketplaceSections({
               </p>
             </div>
           </div>
-          <button type="button" onClick={() => onInfo({ title: "Danh sách nhu cầu", description: "Danh sách đầy đủ nhu cầu tìm phòng và ở ghép đang được hoàn thiện cho phiên bản V1." })}
+          <button type="button" onClick={() => navigate("/tin-nhu-cau")}
             style={{ display: "inline-flex", alignItems: "center", gap: 5, minHeight: 44, padding: "0 4px", fontFamily: font, fontSize: 13, fontWeight: 700, color: C.primary, background: "none", border: "none", cursor: "pointer", whiteSpace: "nowrap", flexShrink: 0 }}>
             Xem tất cả nhu cầu →
           </button>
@@ -387,12 +273,7 @@ function MarketplaceSections({
                 post={post}
                 kind={activeTab}
                 onMessage={() => handleMessage(post)}
-                onView={() => onInfo({
-                  title: post.title,
-                  description: activeTab === "RoomWanted"
-                    ? `${post.name} đang tìm ${post.roomType.toLowerCase()} tại ${post.locations}, ngân sách ${post.budget}.`
-                    : `${post.name} tìm bạn ở ghép tại ${post.location}, giá ${post.price}. Yêu cầu: ${post.requirements.join(", ")}.`
-                })}
+                onView={() => navigate(`/tin-nhu-cau/${post.id}`)}
               />
             ))}
           </div>
@@ -1121,37 +1002,9 @@ export function HomePage() {
         }
 
         // Fetch demand posts via service layer
-        const demandData = await getActiveDemandPosts();
-
-        if (demandData && demandData.length > 0) {
-          const roomWants = demandData
-            .filter(d => d.kind === "RoomWanted")
-            .map(d => ({
-              id: d.id,
-              initials: "ND",
-              name: "Khách tìm trọ",
-              title: `Tìm phòng tại ${(d.desired_districts || []).join(", ")}`,
-              locations: (d.desired_districts || []).join(", "),
-              budget: `${(d.price_min / 1000000).toFixed(1)} – ${(d.price_max / 1000000).toFixed(1)} triệu/tháng`,
-              roomType: "Phòng trọ / Căn hộ",
-              moveIn: "Dọn vào trong tháng",
-              amenities: ["Wifi", "WC riêng", "Tự do"],
-            }));
-
-          const roommateWants = demandData
-            .filter(d => d.kind === "RoommateWanted")
-            .map(d => ({
-              id: d.id,
-              title: `Tìm bạn ở ghép tại ${(d.desired_districts || []).join(", ")}`,
-              location: `${(d.desired_districts || []).join(", ")}, TP.HCM`,
-              price: `${(d.price_min / 1000000).toFixed(1)} – ${(d.price_max / 1000000).toFixed(1)} triệu/người`,
-              needed: "Cần 1 người",
-              requirements: ["Sạch sẽ", "Gọn gàng", "Vui vẻ"],
-            }));
-
-          setDbRoomWants(roomWants);
-          setDbRoommateWants(roommateWants);
-        }
+        const demandData = await listActiveDemandPosts();
+        setDbRoomWants(demandData.filter(d => d.kind === "RoomWanted"));
+        setDbRoommateWants(demandData.filter(d => d.kind === "RoommateWanted"));
       } catch (err) {
         logError("HomePage.loadHomeData", err);
       }
@@ -1165,10 +1018,8 @@ export function HomePage() {
 
   const selectRenterPostType = (type: string) => {
     setPostTypeModal(false);
-    setInfoModal({
-      title: "[Demand Posts — đang phát triển]",
-      description: `Biểu mẫu cho "${type}" đang được thiết kế và phát triển. Tính năng này sẽ ra mắt trong phiên bản V1.`,
-    });
+    const kindParam = type.toLowerCase().includes("ở ghép") ? "o-ghep" : "tim-phong";
+    navigate(`/dang-tin-nhu-cau?kind=${kindParam}`);
   };
 
   /* ── MOBILE ─────────────────────────────────────── */

@@ -42,6 +42,7 @@ export const router = createHashRouter([
           { path: "tai-khoan/danh-gia", lazy: async () => ({ Component: (await import("../shared/pages/AccountPage")).AccountReviewsPage }) },
           { path: "tai-khoan/hop-dong", lazy: async () => ({ Component: (await import("../shared/pages/AccountPage")).AccountContractsPage }) },
           { path: "tai-khoan/cai-dat", lazy: async () => ({ Component: (await import("../shared/pages/AccountPage")).AccountSettingsPage }) },
+          { path: "tai-khoan/tin-nhu-cau", lazy: async () => ({ Component: (await import("../marketplace/pages/MyDemandPostsPage")).MyDemandPostsPage }) },
 
           // Landlord SaaS Workspace Routes
           { path: "chu-tro", lazy: async () => ({ Component: (await import("../workspace/pages/ChuTroDashboardPage")).ChuTroDashboardPage }) },
