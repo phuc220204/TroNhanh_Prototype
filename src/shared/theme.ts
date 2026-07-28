@@ -22,6 +22,8 @@ export const C = {
   primaryPress:  "#5C2D0F",
   primaryDark:   "#5C2D0F",
   secondary:     "#C99B65",
+  secondaryHover:"#B08D63",
+  secondaryPress:"#9A784F",
   sand:          "#C99B65",
   cream:         "#F7EFE2",
   caramelSoft:   "#F7EFE2",

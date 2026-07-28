@@ -1,36 +1,6 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
-  /* ── Trọ Nhanh Design Tokens ── */
-  --tn-primary:        #8A6A45;
-  --tn-primary-dark:   #5C4632;
-  --tn-secondary:      #B08D63;
-  --tn-sand:           #C2A982;
-  --tn-cream:          #E8DEC9;
-  --tn-bg:             #F5EFE4;
-  --tn-text-primary:   #3E2E1E;
-  --tn-text-secondary: #7A6A55;
-  --tn-border:         #DDD0BC;
-  --tn-white:          #FFFFFF;
-  /* status */
-  --tn-available:      #6B8E5A;
-  --tn-rented:         #9B8C78;
-  --tn-repairing:      #C07B4A;
-  /* semantic */
-  --tn-error:          #B5503C;
-  --tn-warning:        #C8861A;
-  /* radius */
-  --tn-r-sm:           8px;
-  --tn-r-md:           12px;
-  --tn-r-lg:           14px;
-  /* spacing */
-  --tn-sp-1:           4px;
-  --tn-sp-2:           8px;
-  --tn-sp-3:           12px;
-  --tn-sp-4:           16px;
-  --tn-sp-6:           24px;
-  --tn-sp-8:           32px;
-
   --font-size: 16px;
   --background: #ffffff;
   --foreground: oklch(0.145 0 0);
