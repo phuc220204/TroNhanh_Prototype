@@ -15,6 +15,11 @@ import { EmptyState, Skeleton, Button } from "../../shared/components/common";
 import { logError } from "../../shared/services/supabase-error";
 import { useAuth } from "../../shared/contexts/AuthContext";
 import { supabase } from "../../shared/supabaseClient";
+import { getPropertiesByOwner } from "../services/property-service";
+import { getRoomsByOwner, getRoomsByProperty } from "../services/room-service";
+import { getLatestReading } from "../services/billing-service";
+import { getDashboardMetrics, type DashboardKPIs } from "../services/dashboard-service";
+import { getMyListings } from "../../marketplace/services/listing-queries";
 
 /* ══════════════════════════════════════════
    SHARED PRIMITIVES
@@ -165,10 +170,7 @@ function UtilityModal({ onClose, properties, isReadOnly, onSave }: { onClose: ()
     if (!propId) return;
     const fetchRooms = async () => {
       try {
-        const { data } = await supabase
-          .from("rooms")
-          .select("*")
-          .eq("property_id", propId);
+        const data = await getRoomsByProperty(propId);
         setRooms(data || []);
         if (data && data.length > 0) {
           setRoomId(data[0].id);
@@ -190,24 +192,10 @@ function UtilityModal({ onClose, properties, isReadOnly, onSave }: { onClose: ()
     }
     const fetchPrevious = async () => {
       try {
-        const { data: elec } = await supabase
-          .from("utility_readings")
-          .select("current_reading")
-          .eq("room_id", roomId)
-          .eq("type", "Electricity")
-          .order("created_at", { ascending: false })
-          .limit(1);
-        
-        const { data: wat } = await supabase
-          .from("utility_readings")
-          .select("current_reading")
-          .eq("room_id", roomId)
-          .eq("type", "Water")
-          .order("created_at", { ascending: false })
-          .limit(1);
-        
-        setPreviousElec(elec && elec.length > 0 ? Number(elec[0].current_reading) : 0);
-        setPreviousWater(wat && wat.length > 0 ? Number(wat[0].current_reading) : 0);
+        const elec = await getLatestReading(roomId, "Electricity");
+        const wat = await getLatestReading(roomId, "Water");
+        setPreviousElec(elec?.value ? Number(elec.value) : 0);
+        setPreviousWater(wat?.value ? Number(wat.value) : 0);
       } catch (e) {
         logError("ChuTroDashboardPage.UtilityModal.fetchPrevious", e);
       }
@@ -607,35 +595,29 @@ export function ChuTroDashboardPage() {
   const toListings = () => navigate("/chu-tro/tin-dang");
   const toPost = () => navigate("/chu-tro/dang-tin");
 
+  const [dbKpis, setDbKpis] = useState<DashboardKPIs | null>(null);
+
   const loadDashboardData = async () => {
     if (!user) return;
     try {
       setLoading(true);
       // Load properties
-      const { data: props } = await supabase
-        .from("properties")
-        .select("*")
-        .eq("owner_id", user.id);
+      const props = await getPropertiesByOwner(user.id);
       setProperties(props || []);
       
       setProperty("Tất cả khu trọ");
 
       // Load rooms
-      const { data: rms } = await supabase
-        .from("rooms")
-        .select("*, properties(name)")
-        .eq("owner_id", user.id);
+      const rms = await getRoomsByOwner(user.id);
       setRooms(rms || []);
 
+      // Load server-side KPI counts via head: true
+      const kpis = await getDashboardMetrics(user.id);
+      setDbKpis(kpis);
+
       // Load recent listings from user
-      const { data: listings } = await supabase
-        .from("rental_listings")
-        .select("*")
-        .eq("seller_id", user.id)
-        .order("created_at", { ascending: false })
-        .limit(3);
-      
-      setRealListings(listings || []);
+      const listings = await getMyListings(user.id);
+      setRealListings(listings ? listings.slice(0, 3) : []);
     } catch (err) {
       logError("ChuTroDashboardPage.loadDashboardData", err);
     } finally {
@@ -692,25 +674,28 @@ export function ChuTroDashboardPage() {
   }, [realListings]);
 
   // Dynamic KPIs calculations
-  const totalRoomsCount = activeRoomsList.length;
+  const totalRoomsCount = (property === "Tất cả khu trọ" && dbKpis) ? dbKpis.totalRoomsCount : activeRoomsList.length;
   
   const rentedRoomsCount = useMemo(() => {
+    if (property === "Tất cả khu trọ" && dbKpis) return dbKpis.rentedRoomsCount;
     return rooms.length > 0 
       ? activeRoomsList.filter(r => r.status === "Rented").length 
       : activeRoomsList.filter(r => r.status === "rented").length;
-  }, [rooms, activeRoomsList]);
+  }, [rooms, activeRoomsList, property, dbKpis]);
 
   const emptyRoomsCount = useMemo(() => {
+    if (property === "Tất cả khu trọ" && dbKpis) return dbKpis.emptyRoomsCount;
     return rooms.length > 0 
       ? activeRoomsList.filter(r => r.status === "Available").length 
       : activeRoomsList.filter(r => r.status === "available").length;
-  }, [rooms, activeRoomsList]);
+  }, [rooms, activeRoomsList, property, dbKpis]);
 
   const unpaidRoomsCount = useMemo(() => {
+    if (property === "Tất cả khu trọ" && dbKpis) return dbKpis.unpaidRoomsCount;
     return rooms.length > 0
       ? activeRoomsList.filter(r => r.payment_status === "Unpaid").length
       : activeRoomsList.filter(r => r.bill && !r.bill.paid).length;
-  }, [rooms, activeRoomsList]);
+  }, [rooms, activeRoomsList, property, dbKpis]);
 
   const revenueAmount = useMemo(() => {
     return rooms.length > 0 

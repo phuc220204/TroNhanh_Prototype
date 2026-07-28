@@ -12,7 +12,8 @@ import { LandlordShell, LandlordBreadcrumb } from "../../shared/components/Landl
 import { useAuth } from "../../shared/contexts/AuthContext";
 import { supabase } from "../../shared/supabaseClient";
 import { DemoFAB } from "../../shared/components/PublicNavbar";
-import { getListingImage } from "../../marketplace/pages/AllListingsPage";
+import { getListingImage } from "../../marketplace/services/listing-mappers";
+import { searchListings } from "../../marketplace/services/listing-queries";
 import { formatVND } from "../../marketplace/utils/listingMetadata";
 import { logError } from "../../shared/services/supabase-error";
 
@@ -284,23 +285,19 @@ export function QuanLyPage() {
     setTimeout(() => setToast(false), 2500);
   };
 
-  // Fetch Owner listings from Supabase
+  // Fetch Owner listings via service layer
   const fetchListings = async () => {
     if (!user) return;
     setIsLoading(true);
     setIsError(false);
     try {
-      const { data, error } = await supabase
-        .from("rental_listings")
-        .select("*")
-        .eq("seller_id", user.id)
-        .is("deleted_at", null)
-        .order("created_at", { ascending: false });
-      
-      if (error) throw error;
-      if (data) {
-        // `views` map từ cột thật view_count; `contacts` chưa có nguồn (xem type).
-        setDbListings(data.map(l => ({ ...l, views: l.view_count ?? 0 })));
+      const result = await searchListings({
+        sellerId: user.id,
+        pageSize: 100,
+        page: 1,
+      });
+      if (result.rawRows) {
+        setDbListings(result.rawRows.map(l => ({ ...l, views: l.view_count ?? 0 })));
       }
     } catch (err: any) {
       logError("QuanLyPage.fetchListings", err);

@@ -21,6 +21,10 @@ import { Field, SelectField } from "../../shared/components/common/FormField";
 import { useAuth } from "../../shared/contexts/AuthContext";
 import { useSubscriptionContext } from "../../shared/contexts/SubscriptionContext";
 import { supabase } from "../../shared/supabaseClient";
+import { getPropertiesByOwner } from "../services/property-service";
+import { getRoomsByOwner, getRoomsByProperty } from "../services/room-service";
+import { getActiveContractByRoom } from "../services/contract-service";
+import { getLatestReading, getInvoices } from "../services/billing-service";
 
 /* ══════════════════════════════════════════
    TYPES & CONSTANTS
@@ -413,24 +417,10 @@ function UtilityMeterModal({ room, property, onClose, isReadOnly }: { room: Room
   useEffect(() => {
     const loadPrevious = async () => {
       try {
-        const { data: elec } = await supabase
-          .from("utility_readings")
-          .select("current_reading")
-          .eq("room_id", room.id)
-          .eq("type", "Electricity")
-          .order("created_at", { ascending: false })
-          .limit(1);
-        
-        const { data: wat } = await supabase
-          .from("utility_readings")
-          .select("current_reading")
-          .eq("room_id", room.id)
-          .eq("type", "Water")
-          .order("created_at", { ascending: false })
-          .limit(1);
-        
-        if (elec && elec.length > 0) setPreviousElec(Number(elec[0].current_reading));
-        if (wat && wat.length > 0) setPreviousWater(Number(wat[0].current_reading));
+        const elec = await getLatestReading(room.id, "Electricity");
+        const wat = await getLatestReading(room.id, "Water");
+        if (elec?.value) setPreviousElec(Number(elec.value));
+        if (wat?.value) setPreviousWater(Number(wat.value));
       } catch (e) {
         logError("QuanLyPhongPage.UtilityModal.loadPrevious", e);
       }
@@ -547,21 +537,13 @@ function RoomInvoiceModal({ room, property, onClose, isReadOnly, onSave }: { roo
     const fetchInvoice = async () => {
       try {
         setLoading(true);
-        const { data, error } = await supabase
-          .from("invoices")
-          .select("*")
-          .eq("room_id", room.id)
-          .order("created_at", { ascending: false })
-          .limit(1);
+        const data = await getInvoices(user?.id);
+        const roomInvoices = data ? data.filter(inv => inv.room_id === room.id) : [];
 
-        if (error) throw error;
-        if (data && data.length > 0) {
-          setInvoice(data[0]);
-          const { data: itms } = await supabase
-            .from("invoice_items")
-            .select("*")
-            .eq("invoice_id", data[0].id);
-          setItems(itms || []);
+        if (roomInvoices.length > 0) {
+          const inv = roomInvoices[0];
+          setInvoice(inv);
+          setItems(inv.invoice_items || []);
         } else if (room.bill) {
           // Fallback to room's mocked bill data so user can review the invoice UI instantly
           const mockRent = Number(room.bill.rent.replace(/\D/g, ""));
@@ -1516,11 +1498,8 @@ function PaymentsView({ property, isReadOnly, user, loadDbData, mobile }: { prop
         return;
       }
 
-      const { data: dbRooms } = await supabase
-        .from("rooms")
-        .select("*")
-        .eq("property_id", property.id)
-        .eq("status", "Rented");
+      const allRooms = await getRoomsByProperty(property.id);
+      const dbRooms = allRooms ? allRooms.filter(r => r.status === "Rented") : [];
 
       if (!dbRooms || dbRooms.length === 0) {
         alert("Không có phòng nào đang ở trạng thái 'Đang thuê' để tạo hóa đơn!");
@@ -1533,19 +1512,8 @@ function PaymentsView({ property, isReadOnly, user, loadDbData, mobile }: { prop
 
       let count = 0;
       for (const r of dbRooms) {
-        // Fetch active contract & occupants
-        const { data: activeContract } = await supabase
-          .from("contracts")
-          .select(`
-            id,
-            occupancies (
-              occupant_count
-            )
-          `)
-          .eq("room_id", r.id)
-          .eq("status", "Active")
-          .limit(1)
-          .maybeSingle();
+        // Fetch active contract via service layer
+        const activeContract = await getActiveContractByRoom(r.id);
 
         const occupants = Number((activeContract as any)?.occupancies?.occupant_count || 1);
 
@@ -1817,48 +1785,8 @@ export function QuanLyPhongPage() {
     if (!user) return;
     try {
       setLoading(true);
-      const { data: props, error: propsErr } = await supabase
-        .from("properties")
-        .select("*")
-        .eq("owner_id", user.id);
-      if (propsErr) throw propsErr;
-
-      const { data: rms, error: rmsErr } = await supabase
-        .from("rooms")
-        .select(`
-          *,
-          contracts(
-            id,
-            start_date,
-            end_date,
-            rent_price,
-            deposit,
-            status,
-            occupancies(
-              id,
-              full_name,
-              phone_number,
-              occupant_count
-            )
-          ),
-          invoices(
-            id,
-            period,
-            due_date,
-            total_amount,
-            status,
-            invoice_items(
-              id,
-              type,
-              description,
-              quantity,
-              unit_price,
-              amount
-            )
-          )
-        `)
-        .eq("owner_id", user.id);
-      if (rmsErr) throw rmsErr;
+      const props = await getPropertiesByOwner(user.id);
+      const rms = await getRoomsByOwner(user.id);
 
       if (props && props.length > 0) {
         const mapped: Property[] = props.map((p: any) => {
