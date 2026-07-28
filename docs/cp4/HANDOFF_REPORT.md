@@ -17,36 +17,29 @@
 ```
 pnpm typecheck        → 0 lỗi   ✅  (lần đầu tiên trong lịch sử repo này)
 pnpm typecheck:strict → 0 lỗi   ✅
-pnpm build            → thành công trong 4.23s  ✅
-dev server            → trang chủ render đúng như trước khi xóa 51 file  ✅
+pnpm build            → thành công  ✅
+dev server + Supabase → chạy thật với dữ liệu seed, drawer render đúng  ✅
 ```
 
 ---
 
-## 2. ⚠️ VIỆC BẮT BUỘC LÀM TRƯỚC KHI VIẾT DÒNG CODE ĐẦU TIÊN
+## 2. ✅ MÔI TRƯỜNG ĐÃ SẴN SÀNG — không còn việc setup nào chặn bạn
 
-Migration **đã viết xong nhưng CHƯA được apply** — tôi không có credential Supabase và không nên chạy lệnh ghi vào DB thật của bạn.
+Cập nhật 2026-07-28. Những việc dưới đây **đã hoàn tất**, không cần làm lại:
 
-```bash
-# 1. Init CLI (supabase/ hiện KHÔNG có config.toml — migration đầu được paste tay)
-npx supabase init
-npx supabase link --project-ref <ref lấy từ VITE_SUPABASE_URL>
+| Việc | Trạng thái |
+|---|---|
+| `supabase init` + `link` | ✅ có `supabase/config.toml` |
+| `db push` — **11 migration đã lên Supabase** | ✅ `migration list` xác nhận cả 12 dòng ở cột Remote |
+| `pnpm db:types` → `database.types.ts` (40KB) | ✅ đã commit |
+| `createClient<Database>` + `types/db.ts` (**T04b**) | ✅ đã nối, đã bắt được 7 mismatch |
+| Tắt email confirmation | ✅ (4 account đăng ký qua app thành công) |
+| 4 account demo `@tronhanh.demo` + role Admin | ✅ |
+| Seeder chạy thật | ✅ properties/rooms/occupancies/contracts/invoices đều có dữ liệu |
 
-# 2. Apply 9 migration
-npx supabase db push
+**Nghĩa là bạn `git pull` rồi `pnpm install` là code được ngay.**
 
-# 3. Sinh type — BẮT BUỘC, nếu thiếu thì mọi query vẫn là `any`
-pnpm db:types
-
-# 4. Kiểm lại
-pnpm typecheck
-```
-
-Và **2 việc làm tay trên Supabase Dashboard**:
-1. **Authentication → Providers → Email → TẮT "Confirm email"** — không làm thì mọi account demo fail ở bước register → login.
-2. Tạo Admin đầu tiên bằng SQL snippet (xem `06_QA_CHECKLIST.md` §1).
-
-> ⚠️ `pnpm db:types` sẽ tạo `src/shared/types/database.types.ts`. Sau đó phải sửa `src/shared/supabaseClient.ts` thành `createClient<Database>(...)` và tạo `src/shared/types/db.ts` (khuôn có trong `04_FRONTEND_ARCH.md` §2). **Đây là phần T04 còn lại** — tôi không làm được vì cần chạy CLI.
+Chỉ còn **1 việc tay của chủ dự án** (không chặn bạn): seed lại `seller.a` để có dữ liệu 3 kỳ — xem `06_QA_CHECKLIST.md` §"Dọn dữ liệu demo".
 
 ---
 
@@ -146,7 +139,7 @@ Cái cuối đã sửa thành **trạng thái dẫn xuất**: `isContractExpirin
 
 | # | Việc | Ghi chú |
 |---|---|---|
-| **T04 còn lại** | Sau `pnpm db:types`: sửa `supabaseClient.ts` → `createClient<Database>`, tạo `types/db.ts` | Khuôn ở `04_FRONTEND_ARCH.md` §2 |
+| ~~T04b~~ | ~~`createClient<Database>` + `types/db.ts`~~ | ✅ **ĐÃ XONG** |
 | **T06 client** | Ngừng gọi `appendMetadataToDescription` ở **write path**; giữ parser ở read path 1 release | `marketplace/utils/listingMetadata.ts`, `DangTinPage`, `RoomDetailPage` |
 | **T08 primitive** | Dựng 8 component: `Button` `Badge` `Card` `Table` `EmptyState` `Pagination` `Toast` `Skeleton` trong `shared/components/common/` | **Làm sớm** — 12 screen mới đều cần, không có thì mỗi page tự mọc 200 dòng style |
 | **T08 token** | Xóa 24 khai báo `--tn-*` dead trong `styles/theme.css`; `StyleGuidePage` xóa `C` local → import `shared/theme` | Styleguide là **bài test hồi quy** cho việc này |
@@ -218,12 +211,18 @@ Nếu `typecheck` ra lỗi ngay khi chưa sửa gì → có thể bạn vừa ch
 
 ---
 
-## 8. Những gì tôi KHÔNG verify được (giới hạn môi trường)
+## 8. Đã verify được gì / chưa verify được gì
 
-Nói thẳng để bạn không tin quá mức vào phần trên:
+**Đã chạy thật:**
+- ✅ **11 migration apply sạch** lên Supabase, không lỗi SQL nào.
+- ✅ **Trigger `handle_new_user()`** tạo `profiles` (đúng `full_name`/`contact_phone` từ metadata) + tự gán role `Renter`; cấp `Admin` bằng SQL snippet chạy đúng.
+- ✅ **Seeder ghi thật** vào 9 bảng qua RLS của user thường — chứng minh policy không chặn nhầm chủ sở hữu.
+- ✅ **Drawer chi tiết phòng** đọc `utility_readings`/`invoices`/`payments`/`contracts` và render đúng (đã chụp 3 tab).
+- ✅ `typecheck` / `typecheck:strict` / `build` xanh.
 
-- **Migration chưa được apply.** SQL đã viết và tự review, nhưng **chưa chạy qua Postgres thật**. Có thể còn lỗi cú pháp/thứ tự. Chạy `db push` sớm và đọc lỗi kỹ.
-- **RPC chưa được gọi thật lần nào.** Logic đã viết theo hợp đồng ở `03_RPC_CONTRACTS.md` nhưng chưa có integration test.
-- **`supabase/tests/rls.sql` chưa chạy** (cần 4 UUID account thật).
-- **Sandbox không có mạng ra ngoài** → dev server render nhưng mọi request Supabase trả `ERR_NAME_NOT_RESOLVED`. Nên tôi xác nhận được **app render + build được**, nhưng **không** xác nhận được luồng dữ liệu end-to-end.
-- Trang chủ hiện đang hiển thị **mock fallback** (vì DB không kết nối được) — đó đúng là vi phạm AC#1 mà T09 phải xử lý.
+**CHƯA verify — việc của bạn:**
+- ⚠️ **`supabase/tests/rls.sql` chưa ai chạy.** Đây là kiểm chứng bảo mật quan trọng nhất (đặc biệt TEST 4 — rò rỉ cột `bank_*`). Cần thay 4 UUID rồi chạy. **Mọi cột `ok_*` phải `true`.**
+- ⚠️ **13/16 RPC chưa được gọi lần nào.** Mới chỉ có đường ghi trực tiếp của seeder chạy qua. `create_listing_with_details`, `create_occupancy_with_contract`, `post_review`, `moderate_listing`, `start_conversation`… đều chưa có lần gọi thật nào. Task nào dùng RPC thì **phải test luồng đó tay ít nhất 1 lần**, đừng tin là nó chạy.
+- ⚠️ **Cô lập RLS giữa 2 seller chưa test** (`seller.b` chưa seed dữ liệu).
+- ⚠️ Còn **~38 `console.error`** ở các page cũ — T09 dọn.
+- ⚠️ Mock fallback vẫn còn ở 4 chỗ (`HomePage`, `QuanLyPhongPage`, `ChuTroDashboardPage`) — T09 dọn.
