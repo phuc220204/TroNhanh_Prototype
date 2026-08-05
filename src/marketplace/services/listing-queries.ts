@@ -14,6 +14,12 @@ export interface ListingQueryParams {
   sort?: "newest" | "price-asc" | "price-desc" | "area-desc" | "priceAsc" | "priceDesc" | "areaDesc";
   page?: number;
   pageSize?: number;
+  /**
+   * Mặc định "Active". Truyền "All" để BỎ lọc trạng thái — dùng cho trang quản
+   * lý tin của chính người bán, nơi phải thấy cả Chờ duyệt / Bị từ chối / Đã ẩn.
+   * RLS vẫn là biên thật: khách chỉ đọc được tin Active, người bán đọc được tin
+   * của mình, Moderator đọc được tất cả.
+   */
   status?: string;
   sellerId?: string;
 }
@@ -37,8 +43,12 @@ export async function searchListings(params: ListingQueryParams = {}): Promise<S
     let q = supabase
       .from("rental_listings")
       .select("*, listing_amenities(amenity), listing_media(storage_path, sort_order)", { count: "exact" })
-      .eq("status", params.status || "Active")
       .is("deleted_at", null);
+
+    const statusFilter = params.status || "Active";
+    if (statusFilter !== "All") {
+      q = q.eq("status", statusFilter);
+    }
 
     if (params.sellerId) {
       q = q.eq("seller_id", params.sellerId);

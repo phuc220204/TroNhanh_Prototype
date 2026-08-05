@@ -1,30 +1,66 @@
 import React from "react";
-import { Eye, EyeOff, Pencil, ArrowUpCircle, Trash2, Star } from "lucide-react";
-import { C, font } from "../../../shared/theme";
+import { Eye, EyeOff, Pencil, ArrowUpCircle, Trash2, Star, TriangleAlert } from "lucide-react";
+import { C, font, radius, space } from "../../../shared/theme";
+import { LISTING_META } from "../../../shared/utils/statusMaps";
+import { toListingStatus } from "../../../shared/types/status";
 
+/**
+ * Nhãn trạng thái tin cho phía người bán.
+ *
+ * Lấy từ LISTING_META (đủ 7 trạng thái BR-001) thay vì tự so chuỗi. Bản cũ chỉ
+ * bắt Active/PendingApproval/Expired nên `Draft`, `Rejected`, `Rented` đều rơi
+ * vào nhánh mặc định và hiện "Đã ẩn" — người bán bị từ chối không hề biết.
+ */
 export function getStatusMeta(status: string, boostExpire: string | null) {
-  const isVIP = boostExpire && new Date(boostExpire) > new Date();
-  if (status === "Active" || status === "active") {
-    return isVIP 
-      ? { label: "Hiển thị (VIP)", color: "#E05C5C", bg: "#FCECEC", vip: true } 
-      : { label: "Đang hiển thị", color: "#4A7A34", bg: "#E8F5E1", vip: false };
+  const isVIP = !!(boostExpire && new Date(boostExpire) > new Date());
+  const meta = LISTING_META[toListingStatus(status)];
+  if (isVIP && meta.label === "Đang hiển thị") {
+    return { label: "Hiển thị (VIP)", color: C.repairing, bg: C.cream, vip: true };
   }
-  if (status === "PendingApproval" || status === "pendingApproval") {
-    return { label: "Chờ duyệt", color: "#C99B65", bg: "#FEF6EC", vip: false };
-  }
-  if (status === "Expired" || status === "expired") {
-    return { label: "Hết hạn", color: "#A28B78", bg: "#F5EFE6", vip: false };
-  }
-  return { label: "Đã ẩn", color: C.textSecondary, bg: C.caramelSoft, vip: false };
+  return { ...meta, vip: false };
 }
 
 export function StatusChip({ status, boostExpire }: { status: string; boostExpire: string | null }) {
   const m = getStatusMeta(status, boostExpire);
   return (
     <span style={{ fontFamily: font, fontSize: 11.5, fontWeight: 700, color: m.color, background: m.bg, borderRadius: 8, padding: "3px 9px", whiteSpace: "nowrap", display: "inline-flex", alignItems: "center", gap: 4 }}>
-      {m.vip && <Star size={10.5} fill="#E05C5C" stroke="none" />}
+      {m.vip && <Star size={10.5} fill={C.repairing} stroke="none" />}
       {m.label}
     </span>
+  );
+}
+
+/**
+ * Lý do từ chối + lối sửa lại. Không có khối này thì tin `Rejected` là ngõ cụt:
+ * người bán thấy nhãn đỏ mà không biết sai gì (FR-064).
+ */
+export function RejectionNotice({ reason, onEdit }: { reason: string | null; onEdit: () => void }) {
+  if (!reason) return null;
+  return (
+    <div
+      data-testid="listing-rejection-notice"
+      style={{
+        display: "flex", alignItems: "flex-start", gap: space[2],
+        background: C.cream, border: `1px solid ${C.error}`,
+        borderRadius: radius.sm, padding: `${space[2]}px ${space[3]}px`,
+        marginTop: space[2],
+      }}
+    >
+      <TriangleAlert size={14} color={C.error} style={{ flexShrink: 0, marginTop: 2 }} />
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <p style={{ fontFamily: font, fontSize: 12.5, color: C.error, margin: 0, lineHeight: 1.5 }}>
+          <strong>Lý do từ chối:</strong> {reason}
+        </p>
+        <button
+          type="button"
+          onClick={onEdit}
+          data-testid="listing-resubmit-btn"
+          style={{ fontFamily: font, fontSize: 12.5, fontWeight: 700, color: C.primary, background: "none", border: "none", padding: "4px 0 0", cursor: "pointer" }}
+        >
+          Sửa &amp; gửi lại →
+        </button>
+      </div>
+    </div>
   );
 }
 

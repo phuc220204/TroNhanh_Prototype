@@ -150,6 +150,9 @@ export function QuanLyPage() {
     try {
       const result = await searchListings({
         sellerId: user.id,
+        // "All" để thấy CẢ tin Chờ duyệt / Bị từ chối / Đã ẩn — đây là trang
+        // quản lý tin của chính mình, không phải trang tìm kiếm công khai.
+        status: "All",
         pageSize: 100,
         page: 1,
       });

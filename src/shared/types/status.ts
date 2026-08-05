@@ -26,6 +26,29 @@ export type ListingStatus =
   | "expired"
   | "rented";
 
+/**
+ * DB lưu PascalCase (`PendingApproval`), UI dùng camelCase key của LISTING_META.
+ * Trước đây mỗi chỗ tự so chuỗi tay và bỏ sót `Draft`/`Rejected`/`Rented`,
+ * khiến tin bị từ chối hiện nhãn "Đã ẩn" và người bán không biết vì sao.
+ */
+const LISTING_STATUS_BY_DB: Record<string, ListingStatus> = {
+  Draft: "draft",
+  PendingApproval: "pendingApproval",
+  Active: "active",
+  Rejected: "rejected",
+  Hidden: "hidden",
+  Expired: "expired",
+  Rented: "rented",
+};
+
+export function toListingStatus(value: string | null | undefined): ListingStatus {
+  const raw = value ?? "";
+  if (raw in LISTING_STATUS_BY_DB) return LISTING_STATUS_BY_DB[raw]!;
+  // Chấp nhận luôn dạng camelCase để chỗ nào đã chuẩn hoá trước vẫn chạy.
+  const camel = Object.values(LISTING_STATUS_BY_DB).find((s) => s === raw);
+  return camel ?? "hidden";
+}
+
 /** BR-004: Unpaid → PartiallyPaid → Paid; quá dueDate → Overdue */
 export type InvoiceStatus =
   | "unpaid"

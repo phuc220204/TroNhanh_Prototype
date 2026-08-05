@@ -4,7 +4,7 @@ import { Eye, EyeOff, Pencil, ArrowUpCircle, Trash2, MessageSquare, AlertTriangl
 import { C, font } from "../../../shared/theme";
 import { getListingImage, listingImageUrls } from "../../services/listing-mappers";
 import { formatVND } from "../../utils/listingMetadata";
-import { StatusChip, IconAction, ListingActionGroup } from "./ListingRowActions";
+import { StatusChip, IconAction, ListingActionGroup, RejectionNotice } from "./ListingRowActions";
 
 export type DbListing = {
   id: string;
@@ -19,6 +19,8 @@ export type DbListing = {
   updated_at: string;
   created_at: string;
   boost_expire_at: string | null;
+  /** Lý do Moderator từ chối (FR-064). Chỉ có khi status = 'Rejected'. */
+  rejection_reason?: string | null;
   /** Ảnh thật của tin; searchListings select kèm. Vắng mặt ở tin cũ → fallback. */
   listing_media?: { storage_path: string; sort_order: number }[];
   property_type?: string;
@@ -144,6 +146,10 @@ export function MyListingsTable({
                   onDelete={() => handleDeleteListing(l.id)}
                 />
               </div>
+              <RejectionNotice
+                reason={l.status === "Rejected" ? l.rejection_reason ?? null : null}
+                onEdit={() => navigate(`/chu-tro/dang-tin/${l.id}`)}
+              />
             </div>
           );
         })}
@@ -196,6 +202,10 @@ export function MyListingsTable({
 
                   <td style={cellStyle}>
                     <StatusChip status={l.status} boostExpire={l.boost_expire_at} />
+                    <RejectionNotice
+                      reason={l.status === "Rejected" ? l.rejection_reason ?? null : null}
+                      onEdit={() => navigate(`/chu-tro/dang-tin/${l.id}`)}
+                    />
                   </td>
 
                   <td style={cellStyle}>
