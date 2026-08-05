@@ -23,9 +23,7 @@ export interface AdminUserRow {
 
 export async function listUsers(search = ""): Promise<AdminUserRow[]> {
   try {
-    // TODO: bo `as any` sau khi chay `pnpm db:push` + `pnpm db:types` —
-    // admin_list_users chua co trong database.types.ts.
-    const { data, error } = await (supabase.rpc as any)("admin_list_users", {
+    const { data, error } = await supabase.rpc("admin_list_users", {
       ...(search.trim() ? { p_search: search.trim() } : {}),
     });
     if (error) throw error;
@@ -65,8 +63,7 @@ export interface AdminDashboardStats {
 
 export async function getDashboardStats(): Promise<AdminDashboardStats | null> {
   try {
-    // TODO: bo `as any` sau khi chay `pnpm db:push` + `pnpm db:types`.
-    const { data, error } = await (supabase.rpc as any)("admin_dashboard_stats");
+    const { data, error } = await supabase.rpc("admin_dashboard_stats");
     if (error) throw error;
     const row = (data as AdminDashboardStats[] | null)?.[0];
     return row ?? null;

@@ -1169,6 +1169,26 @@ export type Database = {
       }
     }
     Functions: {
+      admin_dashboard_stats: {
+        Args: never
+        Returns: {
+          active_listings: number
+          pending_listings: number
+          reported_reviews: number
+          total_users: number
+        }[]
+      }
+      admin_list_users: {
+        Args: { p_search?: string }
+        Returns: {
+          created_at: string
+          email: string
+          full_name: string
+          is_seller: boolean
+          roles: string[]
+          user_id: string
+        }[]
+      }
       can_review_contract: {
         Args: { p_contract: string; p_user: string }
         Returns: boolean
