@@ -2,9 +2,10 @@ import { useRef, useEffect } from "react";
 import { Upload, Trash2, ArrowUp, ArrowDown, Image as ImageIcon, AlertCircle } from "lucide-react";
 import { C, font } from "../../../shared/theme";
 
-interface PhotoFileItem {
-  file: File;
+export interface PhotoFileItem {
+  file?: File;
   previewUrl: string;
+  storagePath?: string;
 }
 
 interface Step3PhotosProps {
@@ -20,7 +21,9 @@ export function Step3Photos({ photos, setPhotos, error, uploadProgress }: Step3P
   // Revoke object URLs on unmount to prevent memory leaks
   useEffect(() => {
     return () => {
-      photos.forEach((p) => URL.revokeObjectURL(p.previewUrl));
+      photos.forEach((p) => {
+        if (p.file) URL.revokeObjectURL(p.previewUrl);
+      });
     };
   }, []);
 
@@ -40,7 +43,7 @@ export function Step3Photos({ photos, setPhotos, error, uploadProgress }: Step3P
   const handleRemovePhoto = (index: number) => {
     setPhotos((prev) => {
       const target = prev[index];
-      if (target) {
+      if (target?.file) {
         URL.revokeObjectURL(target.previewUrl);
       }
       return prev.filter((_, i) => i !== index);
@@ -270,13 +273,13 @@ export function Step3Photos({ photos, setPhotos, error, uploadProgress }: Step3P
                       width: 28,
                       height: 28,
                       borderRadius: 6,
-                      border: "1px solid #F5C2B9",
-                      background: "#FDF2F0",
+                      border: `1px solid ${C.border}`,
+                      background: C.cream,
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "center",
                       cursor: "pointer",
-                      color: "#B5503C",
+                      color: C.error,
                     }}
                   >
                     <Trash2 size={14} />

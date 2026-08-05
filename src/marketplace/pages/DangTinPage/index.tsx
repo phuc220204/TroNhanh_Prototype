@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { useNavigate, useLocation } from "react-router";
-import { ArrowLeft, ArrowRight, Check, ArrowUpCircle, CheckCircle } from "lucide-react";
+import { useNavigate, useLocation, useParams } from "react-router";
+import { ArrowLeft, ArrowRight, Check, ArrowUpCircle, CheckCircle, AlertCircle } from "lucide-react";
 import { C, font } from "../../../shared/theme";
 import { useBreakpoint } from "../../../shared/components/useBreakpoint";
 import { PublicNavbarDesktop, DemoFAB } from "../../../shared/components/PublicNavbar";
@@ -72,6 +72,7 @@ function Toast({ show, message }: { show: boolean; message: string }) {
 export function DangTinPage() {
   const navigate = useNavigate();
   const location = useLocation();
+  const { id } = useParams<{ id?: string }>();
   const { isMobile } = useBreakpoint();
   const { profile } = useAuth();
   const prefill = (location.state as { prefill?: any } | null)?.prefill ?? {};
@@ -101,9 +102,66 @@ export function DangTinPage() {
     success,
     newRoomId,
     handlePostSubmit,
-  } = useListingForm(prefill, showToast);
+    isLoadingListing,
+    notFound,
+    updatedStatus,
+    isEditMode,
+  } = useListingForm(prefill, showToast, id);
+
+  if (isLoadingListing) {
+    return (
+      <div style={{ minHeight: "100vh", background: C.bg, fontFamily: font, display: "flex", flexDirection: "column" }}>
+        <DemoBanner />
+        <PublicNavbarDesktop />
+        <div style={{ flex: 1, maxWidth: 640, margin: "60px auto", width: "100%", padding: "0 20px", boxSizing: "border-box" }}>
+          <div style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: 20, padding: 40, textAlign: "center", color: C.textSecondary }}>
+            Đang tải dữ liệu tin đăng...
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (notFound) {
+    return (
+      <div style={{ minHeight: "100vh", background: C.bg, fontFamily: font, display: "flex", flexDirection: "column" }}>
+        <DemoBanner />
+        <PublicNavbarDesktop />
+        <div style={{ flex: 1, maxWidth: 640, margin: "60px auto", width: "100%", padding: "0 20px", boxSizing: "border-box" }}>
+          <div style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: 24, padding: "48px 36px", textAlign: "center", boxShadow: "0 8px 32px rgba(92,70,50,0.08)" }}>
+            <div style={{ width: 72, height: 72, borderRadius: "50%", background: C.caramelSoft, display: "flex", alignItems: "center", justifyContent: "center", color: C.primary, margin: "0 auto 20px" }}>
+              <AlertCircle size={36} strokeWidth={2} />
+            </div>
+            <h1 style={{ fontFamily: font, fontSize: 22, fontWeight: 800, color: C.textPrimary, margin: "0 0 10px" }}>
+              Không tìm thấy tin đăng
+            </h1>
+            <p style={{ fontFamily: font, fontSize: 14, color: C.textSecondary, margin: "0 0 28px", lineHeight: 1.6 }}>
+              Tin đăng không tồn tại, đã bị xóa hoặc bạn không có quyền chỉnh sửa.
+            </p>
+            <button
+              type="button"
+              onClick={() => navigate("/chu-tro/tin-dang")}
+              style={{ padding: "12px 24px", background: C.primary, color: "white", border: "none", borderRadius: 12, fontFamily: font, fontSize: 14, fontWeight: 700, cursor: "pointer" }}
+            >
+              Quản lý tin đăng
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (success) {
+    const successTitle = isEditMode
+      ? (updatedStatus === "PendingApproval" ? "Cập nhật & Đã gửi duyệt lại!" : "Cập nhật tin thành công!")
+      : "Đăng tin thành công!";
+
+    const successDesc = isEditMode
+      ? (updatedStatus === "PendingApproval"
+        ? "Tin của bạn đã được cập nhật và cần duyệt lại trước khi hiển thị."
+        : "Tin đăng của bạn đã được cập nhật thành công và hiển thị trên hệ thống.")
+      : "Tin đăng của bạn đã được xuất bản và lưu trữ hình ảnh trên Supabase Storage.";
+
     return (
       <div style={{ minHeight: "100vh", background: C.bg, fontFamily: font, display: "flex", flexDirection: "column" }}>
         <DemoBanner />
@@ -114,10 +172,10 @@ export function DangTinPage() {
               <CheckCircle size={36} strokeWidth={2.5} />
             </div>
             <h1 style={{ fontFamily: font, fontSize: 24, fontWeight: 800, color: C.textPrimary, margin: "0 0 10px" }}>
-              Đăng tin thành công!
+              {successTitle}
             </h1>
             <p style={{ fontFamily: font, fontSize: 14, color: C.textSecondary, margin: "0 0 28px", lineHeight: 1.6 }}>
-              Tin đăng của bạn đã được xuất bản và lưu trữ hình ảnh trên Supabase Storage.
+              {successDesc}
             </p>
             <div style={{ display: "flex", gap: 12, justifyContent: "center" }}>
               <button
@@ -218,7 +276,7 @@ export function DangTinPage() {
                 onClick={next}
                 style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "12px 28px", background: isSubmitting ? "#C9B09A" : C.primary, color: "white", border: "none", borderRadius: 10, fontFamily: font, fontSize: 14, fontWeight: 800, cursor: isSubmitting ? "not-allowed" : "pointer" }}
               >
-                {isSubmitting ? "Đang xử lý..." : "Hoàn tất & Đăng tin"}
+                {isSubmitting ? "Đang xử lý..." : isEditMode ? "Lưu thay đổi" : "Hoàn tất & Đăng tin"}
               </button>
             )}
           </div>

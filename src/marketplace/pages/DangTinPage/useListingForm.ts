@@ -1,20 +1,17 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router";
 import { useFormik } from "formik";
 import * as Yup from "yup";
 import { useAuth } from "../../../shared/contexts/AuthContext";
-import { createListing } from "../../services/listing-mutations";
-import { uploadListingImages, type UploadedMedia } from "../../../shared/services/media-service";
-import { formatVND, cleanVND, appendMetadataToDescription, type ListingMetadata } from "../../utils/listingMetadata";
-import { logError } from "../../../shared/services/supabase-error";
-import { amenityKeyToLabel } from "../../../shared/constants/amenities";
+import { createListing, updateListing } from "../../services/listing-mutations";
+import { getListingById } from "../../services/listing-queries";
+import { publicUrl, uploadListingImages, type UploadedMedia } from "../../../shared/services/media-service";
+import { formatVND, cleanVND, appendMetadataToDescription, parseMetadataFromDescription, type ListingMetadata } from "../../utils/listingMetadata";
+import { logError, toUserMessage } from "../../../shared/services/supabase-error";
+import { AMENITY_OPTIONS, amenityKeyToLabel } from "../../../shared/constants/amenities";
 import { NEARBY_CATEGORY_META } from "../../../shared/constants/nearby";
 import { isValidLatLng } from "../../../shared/components/common/LeafletMap";
-
-export interface PhotoFileItem {
-  file: File;
-  previewUrl: string;
-}
+import type { PhotoFileItem } from "./Step3Photos";
 
 const step1Schema = Yup.object().shape({
   title: Yup.string().min(10, "Tiêu đề quá ngắn (tối thiểu 10 ký tự)").required("Vui lòng nhập tiêu đề"),
@@ -49,7 +46,7 @@ const step4Schema = Yup.object().shape({
   water: Yup.string().required("Vui lòng nhập tiền nước"),
 });
 
-export function useListingForm(prefill: any = {}, showToast: (msg: string) => void) {
+export function useListingForm(prefill: any = {}, showToast: (msg: string) => void, listingId?: string) {
   const navigate = useNavigate();
   const { user } = useAuth();
 
@@ -59,6 +56,9 @@ export function useListingForm(prefill: any = {}, showToast: (msg: string) => vo
   const [showPayment, setShowPayment] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [newRoomId, setNewRoomId] = useState("");
+  const [isLoadingListing, setIsLoadingListing] = useState<boolean>(Boolean(listingId));
+  const [notFound, setNotFound] = useState(false);
+  const [updatedStatus, setUpdatedStatus] = useState<string>("");
 
   const [photos, setPhotos] = useState<PhotoFileItem[]>([]);
   const [uploadProgress, setUploadProgress] = useState<{ current: number; total: number } | null>(null);
@@ -99,6 +99,129 @@ export function useListingForm(prefill: any = {}, showToast: (msg: string) => vo
       }
     },
   });
+
+  useEffect(() => {
+    if (!listingId) return;
+
+    let isMounted = true;
+    setIsLoadingListing(true);
+
+    getListingById(listingId)
+      .then((listing) => {
+        if (!isMounted) return;
+        if (!listing) {
+          setNotFound(true);
+          setIsLoadingListing(false);
+          return;
+        }
+
+        const meta = (listing.metadata || {}) as ListingMetadata;
+        const parsedDesc = parseMetadataFromDescription(listing.description || "");
+
+        // CHECK constraint: access_policy chỉ nhận 'Free' | 'Restricted'.
+        // Tin cũ (trước migration 0300) chỉ có metadata.curfew nên vẫn đọc kèm.
+        const curfewType =
+          listing.access_policy === "Restricted" || meta.curfew?.type === "curfew" ? "curfew" : "free";
+        const curfewTime = listing.access_close_time
+          ? listing.access_close_time
+          : meta.curfew?.time || "";
+
+        let coords = { lat: 10.7712, lng: 106.6823, address: listing.address || "" };
+        if (listing.latitude != null && listing.longitude != null && isValidLatLng({ lat: Number(listing.latitude), lng: Number(listing.longitude) })) {
+          coords = {
+            lat: Number(listing.latitude),
+            lng: Number(listing.longitude),
+            address: listing.address || "",
+          };
+        } else if (meta.coords && isValidLatLng(meta.coords)) {
+          coords = {
+            lat: meta.coords.lat,
+            lng: meta.coords.lng,
+            address: listing.address || meta.coords.address || "",
+          };
+        }
+
+        const nearby: Array<{ category: string; name: string; dist: string }> = [];
+        if (Array.isArray(meta.nearby)) {
+          meta.nearby.forEach((cat: any) => {
+            if (cat.places && Array.isArray(cat.places)) {
+              cat.places.forEach((p: any) => {
+                if (p.name) {
+                  nearby.push({ category: cat.key || "truong-hoc", name: p.name, dist: p.dist || "" });
+                }
+              });
+            } else if (cat.category && cat.name) {
+              nearby.push(cat);
+            }
+          });
+        }
+
+        const amenityKeys: string[] = [];
+        if (Array.isArray(listing.listing_amenities)) {
+          listing.listing_amenities.forEach((a: any) => {
+            const labelOrKey = (a.amenity || "").trim();
+            const found = AMENITY_OPTIONS.find(
+              (opt) => opt.label.toLowerCase() === labelOrKey.toLowerCase() || opt.key === labelOrKey.toLowerCase()
+            );
+            if (found && !amenityKeys.includes(found.key)) {
+              amenityKeys.push(found.key);
+            }
+          });
+        }
+
+        const electric = listing.electricity_price != null ? String(listing.electricity_price) : meta.costs?.electric || "";
+        const water = listing.water_price != null ? String(listing.water_price) : meta.costs?.water || "";
+        const waterUnit = (listing.water_unit || meta.costs?.waterUnit || "person") as "person" | "cubic";
+        const service = listing.service_price != null ? String(listing.service_price) : meta.costs?.service || "";
+        const deposit = listing.deposit != null ? String(listing.deposit) : meta.costs?.deposit || "";
+        const other = meta.costs?.other || "";
+
+        formik.setValues({
+          title: listing.title || "",
+          roomType: listing.property_type || "Phòng trọ",
+          address: listing.address || "",
+          district: listing.district || "Quận 7",
+          area: listing.area ? String(listing.area) : "",
+          price: listing.price ? formatVND(listing.price) : "",
+          maxPeople: meta.costs ? (meta as any).maxPeople || "" : "",
+          floor: (meta as any).floor || "",
+          phone: listing.contact_phone || "",
+          curfewType,
+          curfewTime,
+          coords,
+          amenities: amenityKeys,
+          description: parsedDesc.cleanDescription,
+          nearby,
+          electric,
+          water,
+          waterUnit,
+          service,
+          deposit,
+          other,
+        });
+
+        if (Array.isArray(listing.listing_media) && listing.listing_media.length > 0) {
+          const sortedMedia = [...listing.listing_media].sort((a: any, b: any) => (a.sort_order || 0) - (b.sort_order || 0));
+          const mediaItems: PhotoFileItem[] = sortedMedia.map((m: any) => ({
+            storagePath: m.storage_path,
+            previewUrl: publicUrl(m.storage_path),
+          }));
+          setPhotos(mediaItems);
+        }
+
+        setIsLoadingListing(false);
+      })
+      .catch((err) => {
+        if (!isMounted) return;
+        logError("useListingForm.getListingById", err);
+        setNotFound(true);
+        setIsLoadingListing(false);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [listingId]);
 
   const next = async () => {
     formik.setErrors({});
@@ -163,20 +286,37 @@ export function useListingForm(prefill: any = {}, showToast: (msg: string) => vo
     setShowPayment(false);
 
     try {
-      // Client pre-generates listingId for Storage path consistency
-      const listingId = crypto.randomUUID();
+      const isEditMode = Boolean(listingId);
+      const targetListingId = listingId || crypto.randomUUID();
 
-      // Upload photos to Supabase Storage bucket 'listing-images'
-      let uploadedMedia: UploadedMedia[] = [];
-      if (photos.length > 0) {
-        const filesToUpload = photos.map((p) => p.file);
-        uploadedMedia = await uploadListingImages(
+      const newPhotoFiles = photos.filter((p) => p.file).map((p) => p.file as File);
+      let newUploadedMedia: UploadedMedia[] = [];
+      if (newPhotoFiles.length > 0) {
+        newUploadedMedia = await uploadListingImages(
           user.id,
-          listingId,
-          filesToUpload,
+          targetListingId,
+          newPhotoFiles,
           (current, total) => setUploadProgress({ current, total })
         );
       }
+
+      let newMediaIdx = 0;
+      const finalMedia: UploadedMedia[] = photos.map((item, idx) => {
+        if (item.file) {
+          const uploaded = newUploadedMedia[newMediaIdx++];
+          return {
+            storage_path: uploaded ? uploaded.storage_path : "",
+            sort_order: idx,
+            size_bytes: uploaded?.size_bytes ?? null,
+            mime_type: uploaded?.mime_type ?? null,
+          };
+        } else {
+          return {
+            storage_path: item.storagePath || "",
+            sort_order: idx,
+          };
+        }
+      }).filter((m) => Boolean(m.storage_path));
 
       const boostExpire = activateBoost
         ? new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
@@ -195,8 +335,6 @@ export function useListingForm(prefill: any = {}, showToast: (msg: string) => vo
           deposit: formik.values.deposit,
           other: formik.values.other,
         },
-        // Gom phẳng -> theo nhóm, bỏ nhóm rỗng. Trước đây chỗ này ghi cứng `[]`
-        // nên trang chi tiết không bao giờ có dữ liệu và rơi về danh sách mock.
         nearby: NEARBY_CATEGORY_META
           .map((cat) => ({
             key: cat.key,
@@ -210,36 +348,75 @@ export function useListingForm(prefill: any = {}, showToast: (msg: string) => vo
       };
 
       const finalDescription = appendMetadataToDescription(formik.values.description, metadata);
-      // `listing_amenities.amenity` lưu LABEL tiếng Việt — bộ lọc ở AllListingsPage
-      // và mapAmenityToKey() đều so theo label. Ghi `key` vào DB làm lọc + icon chết im lặng.
       const amenityLabels = formik.values.amenities.map(amenityKeyToLabel);
 
-      const createdId = await createListing({
-        id: listingId,
-        title: formik.values.title,
-        description: finalDescription,
-        propertyType: formik.values.roomType,
-        price: parseFloat(cleanVND(formik.values.price)),
-        area: parseFloat(formik.values.area),
-        address: formik.values.address,
-        district: formik.values.district,
-        contactPhone: formik.values.phone,
-        contactName: user.email || "Chủ nhà",
-        boostExpireAt: boostExpire,
-        amenities: amenityLabels,
-        media: uploadedMedia,
-        // Cột thật trong rental_listings — trước đây chỉ nằm trong khối metadata
-        // nhồi vào description, nên không lọc/hiển thị theo cột được.
-        latitude: isValidLatLng(formik.values.coords) ? formik.values.coords.lat : null,
-        longitude: isValidLatLng(formik.values.coords) ? formik.values.coords.lng : null,
-        metadata,
-      });
+      const electricPrice = formik.values.electric ? parseFloat(cleanVND(formik.values.electric)) : null;
+      const waterPrice = formik.values.water ? parseFloat(cleanVND(formik.values.water)) : null;
+      const servicePrice = formik.values.service ? parseFloat(cleanVND(formik.values.service)) : null;
+      const depositPrice = formik.values.deposit ? parseFloat(cleanVND(formik.values.deposit)) : null;
 
-      setNewRoomId(createdId || listingId);
-      setSuccess(true);
+      if (isEditMode && listingId) {
+        const returnedStatus = await updateListing({
+          id: listingId,
+          title: formik.values.title,
+          description: finalDescription,
+          propertyType: formik.values.roomType,
+          price: parseFloat(cleanVND(formik.values.price)),
+          area: parseFloat(formik.values.area),
+          address: formik.values.address,
+          district: formik.values.district,
+          contactPhone: formik.values.phone,
+          contactName: user.email || "Chủ nhà",
+          electricityPrice: electricPrice,
+          waterPrice: waterPrice,
+          waterUnit: formik.values.waterUnit,
+          servicePrice: servicePrice,
+          deposit: depositPrice,
+          // Map sang đúng 2 giá trị CHECK cho phép — gửi "free"/"curfew"
+          // sẽ vi phạm constraint và lệnh UPDATE fail.
+          accessPolicy: formik.values.curfewType === "curfew" ? "Restricted" : "Free",
+          accessCloseTime: formik.values.curfewType === "curfew" ? formik.values.curfewTime : null,
+          latitude: isValidLatLng(formik.values.coords) ? formik.values.coords.lat : null,
+          longitude: isValidLatLng(formik.values.coords) ? formik.values.coords.lng : null,
+          metadata,
+          amenities: amenityLabels,
+          media: finalMedia,
+        });
+
+        setUpdatedStatus(returnedStatus);
+        if (returnedStatus === "PendingApproval") {
+          showToast("Tin của bạn đã được cập nhật và cần duyệt lại trước khi hiển thị.");
+        } else {
+          showToast("Cập nhật tin đăng thành công!");
+        }
+        setNewRoomId(listingId);
+        setSuccess(true);
+      } else {
+        const createdId = await createListing({
+          id: targetListingId,
+          title: formik.values.title,
+          description: finalDescription,
+          propertyType: formik.values.roomType,
+          price: parseFloat(cleanVND(formik.values.price)),
+          area: parseFloat(formik.values.area),
+          address: formik.values.address,
+          district: formik.values.district,
+          contactPhone: formik.values.phone,
+          contactName: user.email || "Chủ nhà",
+          boostExpireAt: boostExpire,
+          amenities: amenityLabels,
+          media: finalMedia,
+          latitude: isValidLatLng(formik.values.coords) ? formik.values.coords.lat : null,
+          longitude: isValidLatLng(formik.values.coords) ? formik.values.coords.lng : null,
+          metadata,
+        });
+
+        setNewRoomId(createdId || targetListingId);
+        setSuccess(true);
+      }
     } catch (err: any) {
       logError("useListingForm.handlePostSubmit", err);
-      showToast("Lỗi khi đăng tin: " + (err.message || "Đã xảy ra lỗi không xác định"));
+      showToast(toUserMessage(err));
     } finally {
       setIsSubmitting(false);
       setUploadProgress(null);
@@ -263,5 +440,9 @@ export function useListingForm(prefill: any = {}, showToast: (msg: string) => vo
     success,
     newRoomId,
     handlePostSubmit,
+    isLoadingListing,
+    notFound,
+    updatedStatus,
+    isEditMode: Boolean(listingId),
   };
 }

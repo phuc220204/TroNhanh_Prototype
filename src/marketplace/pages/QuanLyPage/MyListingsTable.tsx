@@ -140,7 +140,7 @@ export function MyListingsTable({
                   isBlocked={isBlocked}
                   isVIP={isVIP}
                   onView={() => navigate(`/phong/${l.id}`)}
-                  onEdit={() => alert("[Demo] Tính năng chỉnh sửa tin đăng sẽ khả dụng ở bản chính thức!")}
+                  onEdit={() => navigate(`/chu-tro/dang-tin/${l.id}`)}
                   onToggleStatus={() => handleToggleStatus(l.id, l.status)}
                   onBoost={() => setBoostTarget(l)}
                   onDelete={() => handleDeleteListing(l.id)}
@@ -229,7 +229,7 @@ export function MyListingsTable({
                       isBlocked={isBlocked}
                       isVIP={isVIP}
                       onView={() => navigate(`/phong/${l.id}`)}
-                      onEdit={() => alert("[Demo] Tính năng chỉnh sửa tin đăng sẽ khả dụng ở bản chính thức!")}
+                      onEdit={() => navigate(`/chu-tro/dang-tin/${l.id}`)}
                       onToggleStatus={() => handleToggleStatus(l.id, l.status)}
                       onBoost={() => setBoostTarget(l)}
                       onDelete={() => handleDeleteListing(l.id)}
