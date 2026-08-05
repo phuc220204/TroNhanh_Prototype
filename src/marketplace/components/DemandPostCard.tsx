@@ -184,6 +184,7 @@ export function DemandPostCard({ post, kind, onMessage, onView }: DemandPostCard
           <button
             type="button"
             onClick={onMessage}
+            data-testid="demand-contact-btn"
             style={{
               flex: 1,
               minWidth: 0,
