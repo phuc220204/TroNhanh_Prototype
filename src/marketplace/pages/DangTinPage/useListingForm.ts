@@ -7,6 +7,9 @@ import { createListing } from "../../services/listing-mutations";
 import { uploadListingImages, type UploadedMedia } from "../../../shared/services/media-service";
 import { formatVND, cleanVND, appendMetadataToDescription, type ListingMetadata } from "../../utils/listingMetadata";
 import { logError } from "../../../shared/services/supabase-error";
+import { amenityKeyToLabel } from "../../../shared/constants/amenities";
+import { NEARBY_CATEGORY_META } from "../../../shared/constants/nearby";
+import { isValidLatLng } from "../../../shared/components/common/LeafletMap";
 
 export interface PhotoFileItem {
   file: File;
@@ -192,12 +195,24 @@ export function useListingForm(prefill: any = {}, showToast: (msg: string) => vo
           deposit: formik.values.deposit,
           other: formik.values.other,
         },
-        nearby: [],
+        // Gom phẳng -> theo nhóm, bỏ nhóm rỗng. Trước đây chỗ này ghi cứng `[]`
+        // nên trang chi tiết không bao giờ có dữ liệu và rơi về danh sách mock.
+        nearby: NEARBY_CATEGORY_META
+          .map((cat) => ({
+            key: cat.key,
+            label: cat.label,
+            places: (formik.values.nearby || [])
+              .filter((n: { category: string }) => n.category === cat.key)
+              .map((n: { name: string; dist: string }) => ({ name: n.name, dist: n.dist })),
+          }))
+          .filter((cat) => cat.places.length > 0),
         coords: formik.values.coords,
       };
 
       const finalDescription = appendMetadataToDescription(formik.values.description, metadata);
-      const amenityLabels = formik.values.amenities.map((key) => key);
+      // `listing_amenities.amenity` lưu LABEL tiếng Việt — bộ lọc ở AllListingsPage
+      // và mapAmenityToKey() đều so theo label. Ghi `key` vào DB làm lọc + icon chết im lặng.
+      const amenityLabels = formik.values.amenities.map(amenityKeyToLabel);
 
       const createdId = await createListing({
         id: listingId,
@@ -213,6 +228,11 @@ export function useListingForm(prefill: any = {}, showToast: (msg: string) => vo
         boostExpireAt: boostExpire,
         amenities: amenityLabels,
         media: uploadedMedia,
+        // Cột thật trong rental_listings — trước đây chỉ nằm trong khối metadata
+        // nhồi vào description, nên không lọc/hiển thị theo cột được.
+        latitude: isValidLatLng(formik.values.coords) ? formik.values.coords.lat : null,
+        longitude: isValidLatLng(formik.values.coords) ? formik.values.coords.lng : null,
+        metadata,
       });
 
       setNewRoomId(createdId || listingId);

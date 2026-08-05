@@ -66,9 +66,7 @@ export function formatDemandPostItem(item: any): DemandPostItem {
  */
 export async function listActiveDemandPosts(filter?: DemandPostFilter): Promise<DemandPostItem[]> {
   try {
-    // TODO: bo `as any` sau khi chay `pnpm db:push` + `pnpm db:types` —
-    // view public_demand_posts chua co trong database.types.ts.
-    let q = (supabase.from as any)("public_demand_posts")
+    let q = supabase.from("public_demand_posts")
       .select("*")
       .eq("status", "Active")
       .order("created_at", { ascending: false });
@@ -99,8 +97,7 @@ export async function listActiveDemandPosts(filter?: DemandPostFilter): Promise<
 export async function getDemandPostById(id: string): Promise<DemandPostItem | null> {
   if (!id) return null;
   try {
-    // TODO: bo `as any` sau khi chay `pnpm db:push` + `pnpm db:types`.
-    const { data, error } = await (supabase.from as any)("public_demand_posts")
+    const { data, error } = await supabase.from("public_demand_posts")
       .select("*")
       .eq("id", id)
       .maybeSingle();

@@ -1,19 +1,7 @@
-import { Wind, Wifi, Layers, Car, Bath, Clock, Refrigerator, WashingMachine, Fingerprint, ParkingCircle, PawPrint, AlertCircle } from "lucide-react";
+import { AlertCircle } from "lucide-react";
 import { C, font } from "../../../shared/theme";
-
-const AMENITIES_LIST = [
-  { key: "ac",      Icon: Wind,          label: "Máy lạnh" },
-  { key: "wifi",    Icon: Wifi,          label: "Wifi" },
-  { key: "loft",    Icon: Layers,        label: "Gác lửng" },
-  { key: "parking", Icon: Car,           label: "Chỗ để xe" },
-  { key: "bath",    Icon: Bath,          label: "WC riêng" },
-  { key: "free",    Icon: Clock,         label: "Giờ giấc tự do" },
-  { key: "fridge",  Icon: Refrigerator,  label: "Tủ lạnh" },
-  { key: "washer",  Icon: WashingMachine,label: "Máy giặt riêng" },
-  { key: "finger",  Icon: Fingerprint,   label: "Khóa vân tay" },
-  { key: "garage",  Icon: ParkingCircle, label: "Hầm để xe" },
-  { key: "pet",     Icon: PawPrint,      label: "Cho nuôi thú cưng" },
-];
+import { AMENITY_OPTIONS } from "../../../shared/constants/amenities";
+import { NearbyPlacesInput, type NearbyEntry } from "./NearbyPlacesInput";
 
 interface Step2AmenitiesProps {
   formik: any;
@@ -48,7 +36,7 @@ export function Step2Amenities({ formik }: Step2AmenitiesProps) {
           Tiện ích nổi bật phòng trọ
         </p>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(140px, 1fr))", gap: 10 }}>
-          {AMENITIES_LIST.map((item) => {
+          {AMENITY_OPTIONS.map((item) => {
             const Icon = item.Icon;
             const active = (values.amenities || []).includes(item.key);
             return (
@@ -112,6 +100,20 @@ export function Step2Amenities({ formik }: Step2AmenitiesProps) {
             <span style={{ fontFamily: font, fontSize: 12 }}>{errors.description}</span>
           </div>
         )}
+      </div>
+
+      {/* Tiện ích xung quanh — đi vào metadata.nearby */}
+      <div>
+        <p style={{ fontFamily: font, fontSize: 13, fontWeight: 700, color: C.textPrimary, margin: "0 0 4px" }}>
+          Vị trí & Tiện ích xung quanh
+        </p>
+        <p style={{ fontFamily: font, fontSize: 12.5, color: C.textSecondary, margin: "0 0 10px" }}>
+          Trường học, chợ, bệnh viện, quán ăn gần phòng. Người tìm trọ sẽ thấy đúng những gì bạn nhập ở đây.
+        </p>
+        <NearbyPlacesInput
+          value={(values.nearby || []) as NearbyEntry[]}
+          onChange={(next) => setFieldValue("nearby", next)}
+        />
       </div>
     </div>
   );

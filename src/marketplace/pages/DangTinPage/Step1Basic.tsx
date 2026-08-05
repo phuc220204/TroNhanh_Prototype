@@ -3,6 +3,7 @@ import { ChevronDown, AlertCircle, MapPin } from "lucide-react";
 import { C, font } from "../../../shared/theme";
 import { PROPERTY_TYPES, REGIONS } from "../../../shared/constants/catalog";
 import { formatVND, cleanVND } from "../../utils/listingMetadata";
+import { LocationPicker } from "./LocationPicker";
 
 interface Step1BasicProps {
   formik: any;
@@ -118,6 +119,14 @@ export function Step1Basic({ formik }: Step1BasicProps) {
             }}
           />
         </div>
+      </FieldGroup>
+
+      {/* Ghim vị trí trên bản đồ — đi vào rental_listings.latitude/longitude */}
+      <FieldGroup label="Ghim vị trí trên bản đồ" hint="Không bắt buộc, nhưng giúp người tìm trọ hình dung được vị trí.">
+        <LocationPicker
+          value={values.coords}
+          onChange={(next) => setFieldValue("coords", next)}
+        />
       </FieldGroup>
 
       {/* Area & Price */}

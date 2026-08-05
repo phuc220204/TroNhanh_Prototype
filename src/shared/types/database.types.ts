@@ -1136,6 +1136,37 @@ export type Database = {
         }
         Relationships: []
       }
+      public_demand_posts: {
+        Row: {
+          contact_name: string | null
+          contact_phone: string | null
+          created_at: string | null
+          current_address: string | null
+          description: string | null
+          desired_amenities: string[] | null
+          desired_districts: string[] | null
+          district: string | null
+          expire_at: string | null
+          gender_requirement: string | null
+          id: string | null
+          kind: string | null
+          min_area: number | null
+          move_in_date: string | null
+          needed_count: number | null
+          occupant_count: number | null
+          price_max: number | null
+          price_min: number | null
+          property_type: string | null
+          renter_id: string | null
+          renter_name: string | null
+          requirements: string[] | null
+          share_price: number | null
+          status: string | null
+          title: string | null
+          updated_at: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       can_review_contract: {

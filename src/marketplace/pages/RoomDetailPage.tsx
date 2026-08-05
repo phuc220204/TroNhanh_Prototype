@@ -2,14 +2,12 @@ import { useState, useEffect, useRef } from "react";
 import { useNavigate, useParams } from "react-router";
 import {
   ArrowLeft, Heart, Share2, MapPin, Users, Building2,
-  Wifi, Wind, Car, Bath, Clock, Layers,
+  Clock,
   Zap, Droplets, Wrench, Key,
   Phone, MessageSquare, Star,
   ChevronLeft, ChevronRight, X,
   User,
   Shield, AlertTriangle,
-  ShoppingBag, GraduationCap, HeartPulse, UtensilsCrossed,
-  Fingerprint, ParkingCircle, WashingMachine, Refrigerator,
 } from "lucide-react";
 import { C, font } from "../../shared/theme";
 import { useBreakpoint } from "../../shared/components/useBreakpoint";
@@ -17,6 +15,9 @@ import { PublicNavbarDesktop, DemoFAB } from "../../shared/components/PublicNavb
 import { DemoBanner } from "../../shared/components/common/DemoBanner";
 import { useAuth } from "../../shared/contexts/AuthContext";
 import { getListingImage, listingImageUrls } from "../services/listing-mappers";
+import { amenityIcon, amenityLabel } from "../../shared/constants/amenities";
+import { nearbyCategoryMeta } from "../../shared/constants/nearby";
+import { LeafletMap, isValidLatLng } from "../../shared/components/common/LeafletMap";
 import { getListingById, incrementViewCount } from "../services/listing-queries";
 import { parseMetadataFromDescription, ListingMetadata } from "../utils/listingMetadata";
 import { logError } from "../../shared/services/supabase-error";
@@ -61,14 +62,6 @@ const IMAGES = [
   "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=800&q=80",
 ];
 
-const AMENITIES: Array<{ key: string; Icon: React.ElementType; label: string }> = [
-  { key: "ac",      Icon: Wind,          label: "Máy lạnh" },
-  { key: "wifi",    Icon: Wifi,          label: "Wifi tốc độ cao" },
-  { key: "washer",  Icon: WashingMachine,label: "Máy giặt riêng" },
-  { key: "fridge",  Icon: Refrigerator,  label: "Tủ lạnh" },
-  { key: "key",     Icon: Fingerprint,   label: "Khóa vân tay" },
-  { key: "parking", Icon: ParkingCircle, label: "Hầm để xe" },
-];
 
 const COSTS: Array<{ Icon: React.ElementType; label: string; value: string }> = [
   { Icon: Zap,      label: "Điện",      value: "3.500 đ/kWh" },
@@ -77,46 +70,6 @@ const COSTS: Array<{ Icon: React.ElementType; label: string; value: string }> = 
   { Icon: Key,      label: "Đặt cọc",   value: "1 tháng tiền thuê" },
 ];
 
-const NEARBY_CATEGORIES = [
-  {
-    key: "shopping",
-    Icon: ShoppingBag,
-    label: "Mua sắm & Giải trí",
-    places: [
-      { name: "Vạn Hạnh Mall", dist: "500m" },
-      { name: "Chợ Nguyễn Tri Phương", dist: "800m" },
-      { name: "Big C Miền Đông", dist: "1.2km" },
-    ],
-  },
-  {
-    key: "edu",
-    Icon: GraduationCap,
-    label: "Giáo dục",
-    places: [
-      { name: "ĐH Kinh tế TP.HCM", dist: "600m" },
-      { name: "ĐH Bách Khoa", dist: "1.2km" },
-    ],
-  },
-  {
-    key: "health",
-    Icon: HeartPulse,
-    label: "Y tế",
-    places: [
-      { name: "Bệnh viện 115", dist: "400m" },
-      { name: "Viện Tim TP.HCM", dist: "900m" },
-    ],
-  },
-  {
-    key: "food",
-    Icon: UtensilsCrossed,
-    label: "Ẩm thực",
-    places: [
-      { name: "Khu ăn uống Sư Vạn Hạnh", dist: "300m" },
-      { name: "Quán cafe văn phòng", dist: "200m" },
-      { name: "Cửa hàng tiện lợi 24/7", dist: "150m" },
-    ],
-  },
-];
 
 const SIMILAR_ROOMS = [
   {
@@ -222,14 +175,20 @@ function ImageGallery({
 }: { images: string[]; saved: boolean; onSave: () => void; onOpen: (idx: number) => void }) {
   const [mainIdx, setMainIdx] = useState(0);
 
+  // Số ảnh thay đổi theo tin (3 ảnh thật, hoặc 5 ảnh fallback) — luôn kẹp chỉ số
+  // vào khoảng hợp lệ, nếu không badge sẽ hiện kiểu "4/3 ảnh" và <img> nhận undefined.
+  const safeMain = Math.min(Math.max(mainIdx, 0), images.length - 1);
+  const thumbs = images.slice(1, 5);
+  const hasThumbs = thumbs.length > 0;
+
   return (
-    <div style={{ display: "grid", gridTemplateColumns: "3fr 2fr", height: 460, gap: 8, borderRadius: 16, overflow: "hidden", marginBottom: 32 }}>
+    <div style={{ display: "grid", gridTemplateColumns: hasThumbs ? "3fr 2fr" : "1fr", height: 460, gap: 8, borderRadius: 16, overflow: "hidden", marginBottom: 32 }}>
       {/* Main image */}
-      <div style={{ position: "relative", cursor: "pointer" }} onClick={() => onOpen(mainIdx)}>
-        <img src={images[mainIdx]} alt="Ảnh chính"
+      <div style={{ position: "relative", cursor: "pointer" }} onClick={() => onOpen(safeMain)}>
+        <img src={images[safeMain]} alt="Ảnh chính"
           style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
         <div style={{ position: "absolute", top: 14, left: 14, background: "rgba(0,0,0,0.42)", borderRadius: 999, padding: "5px 13px" }}>
-          <span style={{ fontFamily: font, fontSize: 12, fontWeight: 600, color: "white" }}>{mainIdx + 1}/{images.length} ảnh</span>
+          <span style={{ fontFamily: font, fontSize: 12, fontWeight: 600, color: "white" }}>{safeMain + 1}/{images.length} ảnh</span>
         </div>
         <button onClick={e => { e.stopPropagation(); onSave(); }}
           style={{ position: "absolute", top: 14, right: 14, background: "rgba(255,255,255,0.92)", border: "none", borderRadius: "50%", width: 40, height: 40, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", boxShadow: "0 2px 8px rgba(0,0,0,0.15)" }}>
@@ -245,19 +204,21 @@ function ImageGallery({
         </button>
       </div>
 
-      {/* 2×2 thumbnails */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gridTemplateRows: "1fr 1fr", gap: 8 }}>
-        {[1, 2, 3, 4].map(i => {
-          const isLast = i === 4;
+      {/* Thumbnail — chỉ render đúng số ảnh thật có, tối đa 4 */}
+      {hasThumbs && (
+      <div style={{ display: "grid", gridTemplateColumns: thumbs.length > 1 ? "1fr 1fr" : "1fr", gridTemplateRows: thumbs.length > 2 ? "1fr 1fr" : "1fr", gap: 8 }}>
+        {thumbs.map((src, k) => {
+          const i = k + 1;
+          const isOverflowSlot = k === thumbs.length - 1 && images.length > 5;
           return (
             <div key={i} style={{ position: "relative", cursor: "pointer", overflow: "hidden" }}
-              onClick={() => { setMainIdx(i); if (isLast) onOpen(i); }}>
-              <img src={images[i]} alt={`Ảnh ${i + 1}`}
+              onClick={() => { setMainIdx(i); if (isOverflowSlot) onOpen(i); }}>
+              <img src={src} alt={`Ảnh ${i + 1}`}
                 style={{ width: "100%", height: "100%", objectFit: "cover", display: "block", transition: "transform 0.2s" }}
                 onMouseEnter={e => (e.currentTarget.style.transform = "scale(1.04)")}
                 onMouseLeave={e => (e.currentTarget.style.transform = "scale(1)")}
               />
-              {isLast && images.length > 5 && (
+              {isOverflowSlot && (
                 <div style={{ position: "absolute", inset: 0, background: "rgba(20,10,4,0.55)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 4 }}>
                   <span style={{ fontFamily: font, fontSize: 22, fontWeight: 800, color: "white" }}>+{images.length - 4}</span>
                   <span style={{ fontFamily: font, fontSize: 12, color: "rgba(255,255,255,0.85)" }}>ảnh nữa</span>
@@ -267,9 +228,12 @@ function ImageGallery({
           );
         })}
       </div>
+      )}
     </div>
   );
-}/* ══════════════════════════════════════════
+}
+
+/* ══════════════════════════════════════════
    CONTENT BLOCKS — LEFT COLUMN
 ══════════════════════════════════════════ */
 function TitleBlock({ listing }: { listing: any }) {
@@ -358,14 +322,14 @@ function AmenitiesGrid({ listing }: { listing: any }) {
       {listingAmenities.length > 0 ? (
         <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10 }}>
           {listingAmenities.map((amenity: string) => {
-            const matchedMeta = AMENITIES.find(a => amenity.toLowerCase().includes(a.label.toLowerCase())) || { Icon: Wifi };
-            const Icon = matchedMeta.Icon;
+            const Icon = amenityIcon(amenity);
             return (
               <div key={amenity} style={{ display: "flex", alignItems: "center", gap: 10, padding: "11px 14px", background: C.white, border: `1px solid ${C.border}`, borderRadius: 10 }}>
                 <div style={{ width: 34, height: 34, borderRadius: 9, background: C.caramelSoft, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                   <Icon size={16} color={C.primary} strokeWidth={1.8} />
                 </div>
-                <span style={{ fontFamily: font, fontSize: 13, fontWeight: 500, color: C.textPrimary }}>{amenity}</span>
+                {/* Tin đăng trước bản vá backfill lưu `key` — amenityLabel() dịch lại sang tiếng Việt. */}
+                <span style={{ fontFamily: font, fontSize: 13, fontWeight: 500, color: C.textPrimary }}>{amenityLabel(amenity)}</span>
               </div>
             );
           })}
@@ -420,27 +384,24 @@ function CostTable({ listing }: { listing: any }) {
 function NearbySection({ listing }: { listing: any }) {
   const { metadata } = parseMetadataFromDescription(listing.description);
   
-  const getNearbyCategories = () => {
-    if (metadata.nearby && metadata.nearby.length > 0) {
-      return metadata.nearby.map((cat: any) => {
-        let Icon = ShoppingBag;
-        if (cat.key === "edu") Icon = GraduationCap;
-        else if (cat.key === "health") Icon = HeartPulse;
-        else if (cat.key === "food") Icon = UtensilsCrossed;
-        return {
-          key: cat.key,
-          Icon,
-          label: cat.label,
-          places: cat.places || []
-        };
-      });
-    }
-    return NEARBY_CATEGORIES;
-  };
+  // KHÔNG fallback sang danh sách mock (PRD AC#1): tin không nhập gì thì khối này
+  // hiện trạng thái rỗng, chứ không bịa ra "Vạn Hạnh Mall".
+  const categories = ((metadata.nearby || []) as any[])
+    .map((cat: any) => {
+      const meta = nearbyCategoryMeta(cat.key);
+      return { key: cat.key, Icon: meta.Icon, label: cat.label || meta.label, places: cat.places || [] };
+    })
+    .filter((cat: any) => cat.places.length > 0);
 
-  const categories = getNearbyCategories();
-  const coords = metadata.coords || { lat: 10.7712, lng: 106.6823 };
-  const mapAddress = coords.address || `${listing.address || "Đường chính"}, ${listing.district}`;
+  // Ưu tiên cột thật; metadata.coords chỉ để đọc tin cũ (trước khi có cột).
+  const coords =
+    listing.latitude != null && listing.longitude != null
+      ? { lat: Number(listing.latitude), lng: Number(listing.longitude) }
+      : metadata.coords;
+  const hasCoords = isValidLatLng(coords);
+  const mapAddress = `${listing.address || "Đường chính"}, ${listing.district}`;
+
+  if (categories.length === 0 && !hasCoords) return null;
 
   return (
     <Section title="Vị trí & Tiện ích xung quanh">
@@ -468,42 +429,14 @@ function NearbySection({ listing }: { listing: any }) {
           </div>
         ))}
       </div>
-      {/* Map placeholder */}
-      <div style={{
-        borderRadius: 14,
-        overflow: "hidden",
-        border: `1px solid ${C.border}`,
-        height: 220,
-        background: "#ECE5D8",
-        position: "relative",
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        justifyContent: "center",
-      }}>
-        {/* Draw mock street lines */}
-        <div style={{ position: "absolute", top: "30%", left: 0, right: 0, height: 12, background: "white", transform: "rotate(-5deg)", opacity: 0.85 }} />
-        <div style={{ position: "absolute", top: 0, bottom: 0, left: "40%", width: 12, background: "white", transform: "rotate(15deg)", opacity: 0.85 }} />
-        <div style={{ position: "absolute", top: "70%", left: 0, right: 0, height: 8, background: "white", transform: "rotate(3deg)", opacity: 0.85 }} />
-        
-        {/* River */}
-        <div style={{ position: "absolute", top: "50%", left: "-10%", width: "120%", height: 24, background: "#A9D5EC", transform: "rotate(25deg)", opacity: 0.7 }} />
-
-        <div style={{
-          zIndex: 5,
-          background: "rgba(255, 255, 255, 0.92)",
-          padding: "12px 18px",
-          borderRadius: 12,
-          border: `1px solid ${C.border}`,
-          textAlign: "center",
-          boxShadow: "0 4px 14px rgba(0,0,0,0.12)",
-          maxWidth: "80%"
-        }}>
-          <MapPin size={22} color={C.primary} style={{ display: "block", margin: "0 auto 6px" }} />
-          <span style={{ fontFamily: font, fontSize: 14, fontWeight: 700, color: C.textPrimary, display: "block", marginBottom: 2 }}>{mapAddress}</span>
-          <span style={{ fontFamily: font, fontSize: 11, color: C.textSecondary }}>Tọa độ giả lập: {coords.lat.toFixed(5)}, {coords.lng.toFixed(5)}</span>
+      {hasCoords && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+          <LeafletMap center={coords} height={220} data-testid="listing-map" />
+          <span style={{ fontFamily: font, fontSize: 12, color: C.textSecondary, display: "inline-flex", alignItems: "center", gap: 5 }}>
+            <MapPin size={12} /> {mapAddress}
+          </span>
         </div>
-      </div>
+      )}
     </Section>
   );
 }
@@ -916,27 +849,22 @@ function MobileDescriptionSection() {
 function MobileNearbySection({ listing }: { listing: any }) {
   const { metadata } = parseMetadataFromDescription(listing.description);
 
-  const getNearbyCategories = () => {
-    if (metadata.nearby && metadata.nearby.length > 0) {
-      return metadata.nearby.map((cat: any) => {
-        let Icon = ShoppingBag;
-        if (cat.key === "edu") Icon = GraduationCap;
-        else if (cat.key === "health") Icon = HeartPulse;
-        else if (cat.key === "food") Icon = UtensilsCrossed;
-        return {
-          key: cat.key,
-          Icon,
-          label: cat.label,
-          places: cat.places || []
-        };
-      });
-    }
-    return NEARBY_CATEGORIES;
-  };
+  // Không fallback mock (PRD AC#1) — xem ghi chú ở NearbySection bản desktop.
+  const categories = ((metadata.nearby || []) as any[])
+    .map((cat: any) => {
+      const meta = nearbyCategoryMeta(cat.key);
+      return { key: cat.key, Icon: meta.Icon, label: cat.label || meta.label, places: cat.places || [] };
+    })
+    .filter((cat: any) => cat.places.length > 0);
 
-  const categories = getNearbyCategories();
-  const coords = metadata.coords || { lat: 10.7712, lng: 106.6823 };
-  const mapAddress = coords.address || `${listing.address || "Đường chính"}, ${listing.district}`;
+  const coords =
+    listing.latitude != null && listing.longitude != null
+      ? { lat: Number(listing.latitude), lng: Number(listing.longitude) }
+      : metadata.coords;
+  const hasCoords = isValidLatLng(coords);
+  const mapAddress = `${listing.address || "Đường chính"}, ${listing.district}`;
+
+  if (categories.length === 0 && !hasCoords) return null;
 
   return (
     <div style={{ marginBottom: 24, paddingBottom: 24, borderBottom: `1px solid ${C.border}` }}>
@@ -963,41 +891,14 @@ function MobileNearbySection({ listing }: { listing: any }) {
           </div>
         ))}
       </div>
-      {/* Map placeholder */}
-      <div style={{
-        borderRadius: 12,
-        overflow: "hidden",
-        border: `1px solid ${C.border}`,
-        height: 160,
-        background: "#ECE5D8",
-        position: "relative",
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        justifyContent: "center",
-      }}>
-        {/* Draw mock street lines */}
-        <div style={{ position: "absolute", top: "30%", left: 0, right: 0, height: 10, background: "white", transform: "rotate(-5deg)", opacity: 0.85 }} />
-        <div style={{ position: "absolute", top: 0, bottom: 0, left: "40%", width: 10, background: "white", transform: "rotate(15deg)", opacity: 0.85 }} />
-        
-        {/* River */}
-        <div style={{ position: "absolute", top: "50%", left: "-10%", width: "120%", height: 20, background: "#A9D5EC", transform: "rotate(25deg)", opacity: 0.7 }} />
-
-        <div style={{
-          zIndex: 5,
-          background: "rgba(255, 255, 255, 0.92)",
-          padding: "10px 14px",
-          borderRadius: 10,
-          border: `1px solid ${C.border}`,
-          textAlign: "center",
-          boxShadow: "0 3px 10px rgba(0,0,0,0.12)",
-          maxWidth: "85%"
-        }}>
-          <MapPin size={18} color={C.primary} style={{ display: "block", margin: "0 auto 4px" }} />
-          <span style={{ fontFamily: font, fontSize: 12, fontWeight: 700, color: C.textPrimary, display: "block", marginBottom: 2 }}>{mapAddress}</span>
-          <span style={{ fontFamily: font, fontSize: 10, color: C.textSecondary }}>Tọa độ giả lập: {coords.lat.toFixed(5)}, {coords.lng.toFixed(5)}</span>
+      {hasCoords && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+          <LeafletMap center={coords} height={180} zoom={15} data-testid="listing-map-mobile" />
+          <span style={{ fontFamily: font, fontSize: 11.5, color: C.textSecondary, display: "inline-flex", alignItems: "center", gap: 5 }}>
+            <MapPin size={11} /> {mapAddress}
+          </span>
         </div>
-      </div>
+      )}
     </div>
   );
 }

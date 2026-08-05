@@ -16,6 +16,11 @@ export interface CreateListingInput {
   boostExpireAt?: string | null;
   amenities?: string[];
   media?: UploadedMedia[];
+  /** Toạ độ ghim trên bản đồ. Ghi vào cột thật, không phải chỉ trong metadata. */
+  latitude?: number | null;
+  longitude?: number | null;
+  /** Khối `metadata` jsonb: curfew, costs, nearby, coords. */
+  metadata?: object | null;
   /** false = lưu nháp (Draft). Mặc định true = gửi đăng. */
   submit?: boolean;
 }
@@ -39,6 +44,9 @@ export async function createListing(input: CreateListingInput): Promise<string> 
         contact_phone: input.contactPhone,
         contact_name: input.contactName,
         boost_expire_at: input.boostExpireAt ?? null,
+        latitude: input.latitude ?? null,
+        longitude: input.longitude ?? null,
+        metadata: input.metadata ?? {},
       } as any,
       p_amenities: input.amenities ?? [],
       p_media: (input.media ?? []) as any,
