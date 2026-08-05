@@ -39,6 +39,7 @@ export const router = createHashRouter([
 
           // Renter Account Routes
           { path: "tai-khoan", lazy: async () => ({ Component: (await import("../shared/pages/AccountPage")).AccountPage }) },
+          { path: "tai-khoan/phong-cua-toi", lazy: async () => ({ Component: (await import("../marketplace/pages/MyStaysPage")).MyStaysPage }) },
           { path: "tai-khoan/danh-gia", lazy: async () => ({ Component: (await import("../shared/pages/AccountPage")).AccountReviewsPage }) },
           { path: "tai-khoan/hop-dong", lazy: async () => ({ Component: (await import("../shared/pages/AccountPage")).AccountContractsPage }) },
           { path: "tai-khoan/cai-dat", lazy: async () => ({ Component: (await import("../shared/pages/AccountPage")).AccountSettingsPage }) },
@@ -51,8 +52,8 @@ export const router = createHashRouter([
           { path: "chu-tro/dang-tin", lazy: async () => ({ Component: (await import("../marketplace/pages/DangTinPage")).DangTinPage }) },
           { path: "chu-tro/dang-tin/:id", lazy: async () => ({ Component: (await import("../marketplace/pages/DangTinPage")).DangTinPage }) },
           { path: "chu-tro/quan-ly-phong", lazy: async () => ({ Component: (await import("../workspace/pages/QuanLyPhongPage")).QuanLyPhongPage }) },
-          { path: "chu-tro/tim-nguoi-thue", lazy: async () => ({ Component: (await import("../workspace/pages/FindRenterPage")).FindRenterPage }) },
-          { path: "chu-tro/danh-gia", lazy: async () => ({ Component: (await import("../workspace/pages/LandlordReviewsPage")).LandlordReviewsPage }) },
+          { path: "chu-tro/tim-nguoi-thue", lazy: async () => ({ Component: (await import("../marketplace/pages/FindRenterPage")).FindRenterPage }) },
+          { path: "chu-tro/danh-gia", lazy: async () => ({ Component: (await import("../marketplace/pages/LandlordReviewsPage")).LandlordReviewsPage }) },
           { path: "chu-tro/hoa-don", lazy: async () => ({ Component: (await import("../workspace/pages/LandlordBillingPage")).LandlordBillingPage }) },
 
           // Admin / Moderator Routes (Require Role Admin or Moderator)

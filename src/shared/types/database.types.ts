@@ -1245,6 +1245,44 @@ export type Database = {
           updated_at: string
         }[]
       }
+      get_my_properties_review_summary: {
+        Args: never
+        Returns: {
+          avg_rating: number
+          district: string
+          is_public_profile: boolean
+          property_id: string
+          property_name: string
+          public_slug: string
+          review_count: number
+        }[]
+      }
+      get_my_stays: {
+        Args: never
+        Returns: {
+          can_review: boolean
+          contract_id: string
+          contract_status: string
+          deposit: number
+          end_date: string
+          is_public_profile: boolean
+          link_status: string
+          occupancy_id: string
+          occupant_name: string
+          property_district: string
+          property_id: string
+          property_name: string
+          public_slug: string
+          rent_price: number
+          review_content: string
+          review_created_at: string
+          review_id: string
+          review_rating: number
+          room_code: string
+          room_id: string
+          start_date: string
+        }[]
+      }
       grant_role: {
         Args: { p_role: string; p_user_id: string }
         Returns: undefined
@@ -1304,6 +1342,10 @@ export type Database = {
       set_platform_setting: {
         Args: { p_key: string; p_value: Json }
         Returns: undefined
+      }
+      set_property_public_profile: {
+        Args: { p_enabled: boolean; p_property_id: string }
+        Returns: string
       }
       set_subscription_status: {
         Args: { p_status: string }

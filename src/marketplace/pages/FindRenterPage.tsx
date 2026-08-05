@@ -5,9 +5,9 @@ import { C, font, radius, space } from "../../shared/theme";
 import { LandlordShell } from "../../shared/components/LandlordShell";
 import { EmptyState } from "../../shared/components/common/EmptyState";
 import { getMyVacantRoomSummaries, scoreDemandMatch, type VacantRoomSummary } from "../../shared/services/vacancy-service";
-import { listActiveDemandPosts, type DemandPostItem } from "../../marketplace/services/demand-post-service";
+import { listActiveDemandPosts, type DemandPostItem } from "../services/demand-post-service";
 import { startConversation } from "../../shared/services/messaging-service";
-import { DemandPostCard } from "../../marketplace/components/DemandPostCard";
+import { DemandPostCard } from "../components/DemandPostCard";
 import { REGIONS } from "../../shared/constants/catalog";
 import { logError, toUserMessage } from "../../shared/services/supabase-error";
 

@@ -5,14 +5,14 @@ import {
   Search, Heart, User, ChevronDown,
   Key, UserSearch,
   LayoutGrid, LayoutDashboard, Building2, FileText, BookOpen, HelpCircle, X,
-  Bell, Menu, Database, MessageSquare
+  Bell, Menu, Database, MessageSquare, UserCheck
 } from "lucide-react";
 import { C, font } from "../theme";
 import { BrandLogo } from "./brand/BrandLogo";
 import { useAuth } from "../contexts/AuthContext";
 import { supabase } from "../supabaseClient";
 import { seedMockDataForUser } from "../utils/dbSeeder";
-import { logError } from "../services/supabase-error";
+import { logError, toUserMessage } from "../services/supabase-error";
 import { getTotalUnreadCount } from "../services/messaging-service";
 
 /* ══════════════════════════════════════════
@@ -469,12 +469,37 @@ export function DemoFAB() {
     }
   };
 
+  /**
+   * BR-022 đòi hợp đồng ≥30 ngày hoặc ≥1 payment mới đánh giá được. Trên dữ liệu
+   * demo mới seed thì không đợt ở nào thoả, nên luồng đánh giá không demo được.
+   *
+   * ⚠️ Cách đúng là RPC demo này (backdate hợp đồng + tạo 1 payment thật),
+   * KHÔNG phải nới `can_review_contract()` — cổng 30 ngày là toàn bộ giá trị
+   * chống gian lận của tính năng.
+   */
+  const handleLinkDemoOccupancy = async () => {
+    if (!user) {
+      navigate("/dang-nhap");
+      return;
+    }
+    try {
+      const { error } = await supabase.rpc("demo_link_me_to_seeded_occupancy", {});
+      if (error) throw error;
+      alert("Đã gắn bạn vào một đợt ở demo (giả lập). Vào 'Phòng của tôi' để xác nhận liên kết rồi đánh giá.");
+      navigate("/tai-khoan/phong-cua-toi");
+    } catch (err) {
+      logError("PublicNavbar.handleLinkDemoOccupancy", err);
+      alert(toUserMessage(err));
+    }
+  };
+
   const shortcuts = [
     { Icon: LayoutDashboard, label: "Dashboard chủ trọ",        action: () => navigate("/chu-tro") },
     { Icon: Building2,       label: "Quản lý khu trọ & phòng",  action: () => navigate("/chu-tro/quan-ly-phong") },
     { Icon: FileText,        label: "Quản lý tin đăng",          action: () => navigate("/chu-tro/tin-dang") },
     { Icon: BookOpen,        label: "Design System",              action: () => navigate("/styleguide") },
     { Icon: Database,        label: "Seed Dữ liệu mẫu (GĐ3)",     action: handleSeed },
+    { Icon: UserCheck,       label: "Tôi là người ở demo",        action: handleLinkDemoOccupancy },
     { Icon: HelpCircle,      label: "Trợ giúp",                  action: () => {} },
   ];
 

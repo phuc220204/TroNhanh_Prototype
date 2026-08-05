@@ -1,10 +1,10 @@
 import { ReactNode } from "react";
 import { Link, useLocation } from "react-router";
-import { User, Star, FileText, Settings } from "lucide-react";
+import { User, Star, FileText, Settings, Home } from "lucide-react";
 import { C, font } from "../theme";
 import { PublicNavbar } from "./PublicNavbar";
 
-export type RenterNavId = "account" | "reviews" | "contracts" | "settings";
+export type RenterNavId = "account" | "stays" | "reviews" | "contracts" | "settings";
 
 interface RenterShellProps {
   active?: RenterNavId;
@@ -13,6 +13,7 @@ interface RenterShellProps {
 
 const RENTER_NAV_ITEMS: { id: RenterNavId; label: string; path: string; icon: any }[] = [
   { id: "account", label: "Tổng quan tài khoản", path: "/tai-khoan", icon: User },
+  { id: "stays", label: "Phòng của tôi", path: "/tai-khoan/phong-cua-toi", icon: Home },
   { id: "reviews", label: "Đánh giá của tôi", path: "/tai-khoan/danh-gia", icon: Star },
   { id: "contracts", label: "Hợp đồng thuê", path: "/tai-khoan/hop-dong", icon: FileText },
   { id: "settings", label: "Cài đặt tài khoản", path: "/tai-khoan/cai-dat", icon: Settings },

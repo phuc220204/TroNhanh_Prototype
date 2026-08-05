@@ -16,6 +16,11 @@ export interface PropertyItem {
   bank_name?: string;
   bank_account_number?: string;
   bank_account_name?: string;
+  /** BR-024 — bật thì review của khu mới hiện công khai. */
+  is_public_profile_enabled?: boolean;
+  public_slug?: string | null;
+  avg_rating?: number | null;
+  review_count?: number | null;
 }
 
 /**
