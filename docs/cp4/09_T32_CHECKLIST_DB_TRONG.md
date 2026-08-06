@@ -15,17 +15,41 @@ platform_settings   4  ✓   subscription_plans  0  ⚠️
 tin đang có boost  27
 ```
 
-⚠️ **`subscription_plans` rỗng** — bảng gói dịch vụ không có dòng nào, dù migration
-init có `insert` 3 gói. Bảng này cũng là **bảng duy nhất trong 21 bảng không bật
-RLS** (lệch §3). Không gây lỗi runtime vì `TrialModal` hardcode danh sách gói,
-nhưng đó là nguồn chân lý kép. **Việc riêng, không thuộc T32** — xử lý sau.
+⚠️ **`subscription_plans`: SQL Editor đọc `3`, anon key đọc `0`.**
+
+Lần đầu tôi kết luận "bảng rỗng" — **sai**. Bảng có đủ 3 gói; vấn đề là **RLS đang
+bật mà không có policy SELECT nào**, nên không ai đọc được, kể cả người đã đăng
+nhập. (RLS được bật ở ngoài migrations — grep `enable row level security` trong
+`supabase/migrations/` không có dòng nào cho bảng này.)
+
+Hệ quả: `subscription-service.ts` embed `subscription_plans(*)` luôn trả `null` ⇒
+`SubscriptionData.plan` luôn `null`. Chưa component nào tiêu thụ `plan` nên không
+hỏng gì thấy được — bug im lặng.
+
+Cách sửa **không phải** seed lại (đã có dữ liệu) mà là thêm policy SELECT cho
+`anon, authenticated` — bảng giá là thông tin công khai. Kèm theo: `TrialModal`
+đang hardcode danh sách gói, nên giá trong UI và giá trong DB là hai nguồn chân lý
+độc lập. **Việc riêng, không thuộc T32.**
 
 ⚠️ **27/34 tin đang có `boost_expire_at`** — dấu vết của lỗ boost cũ (client tự
 set được, không qua thanh toán). Đã vá ở commit `47d46a9`; truncate sẽ xóa hết.
 
 ---
 
-## Phần 1 — BẠN chạy: dọn dữ liệu
+## Phần 1 — Dọn dữ liệu ✅ ĐÃ XONG (2026-08-06)
+
+Kết quả: **16/16 bảng nghiệp vụ = 0**. Anon cũng xác nhận marketplace trống
+(`rental_listings` 34→0 · `demand_posts` 49→0 · `listing_media` 3→0).
+
+Sáu bảng giữ lại còn nguyên: `profiles` 12 · `user_roles` 19 ·
+`subscription_plans` 3 · `platform_settings` 4 · `user_subscriptions` 9.
+
+> `profiles` = 12 chứ không phải 4 như dòng "kỳ vọng" trong script — kỳ vọng đó
+> viết hẹp, thực tế đã có 12 tài khoản đăng ký qua 9 task. Không phải lỗi.
+> Điều cần là **Admin còn nguyên** (`user_roles` > 0) và đúng vậy.
+
+<details>
+<summary>Cách chạy lại (nếu cần dọn lần nữa)</summary>
 
 Supabase CLI **không có** lệnh chạy SQL ad-hoc lên remote (`db reset` chỉ tác
 động DB local). Nên bước này buộc phải làm tay.
@@ -40,8 +64,10 @@ Supabase CLI **không có** lệnh chạy SQL ad-hoc lên remote (`db reset` ch�
 > Nếu một dòng "phải rỗng" mà khác 0, hoặc một dòng "phải còn" mà bằng 0 →
 > **dừng lại, đừng dùng tiếp**, gửi tôi xem.
 
-Sau đó tôi chạy `node supabase/scripts/verify-public-state.mjs` để xác nhận phần
+Sau đó chạy `node supabase/scripts/verify-public-state.mjs` để xác nhận phần
 công khai từ phía client.
+
+</details>
 
 ### Dọn ảnh đã upload (không bắt buộc)
 
