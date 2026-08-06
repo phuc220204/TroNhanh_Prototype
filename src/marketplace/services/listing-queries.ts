@@ -239,6 +239,72 @@ export async function getListingById(id: string) {
 }
 
 /**
+ * Tin cho thuê tương tự một tin đang xem — cùng quận, giá xê xích ±30%.
+ *
+ * Thay cho hằng số `SIMILAR_ROOMS` cứng trong `RoomDetailPage`: khối "Phòng
+ * tương tự" trước đây hiện đúng 3 tin bịa ("Studio Full Nội Thất Quận 10", ảnh
+ * Unsplash) trên MỌI tin, kể cả tin ở tỉnh khác. Vi phạm §11 (mock cứng trong
+ * component khi đã có bảng thật) và là thứ người xem demo phát hiện ngay.
+ *
+ * Nới dần: hết tin cùng quận thì trả tin cùng khoảng giá ở quận khác, để khối
+ * này không rỗng trên một marketplace còn ít dữ liệu.
+ */
+export async function getSimilarListings(
+  currentListingId: string,
+  district: string | null | undefined,
+  price: number | null | undefined,
+  limit = 3
+): Promise<ListingCardItem[]> {
+  if (!currentListingId) return [];
+
+  const basePrice = Number(price) || 0;
+  const priceMin = basePrice > 0 ? Math.round(basePrice * 0.7) : undefined;
+  const priceMax = basePrice > 0 ? Math.round(basePrice * 1.3) : undefined;
+
+  const exclude = (rows: ListingCardItem[]) =>
+    rows.filter((r) => r.id !== currentListingId).slice(0, limit);
+
+  try {
+    if (district) {
+      const sameDistrict = await searchListings({
+        districts: [district],
+        priceMin,
+        priceMax,
+        status: "Active",
+        pageSize: limit + 1, // +1 vì tin đang xem cũng khớp điều kiện
+        page: 1,
+      });
+      const filtered = exclude(sameDistrict.data);
+      if (filtered.length >= limit) return filtered;
+
+      // Chưa đủ: bù thêm tin cùng khoảng giá ở quận khác, không trùng id.
+      const wider = await searchListings({
+        priceMin,
+        priceMax,
+        status: "Active",
+        pageSize: limit * 3,
+        page: 1,
+      });
+      const seen = new Set([currentListingId, ...filtered.map((r) => r.id)]);
+      const extra = wider.data.filter((r) => !seen.has(r.id));
+      return [...filtered, ...extra].slice(0, limit);
+    }
+
+    const anyDistrict = await searchListings({
+      priceMin,
+      priceMax,
+      status: "Active",
+      pageSize: limit + 1,
+      page: 1,
+    });
+    return exclude(anyDistrict.data);
+  } catch (err) {
+    logError("listing-queries.getSimilarListings", err);
+    return [];
+  }
+}
+
+/**
  * Fetch all listings owned by a specific seller.
  */
 export async function getMyListings(sellerId: string): Promise<ListingCardItem[]> {
