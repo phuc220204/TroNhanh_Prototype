@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Plus, Users, UserCheck, AlertCircle, X, CheckCircle, Clock } from "lucide-react";
+import { Plus, UserCheck, AlertCircle, X, CheckCircle } from "lucide-react";
 import { C, font } from "../../../shared/theme";
 import type { Property, Room } from "../../types/room";
 import {
@@ -7,9 +7,12 @@ import {
   createOccupancyWithContract,
   endOccupancy,
   linkRenterAccount,
+  addOccupantToContract,
   type OccupancyItem,
 } from "../../services/occupancy-service";
 import { toUserMessage } from "../../../shared/services/supabase-error";
+import { AddCoOccupantModal } from "./AddCoOccupantModal";
+import { OccupancyTable } from "./OccupancyTable";
 
 interface OccupantsViewProps {
   property: Property | null;
@@ -44,6 +47,8 @@ export function OccupantsView({
   const [renterEmail, setRenterEmail] = useState("");
 
   const [linkEmailInput, setLinkEmailInput] = useState("");
+  const [coOccupantTarget, setCoOccupantTarget] = useState<{ contractId: string; roomLabel: string; primaryName: string } | null>(null);
+  const [coOccupantSubmitting, setCoOccupantSubmitting] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
   const [toastMsg, setToastMsg] = useState("");
@@ -156,6 +161,31 @@ export function OccupantsView({
     }
   };
 
+  /**
+   * Thêm người ở cùng vào hợp đồng đang có — KHÔNG tạo hợp đồng mới nên BR-006
+   * không bị đụng. Số người trong phòng không giới hạn, tuỳ chủ trọ và diện tích.
+   */
+  const handleAddCoOccupant = async (input: { full_name: string; phone_number?: string }) => {
+    if (!coOccupantTarget) return;
+    try {
+      setCoOccupantSubmitting(true);
+      setErrorMsg("");
+      await addOccupantToContract(coOccupantTarget.contractId, {
+        full_name: input.full_name,
+        phone_number: input.phone_number,
+        start_date: new Date().toISOString().split("T")[0] || "",
+      });
+      setCoOccupantTarget(null);
+      showToast("Đã thêm người ở cùng vào hợp đồng.");
+      fetchOccupanciesData();
+      if (onRefreshData) onRefreshData();
+    } catch (err: unknown) {
+      setErrorMsg(toUserMessage(err));
+    } finally {
+      setCoOccupantSubmitting(false);
+    }
+  };
+
   const handleEndContract = async (contractId: string) => {
     if (isReadOnly) return;
     if (!window.confirm("Bạn có chắc chắn muốn kết thúc hợp đồng này? Phòng sẽ quay về trạng thái Trống.")) {
@@ -191,6 +221,12 @@ export function OccupantsView({
       setSubmitting(false);
     }
   };
+
+  // Gom hợp đồng theo id để hàng của người ở cùng tra ngược được.
+  const contractById = new Map<string, NonNullable<OccupancyItem["contracts"]>[number]>();
+  for (const item of occupancies) {
+    for (const c of item.contracts ?? []) contractById.set(c.id, c);
+  }
 
   return (
     <div style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: 16, padding: mobile ? 16 : 22 }}>
@@ -237,114 +273,17 @@ export function OccupantsView({
         </button>
       </div>
 
-      {/* Occupancies Table */}
-      {loading ? (
-        <p style={{ fontFamily: font, fontSize: 13.5, color: C.textSecondary, textAlign: "center", padding: "32px 0" }}>
-          Đang tải thông tin người ở...
-        </p>
-      ) : occupancies.length === 0 ? (
-        <div style={{ textAlign: "center", padding: "40px 16px", border: `1px dashed ${C.border}`, borderRadius: 12 }}>
-          <Users size={32} color={C.textSecondary} style={{ marginBottom: 8 }} />
-          <p style={{ fontFamily: font, fontSize: 14, fontWeight: 600, color: C.textPrimary, margin: "0 0 4px" }}>
-            Chưa có người ở nào được ghi nhận
-          </p>
-          <p style={{ fontFamily: font, fontSize: 12.5, color: C.textSecondary, margin: 0 }}>
-            Nhấp "Thêm người ở" để tạo đợt ở mới và lập hợp đồng thuê phòng.
-          </p>
-        </div>
-      ) : (
-        <div style={{ overflowX: "auto" }}>
-          <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 720 }}>
-            <thead>
-              <tr style={{ background: C.caramelSoft }}>
-                {["Phòng", "Họ và tên", "SĐT", "Số người", "Thời hạn HĐ", "Tiền cọc", "Giá thuê", "Tài khoản Renter", "Thao tác"].map((h) => (
-                  <th key={h} style={{ fontFamily: font, fontSize: 11.5, fontWeight: 800, color: C.textSecondary, textTransform: "uppercase", padding: "10px 12px", textAlign: "left" }}>
-                    {h}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {occupancies.map((occ) => {
-                const room = property?.rooms.find((r) => r.id === occ.room_id);
-                const activeContract = occ.contracts?.find((c) => c.status === "Active") || occ.contracts?.[0];
-
-                return (
-                  <tr key={occ.id} style={{ borderTop: `1px solid ${C.border}` }}>
-                    <td style={{ fontFamily: font, fontSize: 13.5, fontWeight: 700, color: C.textPrimary, padding: "12px" }}>
-                      {room?.code || "Phòng"}
-                    </td>
-                    <td style={{ fontFamily: font, fontSize: 13.5, fontWeight: 600, color: C.textPrimary, padding: "12px" }}>
-                      {occ.full_name}
-                    </td>
-                    <td style={{ fontFamily: font, fontSize: 13, color: C.textSecondary, padding: "12px" }}>
-                      {occ.phone_number || "—"}
-                    </td>
-                    <td style={{ fontFamily: font, fontSize: 13, color: C.textSecondary, padding: "12px" }}>
-                      {occ.occupant_count} người
-                    </td>
-                    <td style={{ fontFamily: font, fontSize: 12.5, color: C.textSecondary, padding: "12px" }}>
-                      {activeContract ? `${activeContract.start_date} → ${activeContract.end_date}` : occ.start_date}
-                    </td>
-                    <td style={{ fontFamily: font, fontSize: 13, color: C.textPrimary, padding: "12px" }}>
-                      {activeContract ? `${Number(activeContract.deposit || 0).toLocaleString("vi-VN")}đ` : "—"}
-                    </td>
-                    <td style={{ fontFamily: font, fontSize: 13.5, fontWeight: 700, color: C.primary, padding: "12px" }}>
-                      {activeContract ? `${Number(activeContract.rent_price || 0).toLocaleString("vi-VN")}đ` : "—"}
-                    </td>
-                    <td style={{ fontFamily: font, fontSize: 12.5, padding: "12px" }}>
-                      {occ.link_status === "Confirmed" ? (
-                        <span style={{ color: C.success, fontWeight: 700, display: "inline-flex", alignItems: "center", gap: 4 }}>
-                          <CheckCircle size={12} /> Đã liên kết
-                        </span>
-                      ) : occ.link_status === "Pending" ? (
-                        <span style={{ color: C.repairing, fontWeight: 600, display: "inline-flex", alignItems: "center", gap: 4 }} title="Đang chờ Renter xác nhận (BR-029)">
-                          <Clock size={12} /> Chờ xác nhận
-                        </span>
-                      ) : (
-                        <button
-                          type="button"
-                          disabled={isReadOnly}
-                          onClick={() => {
-                            setLinkModalOpen(occ);
-                            setLinkEmailInput("");
-                            setErrorMsg("");
-                          }}
-                          style={{ background: "none", border: "none", color: C.primary, fontSize: 12, fontWeight: 700, cursor: "pointer", textDecoration: "underline" }}
-                        >
-                          Gắn email
-                        </button>
-                      )}
-                    </td>
-                    <td style={{ padding: "12px" }}>
-                      {activeContract && activeContract.status === "Active" && (
-                        <button
-                          type="button"
-                          disabled={isReadOnly}
-                          onClick={() => handleEndContract(activeContract.id)}
-                          style={{
-                            padding: "5px 10px",
-                            background: C.cream,
-                            color: C.error,
-                            border: `1px solid ${C.error}`,
-                            borderRadius: 6,
-                            fontFamily: font,
-                            fontSize: 12,
-                            fontWeight: 600,
-                            cursor: isReadOnly ? "not-allowed" : "pointer",
-                          }}
-                        >
-                          Kết thúc HĐ
-                        </button>
-                      )}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      )}
+      {/* Bảng người ở — tách ra OccupancyTable.tsx (§8.2) */}
+      <OccupancyTable
+        loading={loading}
+        occupancies={occupancies}
+        property={property}
+        contractById={contractById}
+        isReadOnly={isReadOnly}
+        onOpenLinkModal={(occ) => { setLinkModalOpen(occ); setLinkEmailInput(""); setErrorMsg(""); }}
+        onAddCoOccupant={setCoOccupantTarget}
+        onEndContract={handleEndContract}
+      />
 
       {/* Modal "Thêm người ở" */}
       {modalOpen && (
@@ -564,6 +503,17 @@ export function OccupantsView({
             </form>
           </div>
         </div>
+      )}
+
+      {coOccupantTarget && (
+        <AddCoOccupantModal
+          roomLabel={coOccupantTarget.roomLabel}
+          primaryName={coOccupantTarget.primaryName}
+          submitting={coOccupantSubmitting}
+          errorMessage={errorMsg || null}
+          onCancel={() => { setCoOccupantTarget(null); setErrorMsg(""); }}
+          onSubmit={handleAddCoOccupant}
+        />
       )}
     </div>
   );
