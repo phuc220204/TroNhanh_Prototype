@@ -1206,6 +1206,10 @@ export type Database = {
           user_id: string
         }[]
       }
+      boost_listing: {
+        Args: { p_days: number; p_listing_id: string }
+        Returns: string
+      }
       can_review_contract: {
         Args: { p_contract: string; p_user: string }
         Returns: boolean
@@ -1242,6 +1246,10 @@ export type Database = {
       demo_link_me_to_seeded_occupancy: {
         Args: { p_property_id?: string }
         Returns: string
+      }
+      extend_contract: {
+        Args: { p_contract_id: string; p_new_end_date: string }
+        Returns: undefined
       }
       get_my_conversations: {
         Args: never

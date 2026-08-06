@@ -14,7 +14,6 @@ export interface CreateListingInput {
   district: string;
   contactPhone: string;
   contactName: string;
-  boostExpireAt?: string | null;
   amenities?: string[];
   media?: UploadedMedia[];
   /** Toạ độ ghim trên bản đồ. Ghi vào cột thật, không phải chỉ trong metadata. */
@@ -44,7 +43,9 @@ export async function createListing(input: CreateListingInput): Promise<string> 
         district: input.district,
         contact_phone: input.contactPhone,
         contact_name: input.contactName,
-        boost_expire_at: input.boostExpireAt ?? null,
+        // `boost_expire_at` CỐ Ý không có ở đây: boost chỉ đặt được qua RPC
+        // `boost_listing()` sau khi ghi thanh toán. Gửi từ đây thì trigger
+        // `trg_guard_boost_expire_at` raise BOOST_REQUIRES_PAYMENT.
         latitude: input.latitude ?? null,
         longitude: input.longitude ?? null,
         metadata: input.metadata ?? {},
@@ -173,17 +174,27 @@ export async function deleteListing(id: string): Promise<void> {
 }
 
 /**
- * Boost listing VIP.
+ * Đẩy tin nổi bật (boost) — BR-005.
+ *
+ * ⚠️ ĐI QUA RPC, KHÔNG update cột trực tiếp. Bản trước của hàm này chạy
+ * `.from("rental_listings").update({ boost_expire_at })` — nghĩa là client tự đặt
+ * được ngày hết hạn boost, không trả một đồng nào, và tin xếp đầu mọi danh sách
+ * (BR-005). Cột `boost_expire_at` giờ có trigger canh; mọi đường ghi khác ngoài
+ * RPC này đều bị raise `BOOST_REQUIRES_PAYMENT`.
+ *
+ * `days` phải là một gói có trong `platform_settings.boost_config`
+ * (7 / 15 / 30). Giá do server tra từ config — client không gửi giá.
+ *
+ * @returns `boost_expire_at` mới (server tính, có cộng dồn nếu boost còn hạn).
  */
 export async function boostListing(id: string, days = 7): Promise<string> {
   try {
-    const futureDate = new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString();
-    const { error } = await supabase
-      .from("rental_listings")
-      .update({ boost_expire_at: futureDate })
-      .eq("id", id);
+    const { data, error } = await supabase.rpc("boost_listing", {
+      p_listing_id: id,
+      p_days: days,
+    });
     if (error) throw error;
-    return futureDate;
+    return data as string;
   } catch (err) {
     logError("listing-mutations.boostListing", err);
     throw err;

@@ -1,4 +1,4 @@
-import { Users, CheckCircle, Clock, UserPlus } from "lucide-react";
+import { Users, CheckCircle, Clock, UserPlus, CalendarPlus } from "lucide-react";
 import { C, font } from "../../../shared/theme";
 import type { Property } from "../../types/room";
 import type { OccupancyItem } from "../../services/occupancy-service";
@@ -14,6 +14,7 @@ interface OccupancyTableProps {
   onOpenLinkModal: (occ: OccupancyItem) => void;
   onAddCoOccupant: (target: { contractId: string; roomLabel: string; primaryName: string }) => void;
   onEndContract: (contractId: string) => void;
+  onExtendContract: (contractId: string, currentEndDate: string) => void;
 }
 
 /**
@@ -31,6 +32,7 @@ export function OccupancyTable({
   onOpenLinkModal,
   onAddCoOccupant,
   onEndContract,
+  onExtendContract,
 }: OccupancyTableProps) {
   return (
     <>
@@ -156,7 +158,32 @@ export function OccupancyTable({
                           <button
                             type="button"
                             disabled={isReadOnly}
+                            onClick={() => onExtendContract(activeContract.id, activeContract.end_date)}
+                            data-testid="extend-contract-btn"
+                            style={{
+                              padding: "5px 10px",
+                              background: C.white,
+                              color: C.primary,
+                              border: `1px solid ${C.border}`,
+                              borderRadius: 6,
+                              fontFamily: font,
+                              fontSize: 12,
+                              fontWeight: 600,
+                              cursor: isReadOnly ? "not-allowed" : "pointer",
+                              display: "inline-flex",
+                              alignItems: "center",
+                              gap: 4,
+                            }}
+                          >
+                            <CalendarPlus size={12} /> Gia hạn HĐ
+                          </button>
+                        )}
+                        {activeContract && activeContract.status === "Active" && occ.is_primary !== false && (
+                          <button
+                            type="button"
+                            disabled={isReadOnly}
                             onClick={() => onEndContract(activeContract.id)}
+                            data-testid="end-contract-btn"
                             style={{
                               padding: "5px 10px",
                               background: C.cream,

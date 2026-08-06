@@ -41,6 +41,12 @@ const ERROR_MESSAGES: Record<string, string> = {
   ROOM_HAS_ACTIVE_CONTRACT:
     "Phòng này đã có hợp đồng còn hiệu lực trong khoảng thời gian đó.",
   INVALID_CONTRACT_PERIOD: "Ngày kết thúc hợp đồng phải sau ngày bắt đầu.",
+  CONTRACT_NOT_FOUND: "Không tìm thấy hợp đồng.",
+  CONTRACT_NOT_OWNED: "Hợp đồng này không thuộc quyền quản lý của bạn.",
+  CONTRACT_NOT_ACTIVE:
+    "Chỉ gia hạn được hợp đồng đang còn hiệu lực. Hợp đồng đã kết thúc thì cần lập hợp đồng mới.",
+  EXTEND_DATE_NOT_LATER:
+    "Ngày kết thúc mới phải muộn hơn ngày kết thúc hiện tại.",
   USER_NOT_FOUND_BY_EMAIL: "Không tìm thấy tài khoản người dùng với email này.",
 
   // Điện nước & hóa đơn
@@ -67,6 +73,13 @@ const ERROR_MESSAGES: Record<string, string> = {
 
   // Gói dịch vụ
   INVALID_SUBSCRIPTION_STATUS: "Trạng thái gói không hợp lệ.",
+
+  // Đẩy tin nổi bật (BR-005)
+  BOOST_REQUIRES_PAYMENT:
+    "Không thể tự đặt thời hạn đẩy tin. Vui lòng chọn gói đẩy tin để tiếp tục.",
+  INVALID_BOOST_PACKAGE: "Gói đẩy tin không hợp lệ.",
+  BOOST_CONFIG_MISSING:
+    "Hệ thống chưa cấu hình gói đẩy tin. Vui lòng liên hệ quản trị viên.",
 
   // Demo
   DEMO_NO_AVAILABLE_OCCUPANCY:

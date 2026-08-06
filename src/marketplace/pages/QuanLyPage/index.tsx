@@ -14,8 +14,9 @@ import { DemoFAB } from "../../../shared/components/PublicNavbar";
 import { searchListings } from "../../services/listing-queries";
 import { updateListingStatus, deleteListing, boostListing } from "../../services/listing-mutations";
 import { formatVND } from "../../utils/listingMetadata";
-import { logError } from "../../../shared/services/supabase-error";
+import { logError, toUserMessage } from "../../../shared/services/supabase-error";
 import { MyListingsTable, type DbListing } from "./MyListingsTable";
+import { BoostModal } from "./BoostModal";
 
 const FILTERS = [
   { label: "Tất cả", value: "all" },
@@ -69,39 +70,6 @@ function Sparkline({ data, color }: { data: number[]; color: string }) {
   );
 }
 
-function PaymentModal({ open, title, onConfirm, onCancel }: { open: boolean; title: string; onConfirm: () => void; onCancel: () => void }) {
-  if (!open) return null;
-  return (
-    <>
-      <div style={{ position: "fixed", inset: 0, background: "rgba(20,10,4,0.5)", zIndex: 500, backdropFilter: "blur(3px)" }} />
-      <div style={{ position: "fixed", top: "50%", left: "50%", transform: "translate(-50%,-50%)", zIndex: 501, background: C.white, borderRadius: 20, padding: "28px 32px", maxWidth: 400, width: "calc(100vw - 48px)", textAlign: "center", boxShadow: "0 20px 60px rgba(20,10,4,0.25)" }}>
-        <div style={{ width: 56, height: 56, borderRadius: "50%", background: "#FFF3E0", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px" }}>
-          <ArrowUpCircle size={24} color={C.repairing} />
-        </div>
-        <h3 style={{ fontFamily: font, fontSize: 18, fontWeight: 700, color: C.textPrimary, margin: "0 0 6px" }}>Đẩy tin VIP nổi bật</h3>
-        <p style={{ fontFamily: font, fontSize: 13, color: C.textSecondary, margin: "0 0 16px" }}>Tin: <strong>{title}</strong></p>
-        <p style={{ fontFamily: font, fontSize: 13, color: C.textSecondary, margin: "0 0 20px" }}>Số tiền: <strong style={{ color: C.repairing, fontSize: 16 }}>100.000 đ</strong> (Hiển thị nổi bật 7 ngày)</p>
-
-        <div style={{ border: `1.5px solid ${C.border}`, borderRadius: 12, padding: 16, background: C.white, display: "inline-block", marginBottom: 20 }}>
-          <div style={{ width: 140, height: 140, background: "#f5f5f5", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", borderRadius: 8, margin: "0 auto", position: "relative" }}>
-            <div style={{ border: "4px solid #333", width: 80, height: 80, display: "flex", flexWrap: "wrap", padding: 2 }}>
-              {Array.from({ length: 16 }).map((_, i) => (
-                <div key={i} style={{ width: "25%", height: "25%", background: (i % 3 === 0 || i % 5 === 2) ? "#333" : "transparent" }} />
-              ))}
-            </div>
-            <div style={{ fontFamily: font, fontSize: 9, fontWeight: 600, color: C.textSecondary, marginTop: 8 }}>TRỌ NHANH - BOOST</div>
-          </div>
-        </div>
-
-        <div style={{ display: "flex", gap: 10 }}>
-          <button onClick={onCancel} style={{ flex: 1, padding: "12px", background: "transparent", border: `1.5px solid ${C.border}`, borderRadius: 10, fontFamily: font, fontSize: 14, fontWeight: 600, color: C.textSecondary, cursor: "pointer" }}>Hủy</button>
-          <button onClick={onConfirm} style={{ flex: 2, padding: "12px", background: C.primary, border: "none", borderRadius: 10, fontFamily: font, fontSize: 14, fontWeight: 700, color: "white", cursor: "pointer" }}>Xác nhận thanh toán</button>
-        </div>
-      </div>
-    </>
-  );
-}
-
 function Toast({ show, message }: { show: boolean; message: string }) {
   return (
     <div style={{ position: "fixed", bottom: 32, left: "50%", transform: `translateX(-50%) translateY(${show ? 0 : 20}px)`, opacity: show ? 1 : 0, transition: "all 0.25s", zIndex: 600, background: C.primaryDark, borderRadius: 10, padding: "12px 22px", pointerEvents: "none" }}>
@@ -135,6 +103,8 @@ export function QuanLyPage() {
   const [page, setPage]               = useState(1);
   const [pageSize, setPageSize]       = useState(10);
   const [boostTarget, setBoostTarget] = useState<DbListing | null>(null);
+  const [boostSubmitting, setBoostSubmitting] = useState(false);
+  const [boostError, setBoostError] = useState<string | null>(null);
   const [mutatingId, setMutatingId]   = useState<string | null>(null);
 
   const showToast = (msg: string) => {
@@ -202,16 +172,23 @@ export function QuanLyPage() {
     }
   };
 
-  const handleConfirmBoost = async () => {
+  const handleConfirmBoost = async (days: number) => {
     if (!boostTarget) return;
+    setBoostError(null);
     try {
-      const futureDate = await boostListing(boostTarget.id, 7);
-      setDbListings(prev => prev.map(l => l.id === boostTarget.id ? { ...l, boost_expire_at: futureDate } : l));
+      setBoostSubmitting(true);
+      // Ngày hết hạn do SERVER trả về (RPC tự cộng dồn nếu boost còn hạn).
+      // Trước đây client tự tính `Date.now() + days` rồi ghi thẳng vào cột —
+      // vừa không qua thanh toán, vừa xóa mất phần hạn còn lại.
+      const newExpiry = await boostListing(boostTarget.id, days);
+      setDbListings(prev => prev.map(l => l.id === boostTarget.id ? { ...l, boost_expire_at: newExpiry } : l));
       setBoostTarget(null);
-      showToast("Đã đẩy tin VIP nổi bật thành công!");
-    } catch (err: any) {
+      showToast("Đã đẩy tin nổi bật thành công!");
+    } catch (err: unknown) {
       logError("QuanLyPage.handleConfirmBoost", err);
-      showToast("Có lỗi xảy ra: " + err.message);
+      setBoostError(toUserMessage(err));
+    } finally {
+      setBoostSubmitting(false);
     }
   };
 
@@ -573,7 +550,14 @@ export function QuanLyPage() {
         </div>
       </div>
 
-      <PaymentModal open={!!boostTarget} title={boostTarget?.title || ""} onConfirm={handleConfirmBoost} onCancel={() => setBoostTarget(null)} />
+      <BoostModal
+        open={!!boostTarget}
+        title={boostTarget?.title || ""}
+        submitting={boostSubmitting}
+        errorMessage={boostError}
+        onConfirm={handleConfirmBoost}
+        onCancel={() => { setBoostTarget(null); setBoostError(null); }}
+      />
       <Toast show={toast} message={toastMsg} />
       <DemoFAB />
     </LandlordShell>

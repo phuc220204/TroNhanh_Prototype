@@ -57,3 +57,30 @@ export async function getActiveContractByRoom(roomId: string): Promise<ContractI
     return null;
   }
 }
+
+/**
+ * Gia hạn hợp đồng đang hiệu lực — dời `end_date`, giữ nguyên occupancy và
+ * toàn bộ hóa đơn cũ.
+ *
+ * ⚠️ KHÔNG truyền `owner_id`: RPC derive `auth.uid()` và tự assert ownership.
+ * RPC cũng kiểm BR-006 (không để hợp đồng sau gia hạn chồng thời gian với một
+ * hợp đồng Active khác trên cùng phòng) — đừng kiểm lại ở client rồi tin vào đó.
+ *
+ * Domain error có thể gặp: `CONTRACT_NOT_FOUND` · `CONTRACT_NOT_OWNED` ·
+ * `CONTRACT_NOT_ACTIVE` · `EXTEND_DATE_NOT_LATER` · `ROOM_HAS_ACTIVE_CONTRACT`.
+ */
+export async function extendContract(
+  contractId: string,
+  newEndDate: string
+): Promise<void> {
+  try {
+    const { error } = await supabase.rpc("extend_contract", {
+      p_contract_id: contractId,
+      p_new_end_date: newEndDate,
+    });
+    if (error) throw error;
+  } catch (err) {
+    logError("contract-service.extendContract", err);
+    throw err;
+  }
+}

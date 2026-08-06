@@ -11,6 +11,8 @@ import {
   addOccupantToContract,
   type OccupancyItem,
 } from "../../services/occupancy-service";
+import { extendContract } from "../../services/contract-service";
+import { ExtendContractModal } from "./ExtendContractModal";
 import { toUserMessage } from "../../../shared/services/supabase-error";
 import { AddCoOccupantModal } from "./AddCoOccupantModal";
 import { OccupancyTable } from "./OccupancyTable";
@@ -50,6 +52,8 @@ export function OccupantsView({
   const [linkEmailInput, setLinkEmailInput] = useState("");
   const [coOccupantTarget, setCoOccupantTarget] = useState<{ contractId: string; roomLabel: string; primaryName: string } | null>(null);
   const [coOccupantSubmitting, setCoOccupantSubmitting] = useState(false);
+  const [extendTarget, setExtendTarget] = useState<{ contractId: string; currentEndDate: string; roomLabel: string; occupantName: string } | null>(null);
+  const [extendSubmitting, setExtendSubmitting] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
   const [toastMsg, setToastMsg] = useState("");
@@ -189,6 +193,23 @@ export function OccupantsView({
     }
   };
 
+  const handleExtendContract = async (newEndDate: string) => {
+    if (isReadOnly || !extendTarget) return;
+    setErrorMsg("");
+    try {
+      setExtendSubmitting(true);
+      await extendContract(extendTarget.contractId, newEndDate);
+      setExtendTarget(null);
+      showToast(`Đã gia hạn hợp đồng đến ${newEndDate}.`);
+      fetchOccupanciesData();
+      if (onRefreshData) onRefreshData();
+    } catch (err: unknown) {
+      setErrorMsg(toUserMessage(err));
+    } finally {
+      setExtendSubmitting(false);
+    }
+  };
+
   const handleEndContract = async (contractId: string) => {
     if (isReadOnly) return;
     if (!window.confirm("Bạn có chắc chắn muốn kết thúc hợp đồng này? Phòng sẽ quay về trạng thái Trống.")) {
@@ -287,6 +308,17 @@ export function OccupantsView({
         onOpenLinkModal={(occ) => { setLinkModalOpen(occ); setLinkEmailInput(""); setErrorMsg(""); }}
         onAddCoOccupant={setCoOccupantTarget}
         onEndContract={handleEndContract}
+        onExtendContract={(contractId, currentEndDate) => {
+          const occ = occupancies.find((o) => (o.contracts?.[0]?.id ?? o.contract_id) === contractId);
+          const room = property?.rooms.find((r) => r.id === occ?.room_id);
+          setErrorMsg("");
+          setExtendTarget({
+            contractId,
+            currentEndDate,
+            roomLabel: room?.code ?? "Phòng",
+            occupantName: occ?.full_name ?? "người ở",
+          });
+        }}
       />
 
       {/* Modal "Thêm người ở" */}
@@ -507,6 +539,18 @@ export function OccupantsView({
             </form>
           </div>
         </div>
+      )}
+
+      {extendTarget && (
+        <ExtendContractModal
+          currentEndDate={extendTarget.currentEndDate}
+          occupantName={extendTarget.occupantName}
+          roomLabel={extendTarget.roomLabel}
+          submitting={extendSubmitting}
+          errorMessage={errorMsg || null}
+          onCancel={() => { setExtendTarget(null); setErrorMsg(""); }}
+          onSubmit={handleExtendContract}
+        />
       )}
 
       {coOccupantTarget && (

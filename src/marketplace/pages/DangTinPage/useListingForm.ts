@@ -3,7 +3,7 @@ import { useNavigate } from "react-router";
 import { useFormik } from "formik";
 import * as Yup from "yup";
 import { useAuth } from "../../../shared/contexts/AuthContext";
-import { createListing, updateListing } from "../../services/listing-mutations";
+import { createListing, updateListing, boostListing } from "../../services/listing-mutations";
 import { getListingById } from "../../services/listing-queries";
 import { publicUrl, uploadListingImages, type UploadedMedia } from "../../../shared/services/media-service";
 import { formatVND, cleanVND, appendMetadataToDescription, parseMetadataFromDescription, type ListingMetadata } from "../../utils/listingMetadata";
@@ -12,6 +12,14 @@ import { AMENITY_OPTIONS, amenityKeyToLabel } from "../../../shared/constants/am
 import { NEARBY_CATEGORY_META } from "../../../shared/constants/nearby";
 import { isValidLatLng } from "../../../shared/components/common/LeafletMap";
 import type { PhotoFileItem } from "./Step3Photos";
+
+/**
+ * Gói đẩy tin mặc định khi người dùng bật boost ngay lúc đăng tin.
+ * Phải là một giá trị có trong `platform_settings.boost_config.days`
+ * (hiện là 7 / 15 / 30), nếu không RPC raise `INVALID_BOOST_PACKAGE`.
+ * Muốn chọn gói khác thì dùng nút "Đẩy tin" ở `/chu-tro/tin-dang`.
+ */
+const DEFAULT_BOOST_DAYS = 7;
 
 const step1Schema = Yup.object().shape({
   title: Yup.string().min(10, "Tiêu đề quá ngắn (tối thiểu 10 ký tự)").required("Vui lòng nhập tiêu đề"),
@@ -318,10 +326,6 @@ export function useListingForm(prefill: any = {}, showToast: (msg: string) => vo
         }
       }).filter((m) => Boolean(m.storage_path));
 
-      const boostExpire = activateBoost
-        ? new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
-        : null;
-
       const metadata: ListingMetadata = {
         curfew: {
           type: formik.values.curfewType,
@@ -403,13 +407,21 @@ export function useListingForm(prefill: any = {}, showToast: (msg: string) => vo
           district: formik.values.district,
           contactPhone: formik.values.phone,
           contactName: user.email || "Chủ nhà",
-          boostExpireAt: boostExpire,
           amenities: amenityLabels,
           media: finalMedia,
           latitude: isValidLatLng(formik.values.coords) ? formik.values.coords.lat : null,
           longitude: isValidLatLng(formik.values.coords) ? formik.values.coords.lng : null,
           metadata,
         });
+
+        // BR-005 — boost phải đi qua RPC `boost_listing()` để có dòng `payments`.
+        // Trước đây chỗ này tự tính `Date.now() + 7 ngày` rồi nhét vào
+        // `boost_expire_at` của tin: tick một ô là tin xếp đầu marketplace 7 ngày,
+        // miễn phí. Boost là nguồn thu, không phải checkbox.
+        const boostedListingId = createdId || targetListingId;
+        if (activateBoost && boostedListingId) {
+          await boostListing(boostedListingId, DEFAULT_BOOST_DAYS);
+        }
 
         setNewRoomId(createdId || targetListingId);
         setSuccess(true);
