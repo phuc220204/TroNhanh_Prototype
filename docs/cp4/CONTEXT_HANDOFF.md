@@ -176,7 +176,19 @@ Thêm `occupancies.contract_id` + `is_primary` để một phòng có **n ngư�
 - **Không stage `dist/`** — kiểm `git diff --cached --name-only | grep ^dist/` = 0.
 - Terminal **PowerShell 5.1** (không `&&`) — đưa lệnh **mỗi dòng một cái**. Họ dùng **pnpm**.
 - Sau mỗi task: gợi ý **bộ file đính kèm** + **câu cảnh báo riêng** cho task kế tiếp. Đây là thứ tạo khác biệt lớn nhất về chất lượng.
-- **Lỗi Docker khi `pnpm db:push` là nhiễu** — CLI chỉ dò stack local để cache catalog. Đọc dòng JSON cuối cùng: `"migrations":[...]` là đã push.
+- **Lỗi Docker khi `pnpm db:push` là nhiễu** — CLI chỉ dò stack local để cache catalog. Việc đó thất bại nhưng KHÔNG liên quan đến việc đẩy SQL lên remote; dòng `Applying migration...` đã chạy trước đó.
+
+  **Cách kiểm chứng chắc chắn** (đừng tin output, cũng đừng chỉ tin `db:types`):
+  ```
+  npx supabase migration list
+  ```
+  Mỗi dòng phải có `local` **khớp** `remote`. Thiếu `remote` = chưa apply.
+
+  Vì sao không chỉ dựa vào `db:types`: nó chỉ chứng minh được migration có thêm
+  **bảng hoặc RPC client gọi được**. Migration chỉ sửa **trigger function**
+  (`returns trigger`) hay **policy** thì PostgREST không expose ⇒
+  `database.types.ts` KHÔNG đổi dù migration đã lên. Lúc đó `migration list` là
+  bằng chứng duy nhất.
 
 ---
 
