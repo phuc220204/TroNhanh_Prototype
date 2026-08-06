@@ -23,6 +23,13 @@ import {
 import { UtilityModal } from "./UtilityModal";
 import { AddRoomModal } from "./AddRoomModal";
 
+/**
+ * Hộp thư hỗ trợ thật của nhóm. Đặt thành hằng số để không rải địa chỉ khắp nơi
+ * — đổi email thì sửa đúng một chỗ.
+ */
+const SUPPORT_EMAIL = "tronhanh2026@gmail.com";
+const SUPPORT_EMAIL_HREF = `mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent("[Trọ Nhanh] Yêu cầu hỗ trợ")}`;
+
 export function ChuTroDashboardPage() {
   const { subStatus } = useLandlordShell();
   const navigate = useNavigate();
@@ -559,10 +566,7 @@ export function ChuTroDashboardPage() {
             title="Hỗ trợ"
             desc="Liên hệ đội ngũ Trọ Nhanh khi cần trợ giúp."
             cta="Gửi ngay"
-            // TODO(email): `hotro@tronhanh.vn` là địa chỉ CHƯA XÁC MINH — domain
-            // tronhanh.vn hiện không thuộc nhóm. Thay bằng email thật trước khi
-            // demo, nếu không người dùng gửi yêu cầu hỗ trợ vào hư không.
-            onClick={() => { window.location.href = "mailto:hotro@tronhanh.vn"; }}
+            onClick={() => { window.location.href = SUPPORT_EMAIL_HREF; }}
             color="#6B8E5A"
             bgImage="/assets/card_support_icon.png"
           />
