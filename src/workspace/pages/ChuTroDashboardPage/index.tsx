@@ -8,7 +8,7 @@ import { C, font } from "../../../shared/theme";
 import { useBreakpoint } from "../../../shared/components/useBreakpoint";
 import { LandlordShell, useLandlordShell } from "../../../shared/components/LandlordShell";
 import type { RoomStatus } from "../../../shared/types/status";
-import { EmptyState, Button } from "../../../shared/components/common";
+import { EmptyState, Button, Toast } from "../../../shared/components/common";
 import { logError } from "../../../shared/services/supabase-error";
 import { useAuth } from "../../../shared/contexts/AuthContext";
 import { useCanWrite } from "../../../shared/contexts/SubscriptionContext";
@@ -38,6 +38,7 @@ export function ChuTroDashboardPage() {
   const [property, setProperty] = useState("Tất cả khu trọ");
   const [modal, setModal] = useState<null | "utility" | "room">(null);
   const [revealKPIs, setRevealKPIs] = useState(false);
+  const [toast, setToast] = useState<{ message: string; variant: "success" | "error" } | null>(null);
 
   // `isLocked` = chưa từng kích hoạt gói ⇒ khóa cả đường VÀO module SaaS.
   // `canWrite` = BR-015, quyết định được GHI hay không (false cho cả NONE lẫn
@@ -47,7 +48,7 @@ export function ChuTroDashboardPage() {
 
   const toRooms = () => {
     if (isLocked) {
-      alert("Vui lòng kích hoạt dùng thử hoặc đăng ký gói SaaS ở góc dưới Sidebar để truy cập tính năng Quản lý trọ.");
+      setToast({ message: "Vui lòng kích hoạt dùng thử hoặc đăng ký gói SaaS ở góc dưới Sidebar để truy cập tính năng Quản lý trọ.", variant: "error" });
       return;
     }
     navigate("/chu-tro/quan-ly-phong");
@@ -116,9 +117,9 @@ export function ChuTroDashboardPage() {
       task: r.status === "Available" || r.status === "available"
         ? "Tạo tin đăng"
         : (r.status === "Rented" || r.status === "rented") && (r.payment_status === "Unpaid" || (r.bill && !r.bill.paid))
-          ? "Nhắc nợ"
+          ? "Xem hóa đơn"
           : (r.status === "Deposited" || r.status === "deposited" || r.status === "Đã cọc" || r.status === "đã cọc")
-            ? "Gia hạn"
+            ? "Xem hợp đồng"
             : null
     }));
   }, [activeRoomsList]);
@@ -181,13 +182,13 @@ export function ChuTroDashboardPage() {
     { label: "Doanh thu tháng", value: revenueFormatted, accent: C.primaryDark, secret: true },
   ];
 
-  const handleRoomTask = (task: string, roomCode: string) => {
+  const handleRoomTask = (task: string) => {
     if (task === "Tạo tin đăng") {
       toPost();
-    } else if (task === "Nhắc nợ") {
-      alert(`[Demo] Đã gửi thông báo nhắc đóng tiền phòng và đường link VietQR của hóa đơn cho phòng ${roomCode}!`);
-    } else if (task === "Gia hạn") {
-      alert(`[Demo] Đã mở yêu cầu gia hạn hợp đồng và gửi thông báo xác nhận cho phòng ${roomCode}!`);
+    } else if (task === "Xem hóa đơn" || task === "Nhắc nợ") {
+      navigate("/chu-tro/hoa-don");
+    } else if (task === "Xem hợp đồng" || task === "Gia hạn") {
+      navigate("/chu-tro/quan-ly-phong?tab=occupants");
     }
   };
 
@@ -296,7 +297,7 @@ export function ChuTroDashboardPage() {
                   <span style={{ color: C.textSecondary }}>Thanh toán</span>
                   <PayText paid={r.paid} />
                 </div>
-                {r.task && <div style={{ marginTop: 10 }} onClick={e => e.stopPropagation()}><RoomTaskBtn task={r.task} onClick={() => handleRoomTask(r.task, r.code)} /></div>}
+                {r.task && <div style={{ marginTop: 10 }} onClick={e => e.stopPropagation()}><RoomTaskBtn task={r.task} onClick={() => handleRoomTask(r.task)} /></div>}
               </div>
             ))}
           </div>
@@ -494,7 +495,7 @@ export function ChuTroDashboardPage() {
                       <td style={{ padding: "13px 14px" }}><StatusChip status={r.status} /></td>
                       <td style={{ fontFamily: font, fontSize: 13.5, color: C.textPrimary, padding: "13px 14px" }}>{r.occupant ?? <span style={{ color: C.textSecondary }}>—</span>}</td>
                       <td style={{ padding: "13px 14px" }}><PayText paid={r.paid} /></td>
-                      <td style={{ padding: "13px 14px" }}>{r.task ? <RoomTaskBtn task={r.task} onClick={() => handleRoomTask(r.task, r.code)} /> : <span style={{ fontFamily: font, fontSize: 13, color: C.textSecondary }}>—</span>}</td>
+                      <td style={{ padding: "13px 14px" }}>{r.task ? <RoomTaskBtn task={r.task} onClick={() => handleRoomTask(r.task)} /> : <span style={{ fontFamily: font, fontSize: 13, color: C.textSecondary }}>—</span>}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -558,13 +559,21 @@ export function ChuTroDashboardPage() {
             title="Hỗ trợ"
             desc="Liên hệ đội ngũ Trọ Nhanh khi cần trợ giúp."
             cta="Gửi ngay"
-            onClick={() => alert("[Demo] Gửi yêu cầu hỗ trợ thành công! Đội ngũ Trọ Nhanh sẽ phản hồi qua email trong 5 phút.")}
+            // TODO(email): `hotro@tronhanh.vn` là địa chỉ CHƯA XÁC MINH — domain
+            // tronhanh.vn hiện không thuộc nhóm. Thay bằng email thật trước khi
+            // demo, nếu không người dùng gửi yêu cầu hỗ trợ vào hư không.
+            onClick={() => { window.location.href = "mailto:hotro@tronhanh.vn"; }}
             color="#6B8E5A"
             bgImage="/assets/card_support_icon.png"
           />
         </aside>
       </div>
       {Modals}
+      {toast && (
+        <div style={{ position: "fixed", top: 20, right: 20, zIndex: 1000 }}>
+          <Toast message={toast.message} variant={toast.variant} onClose={() => setToast(null)} />
+        </div>
+      )}
     </LandlordShell>
   );
 }

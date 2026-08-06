@@ -90,11 +90,11 @@ export function SaaSPaymentModal({
         {/* Header */}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "18px 24px", borderBottom: `1px solid ${C.border}` }}>
           <span style={{ fontFamily: font, fontSize: 16, fontWeight: 800, color: C.textPrimary }}>
-            {step === "SELECT" && "1. Chọn gói SaaS Quản lý vận hành"}
-            {step === "PAYMENT_METHOD" && "2. Chọn phương thức thanh toán"}
-            {step === "QR" && "3. Tiến hành thanh toán"}
-            {step === "PROCESSING" && "Đang xác thực giao dịch"}
-            {step === "SUCCESS" && "Nâng cấp thành công"}
+            {step === "SELECT" && "1. Chọn gói SaaS Quản lý vận hành (giả lập)"}
+            {step === "PAYMENT_METHOD" && "2. Chọn phương thức thanh toán (giả lập)"}
+            {step === "QR" && "3. Tiến hành thanh toán (giả lập)"}
+            {step === "PROCESSING" && "Đang xác thực giao dịch (giả lập)"}
+            {step === "SUCCESS" && "Nâng cấp thành công (giả lập)"}
           </span>
           {step !== "PROCESSING" && step !== "SUCCESS" && (
             <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", padding: 4 }}>

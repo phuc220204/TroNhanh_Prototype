@@ -284,7 +284,7 @@ export function useListingForm(prefill: any = {}, showToast: (msg: string) => vo
 
   const prev = () => setStep((s) => Math.max(0, s - 1));
 
-  const handlePostSubmit = async (activateBoost: boolean) => {
+  const handlePostSubmit = async (activateBoost: boolean, isDraft?: boolean) => {
     if (!user) {
       showToast("Vui lòng đăng nhập để đăng tin");
       navigate("/dang-nhap");
@@ -376,8 +376,6 @@ export function useListingForm(prefill: any = {}, showToast: (msg: string) => vo
           waterUnit: formik.values.waterUnit,
           servicePrice: servicePrice,
           deposit: depositPrice,
-          // Map sang đúng 2 giá trị CHECK cho phép — gửi "free"/"curfew"
-          // sẽ vi phạm constraint và lệnh UPDATE fail.
           accessPolicy: formik.values.curfewType === "curfew" ? "Restricted" : "Free",
           accessCloseTime: formik.values.curfewType === "curfew" ? formik.values.curfewTime : null,
           latitude: isValidLatLng(formik.values.coords) ? formik.values.coords.lat : null,
@@ -412,15 +410,17 @@ export function useListingForm(prefill: any = {}, showToast: (msg: string) => vo
           latitude: isValidLatLng(formik.values.coords) ? formik.values.coords.lat : null,
           longitude: isValidLatLng(formik.values.coords) ? formik.values.coords.lng : null,
           metadata,
+          submit: isDraft ? false : true,
         });
 
-        // BR-005 — boost phải đi qua RPC `boost_listing()` để có dòng `payments`.
-        // Trước đây chỗ này tự tính `Date.now() + 7 ngày` rồi nhét vào
-        // `boost_expire_at` của tin: tick một ô là tin xếp đầu marketplace 7 ngày,
-        // miễn phí. Boost là nguồn thu, không phải checkbox.
-        const boostedListingId = createdId || targetListingId;
-        if (activateBoost && boostedListingId) {
-          await boostListing(boostedListingId, DEFAULT_BOOST_DAYS);
+        if (isDraft) {
+          setUpdatedStatus("Draft");
+          showToast("Đã lưu bản nháp thành công!");
+        } else {
+          const boostedListingId = createdId || targetListingId;
+          if (activateBoost && boostedListingId) {
+            await boostListing(boostedListingId, DEFAULT_BOOST_DAYS);
+          }
         }
 
         setNewRoomId(createdId || targetListingId);

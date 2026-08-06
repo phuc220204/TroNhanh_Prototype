@@ -49,15 +49,15 @@ const FEATURES = [
   },
   {
     Icon: CreditCard, title: "Thanh toán an toàn",
-    desc: "Hỗ trợ đặt cọc và thanh toán tiền điện nước trực tuyến minh bạch, có biên lai điện tử.",
+    desc: "Chuyển khoản trực tiếp qua VietQR trên hóa đơn — không qua trung gian, không phí ẩn.",
   },
   {
     Icon: MessageSquare, title: "Kết nối trực tiếp",
     desc: "Hệ thống chat tích hợp giúp bạn liên hệ trực tiếp với chủ nhà không qua trung gian.",
   },
   {
-    Icon: Headphones, title: "Hỗ trợ 24/7",
-    desc: "Đội ngũ CSKH luôn sẵn sàng giải đáp mọi thắc mắc và hỗ trợ trong suốt quá trình thuê.",
+    Icon: Headphones, title: "Hỗ trợ qua Email",
+    desc: "Giải đáp thắc mắc và hỗ trợ chủ trọ cùng người ở qua email chính thức của Trọ Nhanh.",
   },
 ];
 
@@ -360,10 +360,6 @@ function InfoModal({ content, onClose }: { content: HomeModalContent; onClose: (
       footer={<Btn label="Đã hiểu" onClick={onClose} />}
     >
       <p style={{ fontFamily: font, fontSize: 14, color: C.textSecondary, lineHeight: 1.7, margin: 0 }}>{content.description}</p>
-      <div style={{ padding: "12px 14px", background: C.caramelSoft, border: `1px solid ${C.border}`, borderRadius: 10, display: "flex", alignItems: "flex-start", gap: 8 }}>
-        <MessageSquare size={15} color={C.primary} style={{ flexShrink: 0, marginTop: 2 }} />
-        <span style={{ fontFamily: font, fontSize: 12, color: C.textSecondary, lineHeight: 1.6 }}>Đây là tương tác placeholder của bản Demo Prototype.</span>
-      </div>
     </ModalShell>
   );
 }

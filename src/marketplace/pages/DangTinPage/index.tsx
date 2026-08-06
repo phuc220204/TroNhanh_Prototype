@@ -152,15 +152,19 @@ export function DangTinPage() {
   }
 
   if (success) {
-    const successTitle = isEditMode
-      ? (updatedStatus === "PendingApproval" ? "Cập nhật & Đã gửi duyệt lại!" : "Cập nhật tin thành công!")
-      : "Đăng tin thành công!";
+    const successTitle = updatedStatus === "Draft"
+      ? "Đã lưu bản nháp thành công!"
+      : isEditMode
+        ? (updatedStatus === "PendingApproval" ? "Cập nhật & Đã gửi duyệt lại!" : "Cập nhật tin thành công!")
+        : "Đăng tin thành công!";
 
-    const successDesc = isEditMode
-      ? (updatedStatus === "PendingApproval"
-        ? "Tin của bạn đã được cập nhật và cần duyệt lại trước khi hiển thị."
-        : "Tin đăng của bạn đã được cập nhật thành công và hiển thị trên hệ thống.")
-      : "Tin đăng của bạn đã được xuất bản và lưu trữ hình ảnh trên Supabase Storage.";
+    const successDesc = updatedStatus === "Draft"
+      ? "Tin đăng của bạn đã được lưu dưới dạng Bản nháp. Bạn có thể mở lại để chỉnh sửa và gửi duyệt sau từ trang Quản lý tin đăng."
+      : isEditMode
+        ? (updatedStatus === "PendingApproval"
+          ? "Tin của bạn đã được cập nhật và cần duyệt lại trước khi hiển thị."
+          : "Tin đăng của bạn đã được cập nhật thành công và hiển thị trên hệ thống.")
+        : "Tin đăng của bạn đã được xuất bản và lưu trữ hình ảnh trên Supabase Storage.";
 
     return (
       <div style={{ minHeight: "100vh", background: C.bg, fontFamily: font, display: "flex", flexDirection: "column" }}>
@@ -261,24 +265,37 @@ export function DangTinPage() {
               <ArrowLeft size={16} /> Quay lại
             </button>
 
-            {step < 3 ? (
-              <button
-                type="button"
-                onClick={next}
-                style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "10px 22px", background: C.primary, color: "white", border: "none", borderRadius: 10, fontFamily: font, fontSize: 14, fontWeight: 700, cursor: "pointer" }}
-              >
-                Tiếp tục <ArrowRight size={16} />
-              </button>
-            ) : (
-              <button
-                type="button"
-                disabled={isSubmitting}
-                onClick={next}
-                style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "12px 28px", background: isSubmitting ? "#C9B09A" : C.primary, color: "white", border: "none", borderRadius: 10, fontFamily: font, fontSize: 14, fontWeight: 800, cursor: isSubmitting ? "not-allowed" : "pointer" }}
-              >
-                {isSubmitting ? "Đang xử lý..." : isEditMode ? "Lưu thay đổi" : "Hoàn tất & Đăng tin"}
-              </button>
-            )}
+            <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+              {!isEditMode && (
+                <button
+                  type="button"
+                  disabled={isSubmitting}
+                  onClick={() => handlePostSubmit(false, true)}
+                  style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "10px 18px", background: C.white, border: `1.5px solid ${C.border}`, borderRadius: 10, fontFamily: font, fontSize: 13.5, fontWeight: 600, color: C.textPrimary, cursor: isSubmitting ? "not-allowed" : "pointer" }}
+                >
+                  Lưu nháp
+                </button>
+              )}
+
+              {step < 3 ? (
+                <button
+                  type="button"
+                  onClick={next}
+                  style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "10px 22px", background: C.primary, color: "white", border: "none", borderRadius: 10, fontFamily: font, fontSize: 14, fontWeight: 700, cursor: "pointer" }}
+                >
+                  Tiếp tục <ArrowRight size={16} />
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  disabled={isSubmitting}
+                  onClick={next}
+                  style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "12px 28px", background: isSubmitting ? "#C9B09A" : C.primary, color: "white", border: "none", borderRadius: 10, fontFamily: font, fontSize: 14, fontWeight: 800, cursor: isSubmitting ? "not-allowed" : "pointer" }}
+                >
+                  {isSubmitting ? "Đang xử lý..." : isEditMode ? "Lưu thay đổi" : "Hoàn tất & Đăng tin"}
+                </button>
+              )}
+            </div>
           </div>
         </div>
       </div>

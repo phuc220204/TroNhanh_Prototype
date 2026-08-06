@@ -14,6 +14,7 @@ import { supabase } from "../supabaseClient";
 import { seedMockDataForUser } from "../utils/dbSeeder";
 import { logError, toUserMessage } from "../services/supabase-error";
 import { getTotalUnreadCount } from "../services/messaging-service";
+import { Toast } from "./common/Toast";
 
 /* ══════════════════════════════════════════
    ĐĂNG TIN DROPDOWN
@@ -432,6 +433,7 @@ export function PublicNavbarMobile({ onSearch }: { onSearch?: () => void }) {
 export function DemoFAB() {
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
+  const [toast, setToast] = useState<{ message: string; variant: "success" | "error" } | null>(null);
   const { isMobile } = useBreakpoint();
   const { user, profile } = useAuth();
 
@@ -442,8 +444,8 @@ export function DemoFAB() {
 
   const handleSeed = async () => {
     if (!user) {
-      alert("Vui lòng đăng nhập trước khi seed dữ liệu để tin đăng thuộc về tài khoản của bạn!");
-      navigate("/dang-nhap");
+      setToast({ message: "Vui lòng đăng nhập trước khi seed dữ liệu để tin đăng thuộc về tài khoản của bạn!", variant: "error" });
+      setTimeout(() => navigate("/dang-nhap"), 1000);
       return;
     }
     
@@ -461,11 +463,14 @@ export function DemoFAB() {
       
       await seedMockDataForUser(user, profile);
       
-      alert("Đã khởi tạo dữ liệu Marketplace & 3 Khu trọ SaaS cùng danh sách phòng, người ở, hợp đồng mẫu thành công! Trình duyệt sẽ tự động tải lại.");
-      window.location.reload();
+      setToast({ message: "Đã khởi tạo dữ liệu Marketplace & 3 Khu trọ SaaS thành công! Trình duyệt sẽ tự động tải lại.", variant: "success" });
+      setTimeout(() => window.location.reload(), 1500);
     } catch (err: any) {
       logError("PublicNavbar.handleSeed", err);
-      alert("Lỗi khi seed dữ liệu: " + err.message);
+      // §7: không ghép `err.message` vào chuỗi hiển thị — đó là văn bản Postgres
+      // thô (tên cột, constraint, có khi cả câu SQL). `toUserMessage` là nơi duy
+      // nhất dịch lỗi sang tiếng Việt an toàn.
+      setToast({ message: toUserMessage(err), variant: "error" });
     }
   };
 
@@ -485,11 +490,11 @@ export function DemoFAB() {
     try {
       const { error } = await supabase.rpc("demo_link_me_to_seeded_occupancy", {});
       if (error) throw error;
-      alert("Đã gắn bạn vào một đợt ở demo (giả lập). Vào 'Phòng của tôi' để xác nhận liên kết rồi đánh giá.");
-      navigate("/tai-khoan/phong-cua-toi");
+      setToast({ message: "Đã gắn bạn vào một đợt ở demo. Vào 'Phòng của tôi' để xác nhận liên kết rồi đánh giá.", variant: "success" });
+      setTimeout(() => navigate("/tai-khoan/phong-cua-toi"), 1200);
     } catch (err) {
       logError("PublicNavbar.handleLinkDemoOccupancy", err);
-      alert(toUserMessage(err));
+      setToast({ message: toUserMessage(err), variant: "error" });
     }
   };
 
@@ -498,7 +503,7 @@ export function DemoFAB() {
     { Icon: Building2,       label: "Quản lý khu trọ & phòng",  action: () => navigate("/chu-tro/quan-ly-phong") },
     { Icon: FileText,        label: "Quản lý tin đăng",          action: () => navigate("/chu-tro/tin-dang") },
     { Icon: BookOpen,        label: "Design System",              action: () => navigate("/styleguide") },
-    { Icon: Database,        label: "Seed Dữ liệu mẫu (GĐ3)",     action: handleSeed },
+    { Icon: Database,        label: "Seed Dữ liệu mẫu",           action: handleSeed },
     { Icon: UserCheck,       label: "Tôi là người ở demo",        action: handleLinkDemoOccupancy },
     { Icon: HelpCircle,      label: "Trợ giúp",                  action: () => {} },
   ];
@@ -510,6 +515,12 @@ export function DemoFAB() {
       bottom: isMobile ? "calc(72px + env(safe-area-inset-bottom))" : 24,
       zIndex: 300, display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 10,
     }}>
+      {toast && (
+        <div style={{ position: "fixed", top: 20, right: 20, zIndex: 1000 }}>
+          <Toast message={toast.message} variant={toast.variant} onClose={() => setToast(null)} />
+        </div>
+      )}
+
       {/* Popup */}
       {open && (
         <div style={{
@@ -519,7 +530,7 @@ export function DemoFAB() {
           animation: "fadeUp 0.16s ease-out",
         }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 16px 12px", borderBottom: `1px solid ${C.border}`, marginBottom: 6 }}>
-            <p style={{ fontFamily: font, fontSize: 12, fontWeight: 700, color: C.textSecondary, margin: 0, textTransform: "uppercase", letterSpacing: "0.08em" }}>Lối tắt demo</p>
+            <p style={{ fontFamily: font, fontSize: 12, fontWeight: 700, color: C.textSecondary, margin: 0, textTransform: "uppercase", letterSpacing: "0.08em" }}>Lối tắt nhanh</p>
             <button onClick={() => setOpen(false)} style={{ background: "none", border: "none", cursor: "pointer", padding: 2 }}>
               <X size={14} color={C.textSecondary} />
             </button>
