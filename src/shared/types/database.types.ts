@@ -462,12 +462,14 @@ export type Database = {
       }
       occupancies: {
         Row: {
+          contract_id: string | null
           created_at: string
           deleted_at: string | null
           end_date: string | null
           full_name: string
           id: string
           is_active: boolean | null
+          is_primary: boolean
           link_status: string | null
           occupant_count: number | null
           owner_id: string
@@ -478,12 +480,14 @@ export type Database = {
           user_id: string | null
         }
         Insert: {
+          contract_id?: string | null
           created_at?: string
           deleted_at?: string | null
           end_date?: string | null
           full_name: string
           id?: string
           is_active?: boolean | null
+          is_primary?: boolean
           link_status?: string | null
           occupant_count?: number | null
           owner_id: string
@@ -494,12 +498,14 @@ export type Database = {
           user_id?: string | null
         }
         Update: {
+          contract_id?: string | null
           created_at?: string
           deleted_at?: string | null
           end_date?: string | null
           full_name?: string
           id?: string
           is_active?: boolean | null
+          is_primary?: boolean
           link_status?: string | null
           occupant_count?: number | null
           owner_id?: string
@@ -510,6 +516,13 @@ export type Database = {
           user_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "occupancies_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: false
+            referencedRelation: "contracts"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "occupancies_room_id_fkey"
             columns: ["room_id"]
@@ -1169,6 +1182,10 @@ export type Database = {
       }
     }
     Functions: {
+      add_occupant_to_contract: {
+        Args: { p_contract_id: string; p_occupant: Json }
+        Returns: string
+      }
       admin_dashboard_stats: {
         Args: never
         Returns: {
@@ -1292,6 +1309,7 @@ export type Database = {
         Args: { p_reason: string; p_review_id: string }
         Returns: undefined
       }
+      is_contract_occupant: { Args: { p_contract: string }; Returns: boolean }
       is_linked_occupant: { Args: { p_occupancy: string }; Returns: boolean }
       is_moderator: { Args: never; Returns: boolean }
       is_property_public: { Args: { p_property: string }; Returns: boolean }

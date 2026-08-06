@@ -37,7 +37,7 @@ export async function getRoomsByOwner(ownerId: string | undefined): Promise<Room
           rent_price,
           deposit,
           status,
-          occupancies(
+          occupancies!occupancies_contract_id_fkey(
             id,
             full_name,
             phone_number,
