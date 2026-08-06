@@ -1214,6 +1214,7 @@ export type Database = {
         Args: { p_accept: boolean; p_occupancy_id: string }
         Returns: undefined
       }
+      count_rented_rooms: { Args: { p_property_id: string }; Returns: number }
       create_invoice_with_items: {
         Args: {
           p_contract_id: string
@@ -1371,6 +1372,10 @@ export type Database = {
       }
       show_limit: { Args: never; Returns: number }
       show_trgm: { Args: { "": string }; Returns: string[] }
+      soft_delete_property: {
+        Args: { p_property_id: string }
+        Returns: undefined
+      }
       start_conversation: {
         Args: { p_first_message?: string; p_ref_id: string; p_ref_type: string }
         Returns: string

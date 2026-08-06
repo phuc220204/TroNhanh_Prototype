@@ -93,8 +93,11 @@ export const qk = {
     all: ["billing"] as const,
     latestReading: (roomId: string, type: "Electricity" | "Water") =>
       ["billing", "latestReading", roomId, type] as const,
-    invoices: (ownerId: string | undefined, period?: string) =>
-      ["billing", "invoices", ownerId, period ?? "all"] as const,
+    /** Trạng thái là một phần của key: hai bộ lọc khác nhau là hai cache khác nhau. */
+    invoices: (ownerId: string | undefined, period?: string, status?: string) =>
+      ["billing", "invoices", ownerId, period ?? "all", status ?? "all"] as const,
+    /** Các kỳ thật sự có hóa đơn — dựng dropdown lọc kỳ ở /chu-tro/hoa-don. */
+    periods: (ownerId: string | undefined) => ["billing", "periods", ownerId] as const,
     invoiceDetail: (id: string) => ["billing", "invoice", id] as const,
   },
 

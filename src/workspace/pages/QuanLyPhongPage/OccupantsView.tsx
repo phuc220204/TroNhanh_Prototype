@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Plus, UserCheck, AlertCircle, X, CheckCircle } from "lucide-react";
 import { C, font } from "../../../shared/theme";
+import { Button } from "../../../shared/components/common";
 import type { Property, Room } from "../../types/room";
 import {
   listOccupancies,
@@ -111,6 +112,7 @@ export function OccupantsView({
 
   const handleSubmitOccupant = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isReadOnly) return; // BR-015
     if (!selectedRoomId || !fullName.trim() || !startDate || !endDate || !rentPrice) {
       setErrorMsg("Vui lòng điền đầy đủ các thông tin bắt buộc.");
       return;
@@ -166,6 +168,7 @@ export function OccupantsView({
    * không bị đụng. Số người trong phòng không giới hạn, tuỳ chủ trọ và diện tích.
    */
   const handleAddCoOccupant = async (input: { full_name: string; phone_number?: string }) => {
+    if (isReadOnly) return; // BR-015
     if (!coOccupantTarget) return;
     try {
       setCoOccupantSubmitting(true);
@@ -206,6 +209,7 @@ export function OccupantsView({
 
   const handleLinkRenter = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isReadOnly) return; // BR-015 — gắn tài khoản Renter cũng là thao tác ghi
     if (!linkModalOpen || !linkEmailInput.trim()) return;
 
     try {
@@ -497,8 +501,8 @@ export function OccupantsView({
               </div>
 
               <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
-                <button type="button" onClick={() => setLinkModalOpen(null)} style={{ padding: "10px 16px", background: "none", border: `1px solid ${C.border}`, borderRadius: 8, fontFamily: font, fontSize: 13.5, color: C.textSecondary, cursor: "pointer" }}>Hủy</button>
-                <button type="submit" disabled={submitting} style={{ padding: "10px 18px", background: C.primary, color: "white", border: "none", borderRadius: 8, fontFamily: font, fontSize: 13.5, fontWeight: 700, cursor: "pointer" }}>Gửi yêu cầu liên kết</button>
+                <Button variant="ghost" onClick={() => setLinkModalOpen(null)}>Hủy</Button>
+                <Button type="submit" variant="primary" requiresWrite loading={submitting} data-testid="link-renter-submit-btn">Gửi yêu cầu liên kết</Button>
               </div>
             </form>
           </div>

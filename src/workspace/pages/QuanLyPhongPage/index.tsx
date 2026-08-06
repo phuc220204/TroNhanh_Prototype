@@ -7,7 +7,7 @@ import { LandlordShell, LandlordBreadcrumb, type LandlordNavId } from "../../../
 import type { Room, Property } from "../../types/room";
 import type { RoomStatus } from "../../../shared/types/status";
 import { useAuth } from "../../../shared/contexts/AuthContext";
-import { useSubscriptionContext } from "../../../shared/contexts/SubscriptionContext";
+import { useCanWrite } from "../../../shared/contexts/SubscriptionContext";
 import { getPropertiesByOwner } from "../../services/property-service";
 import { getRoomsByOwner } from "../../services/room-service";
 import { RoomsView } from "./RoomsView";
@@ -58,7 +58,12 @@ export function QuanLyPhongPage() {
   const location = useLocation();
   const { isMobile } = useBreakpoint();
   const { user } = useAuth();
-  const { isReadOnly } = useSubscriptionContext();
+  // BR-015 — nguồn DUY NHẤT quyết định được ghi hay không.
+  // Trước đây lấy `isReadOnly` (chỉ đúng với status READ_ONLY) nên tài khoản
+  // status NONE vào thẳng URL /chu-tro/quan-ly-phong là GHI ĐƯỢC: dashboard
+  // chặn NONE ở nút điều hướng, còn màn này thì không chặn gì cả.
+  const canWrite = useCanWrite();
+  const isReadOnly = !canWrite;
 
   const activeTab = useMemo(() => {
     const params = new URLSearchParams(location.search);
@@ -264,7 +269,6 @@ export function QuanLyPhongPage() {
           room={detailRoom}
           onClose={() => setDetailRoom(null)}
           onOpenActionModal={(type, room) => setActionModal({ type, room })}
-          isReadOnly={isReadOnly}
         />
       )}
 

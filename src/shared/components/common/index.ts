@@ -11,3 +11,4 @@ export * from "./EmptyState";
 export * from "./Pagination";
 export * from "./Toast";
 export * from "./Skeleton";
+export * from "./VietQRBlock";

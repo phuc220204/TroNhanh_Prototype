@@ -29,8 +29,13 @@ const ERROR_MESSAGES: Record<string, string> = {
   // Ownership
   ROOM_NOT_OWNED: "Phòng này không thuộc quyền quản lý của bạn.",
   PROPERTY_NOT_OWNED: "Khu trọ này không thuộc quyền quản lý của bạn.",
+  PROPERTY_NOT_FOUND: "Không tìm thấy khu trọ.",
   LISTING_NOT_FOUND: "Không tìm thấy tin đăng.",
   REVIEW_NOT_FOUND: "Không tìm thấy đánh giá.",
+
+  // Khu trọ & phòng (BR-011)
+  PROPERTY_HAS_RENTED_ROOMS:
+    "Không thể xóa khu trọ khi vẫn còn phòng đang cho thuê. Hãy kết thúc hợp đồng của các phòng đó trước.",
 
   // Hợp đồng & phòng
   ROOM_HAS_ACTIVE_CONTRACT:

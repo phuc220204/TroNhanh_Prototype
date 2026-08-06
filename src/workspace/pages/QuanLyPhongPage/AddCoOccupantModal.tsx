@@ -52,6 +52,7 @@ export function AddCoOccupantModal({
         <>
           <Button variant="ghost" onClick={onCancel} disabled={submitting}>Hủy</Button>
           <Button
+            requiresWrite
             disabled={!canSubmit}
             loading={submitting}
             onClick={() => onSubmit({ full_name: fullName.trim(), phone_number: phone.trim() || undefined })}

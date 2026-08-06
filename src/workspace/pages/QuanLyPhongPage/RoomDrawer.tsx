@@ -4,14 +4,18 @@ import { C, font } from "../../../shared/theme";
 import type { Room } from "../../types/room";
 import { RoomDetailTabs } from "../../components/RoomDetailTabs";
 
+/**
+ * Drawer chỉ HIỂN THỊ chi tiết phòng — không có nút ghi nào.
+ * Trước đây nó nhận `isReadOnly` nhưng không dùng tới ở bất kỳ đâu; một prop gác
+ * mà không gác gì thì tệ hơn là không có, vì lần audit sau sẽ tưởng chỗ này đã an toàn.
+ */
 interface RoomDrawerProps {
   room: Room | null;
   onClose: () => void;
   onOpenActionModal?: (type: any, room: Room) => void;
-  isReadOnly?: boolean;
 }
 
-export function RoomDrawer({ room, onClose, onOpenActionModal, isReadOnly }: RoomDrawerProps) {
+export function RoomDrawer({ room, onClose }: RoomDrawerProps) {
   if (!room) return null;
 
   return (

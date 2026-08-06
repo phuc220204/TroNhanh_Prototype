@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { X, FileText, AlertCircle } from "lucide-react";
 import { C, font } from "../../../shared/theme";
+import { Button, VietQRBlock } from "../../../shared/components/common";
 import type { Room, Property } from "../../types/room";
 import { createInvoiceWithItems } from "../../services/billing-service";
 import { toUserMessage } from "../../../shared/services/supabase-error";
@@ -177,11 +178,35 @@ export function InvoicePreview({ room, property, onClose, onSuccess, isReadOnly 
             </span>
           </div>
 
+          {/* AS-002 — người ở chuyển khoản thẳng cho chủ trọ. Số tiền trên mã
+              QR bám theo tổng đang tính, nên sửa dòng nào QR đổi theo dòng đó. */}
+          {totalCalc > 0 && (
+            <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: 16, marginTop: 4 }}>
+              <p style={{ fontFamily: font, fontSize: 12.5, fontWeight: 700, color: C.textSecondary, margin: "0 0 12px", textTransform: "uppercase", letterSpacing: "0.04em", textAlign: "center" }}>
+                Mã VietQR của hóa đơn
+              </p>
+              <VietQRBlock
+                bankCode={property?.bank_name}
+                accountNumber={property?.bank_account_number}
+                accountName={property?.bank_account_name}
+                amount={totalCalc}
+                purpose={`Tien phong ${room.code} ky ${period}`}
+                size={170}
+              />
+            </div>
+          )}
+
           <div style={{ display: "flex", gap: 10, justifyContent: "flex-end", marginTop: 12 }}>
-            <button type="button" onClick={onClose} style={{ padding: "10px 16px", background: "none", border: `1px solid ${C.border}`, borderRadius: 8, fontFamily: font, fontSize: 13.5, color: C.textSecondary, cursor: "pointer" }}>Hủy</button>
-            <button type="submit" disabled={loading || isReadOnly} style={{ padding: "10px 18px", background: C.primary, color: "white", border: "none", borderRadius: 8, fontFamily: font, fontSize: 13.5, fontWeight: 700, cursor: isReadOnly ? "not-allowed" : "pointer" }}>
+            <Button variant="ghost" onClick={onClose}>Hủy</Button>
+            <Button
+              type="submit"
+              variant="primary"
+              requiresWrite
+              loading={loading}
+              data-testid="create-invoice-btn"
+            >
               {loading ? "Đang tạo..." : "Xác nhận tạo hóa đơn"}
-            </button>
+            </Button>
           </div>
         </form>
       </div>

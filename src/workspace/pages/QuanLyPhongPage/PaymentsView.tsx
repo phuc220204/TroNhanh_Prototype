@@ -1,8 +1,11 @@
 import { useState, useEffect } from "react";
-import { FileText, CheckCircle, Clock, AlertCircle } from "lucide-react";
+import { FileText, CheckCircle, Clock } from "lucide-react";
 import { C, font } from "../../../shared/theme";
+import { Button } from "../../../shared/components/common";
 import type { Property } from "../../types/room";
-import { getInvoices, recordPayment } from "../../services/billing-service";
+import { useAuth } from "../../../shared/contexts/AuthContext";
+import { getInvoices, type InvoiceItem } from "../../services/billing-service";
+import { recordPayment } from "../../services/billing-service";
 import { toUserMessage } from "../../../shared/services/supabase-error";
 
 interface PaymentsViewProps {
@@ -12,7 +15,8 @@ interface PaymentsViewProps {
 }
 
 export function PaymentsView({ property, mobile, isReadOnly }: PaymentsViewProps) {
-  const [invoices, setInvoices] = useState<any[]>([]);
+  const { user } = useAuth();
+  const [invoices, setInvoices] = useState<InvoiceItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [toastMsg, setToastMsg] = useState("");
 
@@ -22,12 +26,14 @@ export function PaymentsView({ property, mobile, isReadOnly }: PaymentsViewProps
   };
 
   const fetchInvoicesData = async () => {
-    if (!property) return;
+    if (!property || !user) return;
     try {
       setLoading(true);
-      const data = await getInvoices(property.id);
+      // `ownerId` là CHỦ, `propertyId` là KHU — trước đây id khu bị truyền vào
+      // vị trí đầu nên danh sách này luôn rỗng mà không báo lỗi gì.
+      const data = await getInvoices({ ownerId: user.id, propertyId: property.id });
       setInvoices(data || []);
-    } catch (err: any) {
+    } catch (err: unknown) {
       showToast(toUserMessage(err));
     } finally {
       setLoading(false);
@@ -36,7 +42,7 @@ export function PaymentsView({ property, mobile, isReadOnly }: PaymentsViewProps
 
   useEffect(() => {
     fetchInvoicesData();
-  }, [property]);
+  }, [property, user]);
 
   const handleConfirmPayment = async (invoiceId: string, amount: number) => {
     if (isReadOnly) return;
@@ -120,24 +126,15 @@ export function PaymentsView({ property, mobile, isReadOnly }: PaymentsViewProps
                   </td>
                   <td style={{ padding: "12px" }}>
                     {inv.status !== "Paid" && (
-                      <button
-                        type="button"
-                        disabled={isReadOnly}
+                      <Button
+                        variant="primary"
+                        size="sm"
+                        requiresWrite
                         onClick={() => handleConfirmPayment(inv.id, inv.total_amount || 0)}
-                        style={{
-                          padding: "5px 12px",
-                          background: C.primary,
-                          color: "white",
-                          border: "none",
-                          borderRadius: 6,
-                          fontFamily: font,
-                          fontSize: 12,
-                          fontWeight: 700,
-                          cursor: isReadOnly ? "not-allowed" : "pointer",
-                        }}
+                        data-testid="confirm-payment-btn"
                       >
                         Xác nhận đã nhận tiền
-                      </button>
+                      </Button>
                     )}
                   </td>
                 </tr>

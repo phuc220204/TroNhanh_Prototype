@@ -116,3 +116,40 @@ export async function updatePropertySettings(
     throw err;
   }
 }
+
+/**
+ * BR-011 — Số phòng đang cho thuê của một khu, để UI giải thích TRƯỚC khi bấm xóa.
+ * ⚠️ Đây KHÔNG phải guard. Guard thật nằm trong RPC `soft_delete_property`;
+ * con số này chỉ để hiện "còn N phòng đang thuê" thay vì để người dùng ăn lỗi.
+ */
+export async function countRentedRooms(propertyId: string): Promise<number> {
+  if (!propertyId) return 0;
+  try {
+    const { data, error } = await supabase.rpc("count_rented_rooms", {
+      p_property_id: propertyId,
+    });
+    if (error) throw error;
+    return data ?? 0;
+  } catch (err) {
+    logError("property-service.countRentedRooms", err);
+    return 0;
+  }
+}
+
+/**
+ * BR-011 — Xóa mềm một khu trọ qua RPC `soft_delete_property`.
+ * ⚠️ KHÔNG truyền owner_id: RPC derive `auth.uid()` và tự assert ownership.
+ * RPC chặn khi khu còn phòng `Rented` (raise `PROPERTY_HAS_RENTED_ROOMS`),
+ * và soft-delete luôn các phòng còn lại để chúng không mồ côi.
+ */
+export async function softDeleteProperty(propertyId: string): Promise<void> {
+  try {
+    const { error } = await supabase.rpc("soft_delete_property", {
+      p_property_id: propertyId,
+    });
+    if (error) throw error;
+  } catch (err) {
+    logError("property-service.softDeleteProperty", err);
+    throw err;
+  }
+}

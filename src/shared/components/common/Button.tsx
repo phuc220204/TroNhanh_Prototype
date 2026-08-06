@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { C, font, radius } from "../../theme";
+import { useCanWrite, useWriteBlockReason } from "../../contexts/SubscriptionContext";
 
 export interface ButtonProps {
   variant?: "primary" | "secondary" | "outline" | "ghost" | "danger";
@@ -13,6 +14,13 @@ export interface ButtonProps {
   type?: "button" | "submit" | "reset";
   style?: React.CSSProperties;
   "data-testid"?: string;
+  /**
+   * BR-015 — Đánh dấu đây là nút GHI của module SaaS.
+   * Nút tự khóa khi gói hết hạn (READ_ONLY) hoặc chưa kích hoạt (NONE), kèm
+   * `title` giải thích. Gác ở ĐÂY thay vì ở từng call site để không bao giờ
+   * có chuyện "sót một nút" — thêm nút mới mà quên gác là lỗi im lặng.
+   */
+  requiresWrite?: boolean;
 }
 
 export function Button({
@@ -27,9 +35,13 @@ export function Button({
   type = "button",
   style,
   "data-testid": testId,
+  requiresWrite,
 }: ButtonProps) {
   const [s, setS] = useState<"idle" | "hover" | "pressed">("idle");
-  const isDisabled = disabled || loading;
+  const canWrite = useCanWrite();
+  const blockReason = useWriteBlockReason();
+  const isWriteBlocked = requiresWrite === true && !canWrite;
+  const isDisabled = disabled || loading || isWriteBlocked;
 
   const styleMap: Record<NonNullable<ButtonProps["variant"]>, Record<string, React.CSSProperties>> = {
     primary: {
@@ -74,6 +86,7 @@ export function Button({
       disabled={isDisabled}
       onClick={onClick}
       data-testid={testId}
+      title={isWriteBlocked ? blockReason ?? undefined : undefined}
       style={{
         fontFamily: font,
         fontSize: fs,

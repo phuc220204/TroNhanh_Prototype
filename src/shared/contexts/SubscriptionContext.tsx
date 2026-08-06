@@ -103,6 +103,24 @@ export function useCanWrite(): boolean {
   return canWrite;
 }
 
+/**
+ * BR-015 — Lý do (tiếng Việt) khiến thao tác ghi bị khóa, hoặc `null` nếu ghi được.
+ *
+ * Vì sao cần hàm riêng thay vì để mỗi nút tự viết câu thông báo: hai trạng thái
+ * khóa có ý nghĩa KHÁC nhau và người dùng phải phân biệt được.
+ *   • NONE      — chưa từng kích hoạt gói ⇒ mời dùng thử
+ *   • READ_ONLY — đã hết hạn ⇒ trấn an rằng DỮ LIỆU KHÔNG MẤT, chỉ cần gia hạn
+ * Gộp cả hai thành "bạn không có quyền" là làm chủ trọ tưởng mình mất dữ liệu.
+ */
+export function useWriteBlockReason(): string | null {
+  const { status, canWrite } = useContext(SubscriptionContext);
+  if (canWrite) return null;
+  if (status === "READ_ONLY") {
+    return "Gói dịch vụ đã hết hạn. Dữ liệu của bạn vẫn được giữ nguyên — hãy gia hạn để tiếp tục chỉnh sửa.";
+  }
+  return "Hãy kích hoạt gói dùng thử để sử dụng chức năng quản lý trọ.";
+}
+
 export function useSubscriptionStatus(): SubscriptionStatus {
   const { status } = useContext(SubscriptionContext);
   return status;
