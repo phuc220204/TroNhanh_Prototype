@@ -18,6 +18,8 @@ import { getListingImage, listingImageUrls } from "../services/listing-mappers";
 import { amenityIcon, amenityLabel } from "../../shared/constants/amenities";
 import { nearbyCategoryMeta } from "../../shared/constants/nearby";
 import { LeafletMap, isValidLatLng } from "../../shared/components/common/LeafletMap";
+import { useQuery } from "@tanstack/react-query";
+import { listPropertyReviews } from "../services/review-service";
 import { getListingById, incrementViewCount } from "../services/listing-queries";
 import { parseMetadataFromDescription, ListingMetadata } from "../utils/listingMetadata";
 import { logError } from "../../shared/services/supabase-error";
@@ -441,20 +443,78 @@ function NearbySection({ listing }: { listing: any }) {
   );
 }
 
-function ReviewsPlaceholder() {
+/**
+ * Khối đánh giá thật của khu trọ.
+ *
+ * BR-024: RLS "Public reads visible reviews" chỉ trả review khi khu đã bật
+ * trang công khai — nên khu chưa bật sẽ ra danh sách rỗng và ta hiện trạng thái
+ * trống, KHÔNG phải "đang phát triển".
+ */
+function ReviewsSection({ listing }: { listing: any }) {
+  const propertyId = listing?.property_id as string | undefined;
+
+  const reviewsQuery = useQuery({
+    queryKey: ["marketplace", "listingReviews", propertyId],
+    queryFn: () => listPropertyReviews(propertyId || ""),
+    enabled: Boolean(propertyId),
+  });
+
+  const reviews = reviewsQuery.data ?? [];
+  const avg = reviews.length
+    ? reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length
+    : 0;
+
+  if (!propertyId || (!reviewsQuery.isPending && reviews.length === 0)) {
+    return (
+      <Section title="Đánh giá khu trọ">
+        <div style={{ padding: 24, background: C.bg, border: `1.5px dashed ${C.border}`, borderRadius: 16, textAlign: "center" }}>
+          <p style={{ fontFamily: font, fontSize: 14, fontWeight: 600, color: C.textPrimary, margin: "0 0 6px" }}>
+            Chưa có đánh giá cho khu trọ này
+          </p>
+          <p style={{ fontFamily: font, fontSize: 12.5, color: C.textSecondary, margin: "0 auto", maxWidth: 380 }}>
+            Chỉ người đã ở và xác nhận liên kết mới đánh giá được, nên đánh giá ở đây ít nhưng đáng tin.
+          </p>
+        </div>
+      </Section>
+    );
+  }
+
   return (
     <Section title="Đánh giá khu trọ">
-      <div style={{ padding: "24px", background: C.bg, border: `1.5px dashed ${C.border}`, borderRadius: 16, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 10, textAlign: "center" }}>
-        <div style={{ display: "flex", gap: 3 }}>
-          {[1,2,3,4,5].map(i => (
-            <Star key={i} size={20} color="#D2C7B7" fill="#D2C7B7" />
-          ))}
-        </div>
-        <p style={{ fontFamily: font, fontSize: 14, fontWeight: 600, color: C.textPrimary, margin: 0 }}>Chưa có đánh giá cho khu trọ này</p>
-        <p style={{ fontFamily: font, fontSize: 12.5, color: C.textSecondary, margin: 0, maxWidth: 360 }}>
-          [Review khu trọ — V1] đang được phát triển để người dùng có thể chia sẻ trải nghiệm thực tế về chủ nhà, an ninh và tiện ích.
-        </p>
-      </div>
+      {reviewsQuery.isPending ? (
+        <p style={{ fontFamily: font, fontSize: 13, color: C.textSecondary }}>Đang tải đánh giá...</p>
+      ) : (
+        <>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14 }}>
+            <Star size={20} color={C.warning} fill={C.warning} />
+            <span style={{ fontFamily: font, fontSize: 20, fontWeight: 800, color: C.textPrimary }}>{avg.toFixed(1)}</span>
+            <span style={{ fontFamily: font, fontSize: 13, color: C.textSecondary }}>({reviews.length} đánh giá)</span>
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            {reviews.slice(0, 5).map(r => (
+              <div key={r.id} data-testid="review-item" style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: 12, padding: 16 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 3, marginBottom: 6 }}>
+                  {[1,2,3,4,5].map(n => (
+                    <Star key={n} size={13} color={n <= r.rating ? C.warning : C.border} fill={n <= r.rating ? C.warning : "none"} />
+                  ))}
+                  <span style={{ fontFamily: font, fontSize: 12, color: C.textSecondary, marginLeft: 6 }}>
+                    {new Date(r.created_at).toLocaleDateString("vi-VN")}
+                  </span>
+                </div>
+                {r.content && (
+                  <p style={{ fontFamily: font, fontSize: 13.5, color: C.textPrimary, margin: 0, lineHeight: 1.6 }}>{r.content}</p>
+                )}
+                {r.seller_reply && (
+                  <div style={{ background: C.cream, borderRadius: 10, padding: 12, marginTop: 10 }}>
+                    <p style={{ fontFamily: font, fontSize: 11.5, fontWeight: 700, color: C.primary, margin: "0 0 3px" }}>Phản hồi của chủ trọ</p>
+                    <p style={{ fontFamily: font, fontSize: 12.5, color: C.textPrimary, margin: 0, lineHeight: 1.5 }}>{r.seller_reply}</p>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </>
+      )}
     </Section>
   );
 }
@@ -1087,7 +1147,7 @@ export function RoomDetailPage() {
             <MobileNearbySection listing={listing} />
 
             {/* 11. Đánh giá khu trọ */}
-            <ReviewsPlaceholder />
+            <ReviewsSection listing={listing} />
 
             {/* 12. Phòng tương tự */}
             <MobileSimilarRooms />
@@ -1144,7 +1204,7 @@ export function RoomDetailPage() {
             <AmenitiesGrid listing={listing} />
             <CostTable listing={listing} />
             <NearbySection listing={listing} />
-            <ReviewsPlaceholder />
+            <ReviewsSection listing={listing} />
             <SimilarRooms />
           </div>
 

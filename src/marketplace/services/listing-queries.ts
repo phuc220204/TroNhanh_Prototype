@@ -159,6 +159,32 @@ export async function searchListings(params: ListingQueryParams = {}): Promise<S
     const totalPages = Math.ceil(totalCount / pageSize) || 1;
     const mappedCards = rows.map(toListingCard);
 
+    // BR-024: huy hiệu điểm sao chỉ hiện khi tin có `property_id` VÀ khu đã bật
+    // trang công khai. `property_public_profiles` là VIEW đã tự lọc điều kiện
+    // đó, nên khu chưa bật đơn giản là không có row -> không có badge.
+    // Một truy vấn cho cả trang, không phải mỗi card một lần.
+    const propertyIds = Array.from(
+      new Set(rows.map((r: any) => r.property_id).filter(Boolean))
+    ) as string[];
+
+    if (propertyIds.length > 0) {
+      const { data: profiles } = await supabase
+        .from("property_public_profiles")
+        .select("id, avg_rating, review_count, public_slug")
+        .in("id", propertyIds);
+
+      const byId = new Map((profiles || []).map((p) => [p.id, p]));
+      for (let i = 0; i < mappedCards.length; i++) {
+        const propertyId = (rows[i] as any)?.property_id;
+        const profile = propertyId ? byId.get(propertyId) : undefined;
+        if (profile) {
+          mappedCards[i]!.rating = profile.avg_rating != null ? Number(profile.avg_rating) : null;
+          mappedCards[i]!.reviewCount = profile.review_count ?? 0;
+          mappedCards[i]!.propertySlug = profile.public_slug ?? null;
+        }
+      }
+    }
+
     return {
       data: mappedCards,
       rawRows: rows,

@@ -37,6 +37,8 @@ type Room = {
   loc: string; amenities: string[]; type: string;
   badge: "Nổi bật" | "Mới đăng" | null; img: string;
   contact_phone: string; boost_expire_at: string | null;
+  /** BR-024 — chỉ có khi khu bật trang công khai. */
+  rating?: number | null; reviewCount?: number; propertySlug?: string | null;
 };
 
 const REGION_OPTIONS = [...REGIONS];
@@ -141,9 +143,16 @@ function RoomCard({ room, onClick, listView }: { room: Room; onClick?: () => voi
       <div style={{ padding: "12px 14px 14px", display: "flex", flexDirection: "column", flex: 1, minWidth: 0 }}>
         <p style={{ fontFamily: font, fontSize: 14, fontWeight: 600, color: C.textPrimary, margin: "0 0 5px", lineHeight: 1.45, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>{room.title}</p>
         <p style={{ fontFamily: font, fontSize: 18, fontWeight: 700, color: C.primary, margin: "0 0 4px" }}>{room.price} đ<span style={{ fontSize: 12, fontWeight: 400, color: C.textSecondary }}>/tháng</span></p>
-        <div style={{ display: "flex", alignItems: "center", gap: 4, marginBottom: 10 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 4, marginBottom: 10, flexWrap: "wrap" }}>
           <MapPin size={12} color={C.textSecondary} />
           <span style={{ fontFamily: font, fontSize: 12, color: C.textSecondary }}>{room.area} m² · {room.loc}</span>
+          {room.rating != null && (
+            <span data-testid="rating-badge" style={{ display: "inline-flex", alignItems: "center", gap: 3, marginLeft: 4, background: C.cream, borderRadius: 999, padding: "1px 7px" }}>
+              <Star size={10} color={C.warning} fill={C.warning} strokeWidth={0} />
+              <span style={{ fontFamily: font, fontSize: 11, fontWeight: 700, color: C.textPrimary }}>{room.rating.toFixed(1)}</span>
+              <span style={{ fontFamily: font, fontSize: 10.5, color: C.textSecondary }}>({room.reviewCount ?? 0})</span>
+            </span>
+          )}
         </div>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: "auto" }}>
           {room.amenities.slice(0, 3).map(a => {
@@ -688,6 +697,9 @@ export function AllListingsPage() {
           img: item.img,
           contact_phone: item.contact_phone,
           boost_expire_at: item.boost_expire_at,
+          rating: item.rating ?? null,
+          reviewCount: item.reviewCount ?? 0,
+          propertySlug: item.propertySlug ?? null,
         }));
 
         setDbRooms(mapped);

@@ -78,6 +78,10 @@ export interface ListingCardItem {
   boost_expire_at: string | null;
   created_at: string;
   views_count?: number;
+  /** BR-024 — chỉ có giá trị khi khu bật trang công khai. null = không hiện badge. */
+  rating?: number | null;
+  reviewCount?: number;
+  propertySlug?: string | null;
 }
 
 /**
