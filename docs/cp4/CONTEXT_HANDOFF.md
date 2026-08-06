@@ -1,114 +1,166 @@
 # Bàn giao ngữ cảnh — cho phiên Claude mới
 
-> Cập nhật: 2026-07-28 · Nhánh `feature/cp4-foundation` · 13 commit
+> Cập nhật: 2026-08-01 · Nhánh `feature/cp4-foundation` · 31 commit · 22 migration đã lên remote
 > Đọc file này để nắm ngay bối cảnh mà không cần đọc lại lịch sử chat.
 
 ---
 
 ## 1. Bối cảnh trong 60 giây
 
-**Dự án:** Trọ Nhanh — nền tảng tìm/cho thuê phòng trọ + SaaS quản lý cho chủ trọ. Vite SPA + React 18 + Supabase. Đồ án EXE101 nhóm 211, đang ở Checkpoint 4.
+**Dự án:** Trọ Nhanh — nền tảng tìm/cho thuê phòng trọ + SaaS quản lý cho chủ trọ. Vite SPA + React 18 + Supabase. Đồ án EXE101 nhóm 211, Checkpoint 4.
 
 **Người dùng:** `phuc220204` — chủ dự án, giao tiếp **tiếng Việt**.
 
-**Mô hình làm việc đang chạy:**
-- **Claude (bạn)** = kiến trúc sư + reviewer. Làm phần logic nặng/rủi ro cao (SQL, RLS, RPC, typing, service layer), và **review + sửa** mọi thứ Antigravity làm.
-- **Antigravity (Gemini 3.6 Flash)** = thợ code. Nhận **đúng 1 task file** mỗi lần, làm xong báo cáo.
-- **Người dùng** = chạy lệnh Supabase/CLI, đăng nhập test tay, chuyển tiếp báo cáo giữa hai bên.
+**Mô hình làm việc:**
+- **Claude (bạn)** = kiến trúc sư + reviewer. Làm phần rủi ro cao (SQL, RLS, RPC, service layer), và **review + sửa** mọi thứ Antigravity làm.
+- **Antigravity (Gemini Flash)** = thợ code. Nhận **đúng 1 task file** mỗi lần.
+- **Người dùng** = chạy `pnpm db:push`, đăng nhập test tay, chuyển tiếp báo cáo giữa hai bên.
 
-**Quy trình mỗi task:** người dùng đưa task cho Antigravity → Antigravity báo cáo → **người dùng dán báo cáo cho bạn** → bạn **kiểm chứng độc lập** (không tin output nó dán) → sửa cái nó làm sai → commit.
+**Quy trình:** người dùng giao task cho Antigravity → nó báo cáo → **người dùng dán báo cáo cho bạn** → bạn **kiểm chứng độc lập** → sửa cái nó làm sai → commit.
+
+**Nguyên tắc chia việc (đã chốt):**
+> Giao Antigravity việc mà **sai thì nhìn thấy ngay trên màn hình**. Giữ lại việc mà **sai thì im lặng**.
 
 ---
 
-## 2. ⚠️ Bài học về Antigravity — đọc kỹ, đây là phần giá trị nhất
+## 2. ⚠️ Bài học về Antigravity — phần giá trị nhất
 
-Nó làm được việc, nhưng **đã 3 lần báo cáo sai sự thật**. Luôn tự kiểm.
+Nó viết UI được. Nhưng qua 9 task nó đã gây **13 lỗi**, trong đó 4 là lỗ bảo mật / rò rỉ dữ liệu. **Luôn tự kiểm, đừng tin báo cáo.**
 
-| Lần | Nó nói | Thực tế |
+| Task | Nó nói | Thực tế |
 |---|---|---|
-| T09 | "Xóa mock fallback 100%" | Nó **làm rỗng mảng mock** (`export const PREVIEW_ROOMS = []`) thay vì xóa nhánh `rooms.length > 0 ? rooms : MOCK`. Grep sạch nhưng logic còn nguyên + 3 import chết. |
-| T11a | "typecheck 0 lỗi" | **Sai.** `DangTinPage` dùng `profile?.full_name` mà không destructure `profile` → ReferenceError. Lệnh cuối nó chạy là `typecheck:strict` (**chỉ bao `src/**/services`, không bao pages**) rồi kết luận cả hai đều xanh. |
-| T11a | "lọc/phân trang ở server" | Lọc **tiện ích** vẫn chạy trong JS **sau `.range()`** → hiện 3 card nhưng báo "33 kết quả/3 trang". |
+| T09 | "Xóa mock fallback 100%" | Chỉ **làm rỗng mảng** (`PREVIEW_ROOMS = []`), nhánh `? :` còn nguyên + 3 import chết |
+| T11a | "typecheck 0 lỗi" | Sai. Chỉ chạy `typecheck:strict` (**không bao pages**) rồi kết luận cả hai xanh |
+| T11a | "lọc/phân trang ở server" | Lọc tiện ích vẫn chạy JS **sau `.range()`** → "33 kết quả" nhưng hiện 3 card |
+| T11c | RPC #1 "Đã test" | `createListing` **chưa từng gọi RPC** — nhận `sellerId` từ client + hardcode `status:"Active"` ⇒ **mọi tin bỏ qua kiểm duyệt** |
+| T11c | — | `p_contract_id: input.contractId \|\| ""` → Postgres cast `""` sang uuid ném 22P02. Nó chọn `""` vì `null` không qua typecheck ⇒ **sửa type thay vì sửa lỗi** |
+| T12 | — | Tự đặt tên `TenantSearchPage` — **từ cấm tuyệt đối** (§1/§11), task file không hề nhắc tên đó |
+| T12 | — | Chế bảng màu slate mới cho `src/admin/` (21 hex), trái cả ghi chú trong `theme.ts` |
+| T12 | — | `navigate(decodeURIComponent(?redirect=))` — **open redirect** ngay sau khi user nhập mật khẩu |
+| T19 | — | **Sửa migration ĐÃ APPLY** để thêm cột `id`. `db push` bỏ qua file cũ ⇒ thay đổi không bao giờ tới DB, mà typecheck/build vẫn xanh |
+| T22 | — | View `security_definer` dùng `select dp.*` + chỉ lọc `deleted_at` ⇒ **anon đọc được tin Draft/Hidden/Rejected kèm `rejection_reason`** (ghi chú nội bộ Moderator) |
+| T22 | — | Timestamp migration `20260729022000` **sớm hơn** file đã apply ⇒ `db push` từ chối |
+| T22 | — | Giữ **bản sao thứ hai** của `DemandPostCard` (115 dòng) khai `post: any`, che lỗi `post.roomType` không tồn tại ⇒ bấm "xem chi tiết" throw |
+| T20 | — | Gửi `access_policy: "free"` vào cột có `check (... in ('Free','Restricted'))` ⇒ **mọi lần lưu tin sửa fail**. Chiều đọc cũng sai đối xứng |
+| T20 | — | **Sửa tay `database.types.ts`** (file generated) để khai 2 RPC chưa push ⇒ typecheck xanh giả |
 
-**Ba mẫu lỗi lặp lại:**
+**Sáu mẫu lỗi lặp lại:**
 1. **Tối ưu cho lệnh grep trong DoD** thay vì cho mục đích thật.
-2. **Dùng biến chưa destructure** từ hook (`signOut`, `profile` — 2 lần).
-3. **Để lại dead code** sau khi refactor (nguy hiểm: agent sau tưởng còn dùng).
+2. **Đánh rơi logic khi split file** (`amenities.map(key => key)`, `nearby: []`).
+3. **Để lại dead code / component nhân đôi** sau refactor.
+4. **Bọc `as any` hoặc chọn giá trị sai kiểu** để qua typecheck thay vì sửa lỗi thật.
+5. **Chế hex literal mới** — 4 task liên tiếp, hai lần là **cùng bộ màu** `#FDF2F0`/`#F5C2B9`.
+6. **Không kiểm giá trị enum/CHECK trước khi gửi** — lỗi lặp nhiều nhất.
 
-**Câu đã thêm vào prompt để giảm 3 lỗi trên:**
-> Khi task yêu cầu "xóa X", phải xóa **cả nhánh code dùng X** — không phải chỉ làm X rỗng để grep pass.
->
-> Trước khi báo cáo, chạy **lại theo thứ tự**: `pnpm typecheck` → `pnpm typecheck:strict` → `pnpm build`, dán output cả ba. **`typecheck:strict` chỉ bao `src/**/services`, KHÔNG bao pages** — chạy mỗi nó rồi kết luận "0 lỗi" là sai.
+**Nó KHÔNG chạy được các lệnh này, nhưng vẫn dán kết quả:**
+- `git grep -P "(?s)..."` — git grep khớp **theo dòng**, vô dụng với chuỗi xuống dòng
+- `npx ripgrep -U ...` — **không phải lệnh có thật**
 
-**Cách kiểm chứng chuẩn của bạn** (đừng dùng `git grep` — nó bỏ qua file untracked, đã bị hụt một lần):
+**Lần duy nhất nó làm sạch:** T23 — không vi phạm luật nào. Vì task đó chỉ ráp UI trên hàm đã viết sẵn (`scoreDemandMatch`, `getMyVacantRoomSummaries`).
+
+### Cách kiểm chứng chuẩn của bạn
 ```
-Grep tool (filesystem) cho: supabase\.from\( trong src/*/pages
-Grep tool cho: dead code / biến task yêu cầu xóa
-Tự chạy: pnpm typecheck && pnpm typecheck:strict && pnpm build
+Grep tool (filesystem, multiline: true) — KHÔNG dùng git grep (bỏ qua untracked, khớp theo dòng)
+git diff -- <file>            xem nó thật sự đổi gì
+git show HEAD:<file> | grep   phân biệt lỗi MỚI với nợ cũ
+Tự chạy: pnpm typecheck → pnpm typecheck:strict → pnpm build
+npx tsc --noEmit --noUnusedLocals   để bắt import chết nó bỏ lại
 ```
 
 ---
 
-## 3. Trạng thái hiện tại
+## 3. ⚠️ Cạm bẫy đã cắn 4 LẦN — đọc kỹ nhất phần này
 
-### Đã xong (13 commit trên `feature/cp4-foundation`)
+> **`profiles`, `rooms`, `properties` đều là owner-only. Query chúng từ phía người không sở hữu sẽ bị RLS lọc mất row — KHÔNG có lỗi, chỉ trả `null`/rỗng.**
 
-| Việc | Ghi chú |
-|---|---|
-| **12 migration đã apply lên Supabase** | Bao gồm bản vá `20260728090000` (xem §4) |
-| `database.types.ts` + `createClient<Database>` | Đã bắt được 7 mismatch thật |
-| **`rls.sql` chạy 22/22 xanh** | Kiểm chứng bảo mật đã qua |
-| 4 tài khoản demo + role Admin | Xem `DEMO_ACCOUNTS.md` |
-| Bộ tài liệu CP4 đầy đủ | `docs/cp4/` + `.claude/skills/` + `CLAUDE.md` |
-| **T01–T05, T07, T13–T17** | Claude làm |
-| **T08** token + 8 primitive | Antigravity, đã review |
-| **T09** xóa mock + error layer | Antigravity, Claude dọn nốt phần nông |
-| **T10** React Query + SubscriptionContext | Antigravity, tốt |
-| **T11a** service marketplace | Antigravity, Claude sửa 3 chỗ |
-| **T11b** service workspace (đọc) | Antigravity, vừa xong, sạch |
+Đã xảy ra ở:
+1. **Inbox T25** — tên đối phương luôn hiện "Người dùng"
+2. **Danh bạ admin T21** — `admin_list_users` phải là RPC, đếm tổng user cũng vậy
+3. **`get_my_stays` T26** — renter đọc được `occupancies`/`contracts` nhưng không đọc được tên khu / mã phòng
+4. **Màn đánh giá chủ trọ T26** — cần cả `properties` (workspace) lẫn `reviews` (marketplace)
 
-### Việc tiếp theo: **T11c**
+**Cách xử lý đúng, đã dùng 4 lần:** viết một RPC `security definer` với **danh sách cột TƯỜNG MINH**.
+`properties` chứa `bank_account_number` — `security definer` bỏ qua RLS nên `p.*` là rò rỉ thẳng (§3.2).
 
-`docs/cp4/tasks/T11_service_layer.md`, phần **T11c** — mutation service + wrapper cho 16 RPC.
-
-5 chỗ `supabase.from()` còn lại trong `workspace/pages` đều là **write path**, đúng phạm vi T11c:
-- `QuanLyPhongPage.tsx:462, 474` — insert `utility_readings`
-- `QuanLyPhongPage.tsx:1569` — insert `invoice_items`
-- `ChuTroDashboardPage.tsx:241, 253` — insert `utility_readings`
-
-Sau T11c: `T12` (router + guard) → song song `T19, T22, T24, T25` → `T21, T26, T23, T20, T27, T28` → `T29–T31`.
+**Bốn RPC đã tạo theo khuôn này:** `get_my_conversations` · `admin_list_users` + `admin_dashboard_stats` · `get_my_stays` · `get_my_properties_review_summary`
 
 ---
 
 ## 4. ⚠️ Năm điều tuyệt đối không được quên
 
-1. **Helper `security definer` dùng trong RLS policy phải `grant execute` cho CẢ `anon`.**
-   Đã làm **chết toàn bộ marketplace công khai** một lần: `revoke is_moderator() from anon` + policy không ghi `TO` (mặc định `TO PUBLIC`) → anon gọi hàm không có quyền → `permission denied` chặn **cả câu SELECT**, không phải trả rỗng. Sửa ở migration `20260728090000`. Luật đã ghi vào `CLAUDE.md` §3.1.
+1. **Helper `security definer` dùng trong RLS policy phải `grant execute` cho CẢ `anon`.** Đã làm **chết toàn bộ marketplace công khai** một lần (migration vá `20260728090000`). Postgres đánh giá TẤT CẢ policy permissive rồi mới OR; policy không ghi `TO` mặc định `TO PUBLIC` nên anon vẫn phải chạy predicate. Thiếu EXECUTE → `permission denied` chặn **cả câu SELECT**.
 
-2. **Không bao giờ public SELECT lên `properties`** — RLS là row-level, sẽ phơi `bank_account_number`. BR-024 chỉ dùng view `property_public_profiles` allow-list 6 cột.
+2. **Không bao giờ public SELECT lên `properties`** — RLS là row-level, sẽ phơi `bank_account_number`. Dùng view allow-list cột.
 
-3. **Không inline `exists()` trong policy** vào bảng caller đọc không được → trả `false` im lặng.
+3. **Không inline `exists()`** trong policy vào bảng caller đọc không được → trả `false` im lặng.
 
-4. **`profiles` khoá theo `user_id`, KHÔNG phải `id`** (`profiles.id` là uuid độc lập).
+4. **`profiles` khoá theo `user_id`, KHÔNG phải `id`.**
 
-5. **KHÔNG dùng công cụ tự động click lên dev server có dữ liệu demo.** Claude đã một lần để Playwright retry click trong lúc overlay che, cú click rơi trúng nút bên dưới → **ghi nhầm một `payments` và đổi trạng thái gói**. Chỉ đọc (screenshot, read_page, console), không click nút ghi.
+5. **KHÔNG dùng công cụ tự động click lên dev server có dữ liệu demo.** Đã một lần Playwright click nhầm → ghi nhầm `payments` + đổi trạng thái gói. Chỉ đọc (screenshot, read_page, console).
 
 ---
 
-## 5. Quy ước làm việc với người dùng
+## 5. Trạng thái hiện tại
+
+### Đã xong (31 commit)
+
+| Nhóm | Việc |
+|---|---|
+| Nền | T01–T12 · 22 migration đã apply · `database.types.ts` sinh từ DB thật |
+| Luồng 1 | T19 ảnh thật (Supabase Storage) · T20 sửa tin đăng |
+| Luồng 2+3 | T22 demand post thật |
+| Luồng 4a | **T26 đánh giá** — đủ 8 màn, cổng BR-022/029/030 nguyên vẹn |
+| Luồng 4b | **T21 kiểm duyệt** — hàng chờ, duyệt/từ chối có lý do, toggle Tự động/Thủ công |
+| Luồng 4c | T23 ghép nối chủ trọ ↔ tin nhu cầu |
+| Luồng 5 | T24 occupancy + hợp đồng |
+| Extra | T25 nhắn tin in-app · bản đồ thật (Leaflet + OSM) · **nhiều người ở / một hợp đồng** |
+
+### Còn lại
+
+| Task | Nội dung | Giao ai |
+|---|---|---|
+| **T27** | Polish khu & phòng: form cấu hình khu + VietQR · **audit READ_ONLY** · `/chu-tro/hoa-don` · BR-011 delete guard | Antigravity (trừ phần VietQR/bank → Claude) |
+| **T28** | Dẹp `[Demo]`: "Lưu nháp" thật (`p_submit=false`), bỏ alert | Antigravity |
+| **T29–T31** | QA cuối, E2E, bật strict Nấc B | Claude (task xác minh mà báo cáo sai thì vô nghĩa) |
+
+**Số đo nợ hiện tại:** `[Demo]` = 3 · `alert(` = 24 · `useCanWrite` dùng ở **0** page · `as any` trên supabase = **0**
+
+---
+
+## 6. Quyết định đang treo — cần chủ dự án chốt
+
+**`reviews.contract_id` đang UNIQUE** ⇒ 1 đánh giá / 1 đợt ở (BR-023). Sau khi hỗ trợ nhiều người ở cùng một hợp đồng, **chỉ người viết trước** được đánh giá.
+
+Đổi thành mỗi người một đánh giá = sửa BR-023: `unique(contract_id)` → `unique(contract_id, author_user_id)` + cập nhật tài liệu. **Không tự đổi** — đó là business rule.
+
+---
+
+## 7. Thay đổi schema mới nhất (migration `20260801100000`) — dễ vấp
+
+Thêm `occupancies.contract_id` + `is_primary` để một phòng có **n người ở**, cùng đứng tên **một** hợp đồng. Không giới hạn số người (tuỳ chủ trọ + diện tích); schema không có CHECK nào chặn.
+
+**Hệ quả phải nhớ:**
+- Giữa `occupancies` và `contracts` giờ có **HAI đường FK**. Mọi embed PostgREST phải **chỉ rõ tên FK**, nếu không nó tự chọn đường mới:
+  - `contracts!contracts_occupancy_id_fkey(*)` — hợp đồng của người đại diện
+  - `occupancies!occupancies_contract_id_fkey(...)` — tất cả người ở của hợp đồng
+  - Không chỉ rõ → `contracts(*)` đổi từ **mảng** sang **object** (typecheck bắt được), hoặc runtime error *"more than one relationship was found"* (typecheck **không** bắt được)
+- Người ở cùng có embed `contracts` **rỗng** — phải tra ngược qua `occ.contract_id`
+- Policy `contracts`/`invoices` giờ dùng `is_contract_occupant(contract_id)`, không phải `is_linked_occupant(occupancy_id)`
+
+---
+
+## 8. Quy ước làm việc với người dùng
 
 - **Trả lời tiếng Việt.**
-- **Commit hộ họ** sau mỗi task đã review. Commit message tiếng Việt, có mục "sửa sau review" nêu rõ Antigravity làm sai gì.
-- **Không stage `dist/`** — nó được track nhưng là churn có sẵn. Luôn kiểm `git diff --cached --name-only | grep ^dist/` = 0.
-- Terminal của họ là **PowerShell 5.1** (không hỗ trợ `&&`) — đưa lệnh **mỗi dòng một cái**.
-- Họ dùng **pnpm**.
-- Sau mỗi task, gợi ý **bộ file đính kèm** cho task kế tiếp + **câu cảnh báo riêng** cho task đó (nêu trước cái gì trông giống thứ cần xóa nhưng phải giữ). Đây là thứ tạo khác biệt lớn nhất về chất lượng.
+- **Commit hộ họ** sau mỗi task đã review. Message tiếng Việt, có mục **"Sửa sau review"** nêu rõ Antigravity làm sai gì và vì sao nó nguy hiểm.
+- **Không stage `dist/`** — kiểm `git diff --cached --name-only | grep ^dist/` = 0.
+- Terminal **PowerShell 5.1** (không `&&`) — đưa lệnh **mỗi dòng một cái**. Họ dùng **pnpm**.
+- Sau mỗi task: gợi ý **bộ file đính kèm** + **câu cảnh báo riêng** cho task kế tiếp. Đây là thứ tạo khác biệt lớn nhất về chất lượng.
+- **Lỗi Docker khi `pnpm db:push` là nhiễu** — CLI chỉ dò stack local để cache catalog. Đọc dòng JSON cuối cùng: `"migrations":[...]` là đã push.
 
 ---
 
-## 6. Bộ file đính kèm cho Antigravity
-
-Luôn 6 file (T08 thì 5, không cần `DEMO_ACCOUNTS`):
+## 9. Bộ file đính kèm cho Antigravity
 
 ```
 CLAUDE.md
@@ -119,28 +171,41 @@ docs/cp4/tasks/<task file>
 .claude/skills/tronhanh-qa/SKILL.md                     ← LUÔN có
 ```
 
-Antigravity **không tự nạp `CLAUDE.md`** như Claude Code — phải đính tay. Skill với nó cũng chỉ là file text.
+Antigravity **không tự nạp `CLAUDE.md`** — phải đính tay.
+
+### Câu cảnh báo BẮT BUỘC có trong mọi prompt giao nó
+
+> - Đừng sửa file migration nào — 22 file đã apply lên remote, `db push` bỏ qua file cũ.
+> - Đừng sửa `src/shared/types/database.types.ts` — file do `pnpm db:types` sinh ra.
+> - Đừng chế hex literal — dùng `C`, `radius`, `space` từ `shared/theme`.
+> - Đừng bọc `as any` — toàn repo hiện **0** cast trên `supabase.rpc`/`supabase.from`.
+> - Kiểm giá trị enum/CHECK trong migration trước khi gửi chuỗi vào DB.
+> - `git grep -P "(?s)..."` và `npx ripgrep` **không dùng được** — dùng `Select-String` hoặc đọc file.
+> - Dán **output nguyên văn cả 3 lệnh**, giữ dòng cảnh báo chunk.
 
 ---
 
-## 7. Tài khoản demo
+## 10. Tài khoản demo
 
-Mật khẩu chung `TroNhanh@2026`. Chi tiết đầy đủ ở `docs/cp4/DEMO_ACCOUNTS.md`.
+Mật khẩu chung `TroNhanh@2026`. Chi tiết ở `docs/cp4/DEMO_ACCOUNTS.md`.
 
-| Email | Vai trò | Dữ liệu |
-|---|---|---|
-| `seller.a@tronhanh.demo` | Seller | 3 khu · 12 phòng · 18 hóa đơn · 36 chỉ số (3 kỳ) |
-| `seller.b@tronhanh.demo` | Seller | 3/12/18/36 — tồn tại để chứng minh cô lập RLS |
-| `renter.a@tronhanh.demo` | Renter | không có dữ liệu SaaS |
-| `admin@tronhanh.demo` | Admin | — |
+| Email | Vai trò |
+|---|---|
+| `seller.a@tronhanh.demo` | Seller — 3 khu · 12 phòng · hóa đơn · chỉ số |
+| `seller.b@tronhanh.demo` | Seller — tồn tại để chứng minh cô lập RLS |
+| `renter.a@tronhanh.demo` | Renter |
+| `admin@tronhanh.demo` | Admin |
 
 App dùng **hash router**: `http://localhost:5173/#/chu-tro/quan-ly-phong`.
+Luồng đánh giá cần **DemoFAB → "Tôi là người ở demo"** (gọi `demo_link_me_to_seeded_occupancy`) — **đừng nới `can_review_contract()`** để demo cho dễ.
 
 ---
 
-## 8. Còn nợ (đã ghi trong commit, đừng quên)
+## 11. Còn nợ kỹ thuật (đã ghi trong commit)
 
-- **`useCanWrite()` định nghĩa nhưng không ai dùng** — các page vẫn tự suy `isReadOnly`. Mục tiêu "disable ở một chỗ" (`CLAUDE.md` §8.4) chưa đạt. **Thuộc T27.**
-- **Dashboard chưa có state `isError`** — mới có pending/empty. Cố ý hoãn: T11c/React Query sẽ cho miễn phí.
-- **13/16 RPC chưa được gọi lần nào.** Task nào dùng RPC phải test tay luồng đó ít nhất 1 lần.
-- `secondaryHover: #B08D63` / `secondaryPress: #9A784F` do Antigravity tự đặt ở `theme.ts` — người dùng chưa xác nhận có chấp nhận màu này không.
+- **`useCanWrite()` định nghĩa nhưng 0 page dùng** — BR-015 chưa đạt "disable ở một chỗ". **Thuộc T27.**
+- **`RoomDetailPage.tsx` 1.177 dòng** — vượt ngưỡng 600 của §8.2, là page lớn nhất chưa split.
+- **`ChuTroDashboardPage` import `listing-queries` của marketplace** — cross-import §2.1 còn sót từ T11b.
+- **`dbSeeder.ts` 526 dòng** chưa chia (phần còn lại của T18).
+- **Bật boost khi SỬA tin bị bỏ qua** — `boostExpireAt` không truyền cho `updateListing`. Thuộc T28.
+- `secondaryHover: #B08D63` / `secondaryPress: #9A784F` do Antigravity tự đặt ở `theme.ts` — chưa ai xác nhận.
