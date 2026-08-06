@@ -3,6 +3,7 @@ import { useNavigate, Link } from "react-router";
 import { supabase } from "../../shared/supabaseClient";
 import { C, font } from "../../shared/theme";
 import { Eye, EyeOff, Mail, Lock, User, Phone, ArrowLeft } from "lucide-react";
+import { GoogleSignInButton, AuthDivider } from "../../shared/components/common";
 
 export function RegisterPage() {
   const navigate = useNavigate();
@@ -366,6 +367,15 @@ export function RegisterPage() {
             {isLoading ? "Đang xử lý..." : "Đăng Ký Tài Khoản"}
           </button>
         </form>
+
+        <AuthDivider />
+
+        {/*
+          Cùng một nút với trang đăng nhập, cố ý. Với OAuth thì "đăng ký" và
+          "đăng nhập" là một lời gọi: Supabase tạo user mới nếu email chưa có, và
+          gộp vào user cũ nếu email đã tồn tại + đã xác minh.
+        */}
+        <GoogleSignInButton disabled={isLoading} onError={setErrorMessage} />
 
         <div style={{ marginTop: 24, textAlign: "center", fontSize: 13, color: C.textSecondary }}>
           Đã có tài khoản?{" "}

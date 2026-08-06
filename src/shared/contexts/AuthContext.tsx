@@ -13,6 +13,7 @@ interface AuthContextType {
   hasRole: (role: Role) => boolean;
   isLoading: boolean;
   signOut: () => Promise<void>;
+  signInWithGoogle: () => Promise<void>;
   refreshProfile: () => Promise<void>;
 }
 
@@ -92,6 +93,39 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return () => subscription.unsubscribe();
   }, [fetchIdentity]);
 
+  /**
+   * Đăng nhập / đăng ký bằng Google.
+   *
+   * Không phân biệt "đăng nhập" và "đăng ký": Supabase Auth **tự động gộp
+   * identity cùng email vào MỘT user** nếu email đó đã được xác minh. Nên người
+   * đã có tài khoản mật khẩu với `a@gmail.com` bấm nút này sẽ vào đúng tài khoản
+   * cũ — giữ nguyên khu trọ, hợp đồng, hóa đơn — chứ không sinh tài khoản thứ hai.
+   * (Supabase cố ý KHÔNG tự gộp khi email chưa xác minh, vì đó là đường
+   * pre-account-takeover: kẻ khác đăng ký trước bằng email của bạn rồi chờ bạn
+   * đăng nhập Google vào chính tài khoản họ tạo.)
+   *
+   * ⚠️ `redirectTo` PHẢI là origin trần, không kèm `#/...`.
+   * App dùng hash router. Supabase (PKCE) nối `?code=...` vào cuối URL đích:
+   *   redirectTo = "origin/"            → "origin/?code=abc"        ✅ đọc được
+   *   redirectTo = "origin/#/dang-nhap" → "origin/#/dang-nhap?code=abc"  ❌
+   * Ở dạng thứ hai, query nằm SAU dấu `#` nên `window.location.search` rỗng,
+   * `detectSessionInUrl` không thấy code, và phiên không bao giờ được tạo —
+   * người dùng quay về trang chủ trong trạng thái vẫn chưa đăng nhập, không có
+   * lỗi nào hiện ra.
+   */
+  const signInWithGoogle = useCallback(async () => {
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: {
+        redirectTo: `${window.location.origin}/`,
+        // Luôn cho chọn tài khoản thay vì im lặng dùng lại account Google đang
+        // đăng nhập trên máy — cần thiết khi một máy test nhiều tài khoản.
+        queryParams: { prompt: "select_account" },
+      },
+    });
+    if (error) throw error;
+  }, []);
+
   const signOut = async () => {
     setIsLoading(true);
     try {
@@ -110,7 +144,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   return (
     <AuthContext.Provider
-      value={{ user, profile, roles, hasRole, isLoading, signOut, refreshProfile }}
+      value={{ user, profile, roles, hasRole, isLoading, signOut, signInWithGoogle, refreshProfile }}
     >
       {children}
     </AuthContext.Provider>

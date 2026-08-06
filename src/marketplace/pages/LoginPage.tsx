@@ -3,6 +3,7 @@ import { useNavigate, Link, useSearchParams } from "react-router";
 import { supabase } from "../../shared/supabaseClient";
 import { C, font } from "../../shared/theme";
 import { Eye, EyeOff, Mail, Lock, ArrowLeft } from "lucide-react";
+import { GoogleSignInButton, AuthDivider } from "../../shared/components/common";
 
 /**
  * Chỉ chấp nhận đường dẫn nội bộ cho `?redirect=`.
@@ -270,6 +271,10 @@ export function LoginPage() {
             {isLoading ? "Đang xử lý..." : "Đăng Nhập"}
           </button>
         </form>
+
+        <AuthDivider />
+
+        <GoogleSignInButton disabled={isLoading} onError={setErrorMessage} />
 
         <div style={{ marginTop: 24, textAlign: "center", fontSize: 13, color: C.textSecondary }}>
           Chưa có tài khoản?{" "}
