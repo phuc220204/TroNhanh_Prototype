@@ -43,6 +43,17 @@ Nó viết UI được. Nhưng qua 9 task nó đã gây **13 lỗi**, trong đó
 | T22 | — | Giữ **bản sao thứ hai** của `DemandPostCard` (115 dòng) khai `post: any`, che lỗi `post.roomType` không tồn tại ⇒ bấm "xem chi tiết" throw |
 | T20 | — | Gửi `access_policy: "free"` vào cột có `check (... in ('Free','Restricted'))` ⇒ **mọi lần lưu tin sửa fail**. Chiều đọc cũng sai đối xứng |
 | T20 | — | **Sửa tay `database.types.ts`** (file generated) để khai 2 RPC chưa push ⇒ typecheck xanh giả |
+| T27 | "typecheck = 0 lỗi" | Đạt được bằng cách **thêm `as any` vào 2 lời gọi RPC** — trong file prompt ghi rõ "không được đụng". 3 lỗi đó là tín hiệu DUY NHẤT báo `db:push` chưa chạy; bịt nó đi thì "Xóa khu trọ" ném `function does not exist` lúc chạy thật. **T20 lặp lại nguyên vẹn** |
+| T27 | — | Nút "Đã thu" gửi `total_amount` thay vì số còn thiếu. `record_payment` không chặn thu vượt ⇒ hóa đơn 3tr đã thu 1tr, bấm một cái thành **ghi nhận 4tr**, mà status hiện "Paid" nên không ai nhận ra |
+| T27 | — | 4 hex literal mới, 2 trong đó (`#4A7A34`, `#B5503C`) **đúng bằng `C.success`/`C.error`** — copy giá trị từ theme thay vì import token. Lần thứ 5 |
+| T27 | — | Tự viết query key `["billing","periods",...]` và nối thêm phần tử vào `qk.billing.invoices(...)` |
+
+**Mẫu lỗi nguy hiểm nhất — xuất hiện 3 lần (T19, T20, T27):**
+> Khi typecheck đỏ vì **DB chưa được push**, nó luôn chọn cách **làm cho lỗi biến mất**
+> (sửa migration đã apply · sửa tay `database.types.ts` · `as any`) thay vì báo
+> "cần chạy `db:push`". Kết quả là typecheck xanh, build xanh, và app chết lúc chạy thật.
+> **Luôn kiểm `grep -c "<tên_rpc_mới>" src/shared/types/database.types.ts` trước khi tin
+> báo cáo "typecheck 0 lỗi" của bất kỳ task nào có SQL.**
 
 **Sáu mẫu lỗi lặp lại:**
 1. **Tối ưu cho lệnh grep trong DoD** thay vì cho mục đích thật.
@@ -114,16 +125,25 @@ npx tsc --noEmit --noUnusedLocals   để bắt import chết nó bỏ lại
 | Luồng 4c | T23 ghép nối chủ trọ ↔ tin nhu cầu |
 | Luồng 5 | T24 occupancy + hợp đồng |
 | Extra | T25 nhắn tin in-app · bản đồ thật (Leaflet + OSM) · **nhiều người ở / một hợp đồng** |
+| Luồng 5 | **T27** — VietQR thật (EMVCo tự sinh) · audit READ_ONLY · BR-011 delete guard · `/chu-tro/hoa-don` |
 
 ### Còn lại
 
 | Task | Nội dung | Giao ai |
 |---|---|---|
-| **T27** | Polish khu & phòng: form cấu hình khu + VietQR · **audit READ_ONLY** · `/chu-tro/hoa-don` · BR-011 delete guard | Antigravity (trừ phần VietQR/bank → Claude) |
 | **T28** | Dẹp `[Demo]`: "Lưu nháp" thật (`p_submit=false`), bỏ alert | Antigravity |
 | **T29–T31** | QA cuối, E2E, bật strict Nấc B | Claude (task xác minh mà báo cáo sai thì vô nghĩa) |
 
-**Số đo nợ hiện tại:** `[Demo]` = 3 · `alert(` = 24 · `useCanWrite` dùng ở **0** page · `as any` trên supabase = **0**
+**Số đo nợ hiện tại:** `[Demo]` = 3 · `alert(` = 11 · `useCanWrite` dùng ở **13** file · `as any` trên supabase = **0** · không còn file `workspace/` nào > 600 dòng
+
+### Chưa verify tay — nợ của T27
+
+- **Mã VietQR chưa quét thử bằng app ngân hàng thật.** CRC đã kiểm bằng check
+  value chuẩn (`crc16("123456789") === "29B1"`) và payload parse ngược đúng cấu
+  trúc TLV, nhưng **bảng BIN 28 ngân hàng chưa đối chiếu với NAPAS**. BIN sai thì
+  QR vẫn hiện đẹp và vẫn quét ra — chỉ là ra sai ngân hàng.
+- **Luồng thu một phần** (`PartiallyPaid` → "Đã thu" số còn thiếu) chưa chạy tay.
+- **Xóa khu trọ** chưa chạy tay trên DB thật (RPC vừa push).
 
 ---
 
@@ -203,8 +223,11 @@ Luồng đánh giá cần **DemoFAB → "Tôi là người ở demo"** (gọi `d
 
 ## 11. Còn nợ kỹ thuật (đã ghi trong commit)
 
-- **`useCanWrite()` định nghĩa nhưng 0 page dùng** — BR-015 chưa đạt "disable ở một chỗ". **Thuộc T27.**
-- **`RoomDetailPage.tsx` 1.177 dòng** — vượt ngưỡng 600 của §8.2, là page lớn nhất chưa split.
+- ~~`useCanWrite()` định nghĩa nhưng 0 page dùng~~ — ✅ **T27 đã trả**. Gác qua prop
+  `requiresWrite` của `Button`/`PrimaryBtn`/`GhostBtn`; thêm `useWriteBlockReason()`
+  vì `NONE` ("chưa kích hoạt") và `READ_ONLY` ("hết hạn, dữ liệu còn nguyên") phải
+  nói khác nhau.
+- **`RoomDetailPage.tsx` 1.237 dòng** — vượt ngưỡng 600 của §8.2, là page lớn nhất chưa split.
 - **`ChuTroDashboardPage` import `listing-queries` của marketplace** — cross-import §2.1 còn sót từ T11b.
 - **`dbSeeder.ts` 526 dòng** chưa chia (phần còn lại của T18).
 - **Bật boost khi SỬA tin bị bỏ qua** — `boostExpireAt` không truyền cho `updateListing`. Thuộc T28.
