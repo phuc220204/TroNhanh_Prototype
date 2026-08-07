@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router";
 import { useBreakpoint } from "./useBreakpoint";
 import {
-  Search, Heart, User, ChevronDown,
+  Search, User, ChevronDown,
   Key, UserSearch,
   LayoutGrid, LayoutDashboard, Building2, FileText, BookOpen, HelpCircle, X,
   Bell, Menu, Database, MessageSquare, UserCheck
@@ -67,13 +67,29 @@ function DangTinDropdown({ onRenter, onLandlord, onClose }: {
    ACCOUNT DROPDOWN
 ══════════════════════════════════════════ */
 function AccountDropdown({ onLandlord, onSignOut, onClose }: { onLandlord: () => void; onSignOut: () => void; onClose: () => void }) {
+  const navigate = useNavigate();
+  const { hasRole } = useAuth();
+  const isStaff = hasRole("Admin") || hasRole("Moderator");
+
+  /**
+   * Ba mục đầu trước đây là `action: () => {}` — bấm vào KHÔNG có gì xảy ra, dù
+   * `/tai-khoan` và `/tin-nhan` đã tồn tại từ T12/T25. "Tin đã lưu" thì không có
+   * route nào cả nên đã bỏ hẳn (nguyên tắc đã chốt: nút không làm được việc thì
+   * xóa, không dán nhãn phiên bản).
+   *
+   * Và thiếu hẳn đường vào `/quan-tri`: Admin đăng nhập không có cách nào tới màn
+   * kiểm duyệt ngoài việc tự gõ URL — mà với hash router thì gõ
+   * `localhost:5173/quan-tri` còn ra trang chủ, phải là `localhost:5173/#/quan-tri`.
+   */
   const items = [
-    { label: "Hồ sơ",             action: () => {} },
-    { label: "Tin nhắn",           action: () => {} },
-    { label: "Tin đã lưu",         action: () => {} },
-    { label: "Dashboard chủ trọ", action: onLandlord },
-    { label: "Đăng xuất",         action: onSignOut },
-  ];
+    { label: "Hồ sơ", action: () => navigate("/tai-khoan") },
+    { label: "Tin nhắn", action: () => navigate("/tin-nhan") },
+    ...(isStaff
+      ? [{ label: "Quản trị hệ thống", action: () => navigate("/quan-tri"), highlight: true }]
+      : []),
+    { label: "Dashboard chủ trọ", action: onLandlord, highlight: true },
+    { label: "Đăng xuất", action: onSignOut, danger: true },
+  ] as Array<{ label: string; action: () => void; highlight?: boolean; danger?: boolean }>;
   return (
     <div style={{
       position: "absolute", top: "calc(100% + 10px)", right: 0,
@@ -81,14 +97,17 @@ function AccountDropdown({ onLandlord, onSignOut, onClose }: { onLandlord: () =>
       borderRadius: 14, boxShadow: "0 12px 40px rgba(92,70,50,0.16)",
       padding: "6px 0", width: 200, zIndex: 200,
     }}>
-      {items.map(({ label, action }, i) => (
+      {items.map(({ label, action, highlight, danger }) => (
         <button key={label} onClick={() => { action(); onClose(); }}
+          data-testid={`account-menu-${label === "Quản trị hệ thống" ? "admin" : "item"}`}
           style={{
             display: "block", width: "100%", padding: "11px 16px",
-            border: "none", borderTop: i === items.length - 1 ? `1px solid ${C.border}` : "none",
+            border: "none", borderTop: danger ? `1px solid ${C.border}` : "none",
             background: "transparent", cursor: "pointer", textAlign: "left", fontFamily: font,
-            fontSize: 14, color: i === items.length - 1 ? "#C0392B" : C.textPrimary,
-            fontWeight: i === 3 ? 600 : 400, transition: "background 0.1s",
+            // Trước đây kiểu chữ bám theo CHỈ SỐ mảng (`i === 3`, `i === length-1`),
+            // nên thêm/bớt một mục là lệch hết. Giờ bám theo cờ của chính mục đó.
+            fontSize: 14, color: danger ? C.error : C.textPrimary,
+            fontWeight: highlight ? 600 : 400, transition: "background 0.1s",
           }}
           onMouseEnter={e => (e.currentTarget.style.background = C.bg)}
           onMouseLeave={e => (e.currentTarget.style.background = "transparent")}>
@@ -227,13 +246,12 @@ export function PublicNavbarDesktop({
         {/* Tìm phòng */}
         <NavLink label="Tìm phòng" onClick={goSearch} />
 
-        {/* Yêu thích */}
-        <button style={{ display: "flex", alignItems: "center", gap: 5, background: "none", border: "none", cursor: "pointer", padding: "8px 12px", borderRadius: 8 }}
-          onMouseEnter={e => (e.currentTarget.style.background = C.cream)}
-          onMouseLeave={e => (e.currentTarget.style.background = "none")}>
-          <Heart size={15} color={C.textSecondary} strokeWidth={1.8} />
-          <span style={{ fontFamily: font, fontSize: 13.5, color: C.textSecondary, whiteSpace: "nowrap" }}>Yêu thích</span>
-        </button>
+        {/* Tin nhu cầu — thay nút "Yêu thích" cũ.
+            Nút đó không có `onClick`: bấm vào chỉ đổi màu nền rồi thôi. Chức năng
+            lưu tin yêu thích chưa tồn tại (không có route, không có bảng), nên để
+            lại một nút bấm-không-làm-gì ngay trên navbar chính là thứ khách phát
+            hiện trong 5 giây đầu. Thay bằng lối vào một trang có thật. */}
+        <NavLink label="Tin nhu cầu" onClick={() => navigate("/tin-nhu-cau")} />
 
         {user && (
           <button
@@ -350,18 +368,28 @@ function NavLink({ label, onClick }: { label: string; onClick?: () => void }) {
 ══════════════════════════════════════════ */
 export function PublicNavbarMobile({ onSearch }: { onSearch?: () => void }) {
   const navigate = useNavigate();
-  const { user, signOut } = useAuth();
+  const { user, signOut, hasRole } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
+  const isStaff = hasRole("Admin") || hasRole("Moderator");
+
+  /**
+   * "Yêu thích", "Đăng tin tìm phòng" và "Tin nhắn" trước đây chỉ gọi
+   * `setMenuOpen(false)` — bấm vào thì menu đóng lại và không đi đâu cả. Hai mục
+   * sau có route thật (`/dang-tin-nhu-cau`, `/tin-nhan`), chỉ là chưa được nối.
+   * "Yêu thích" không có route nào nên bỏ hẳn.
+   */
+  const go = (path: string) => () => { navigate(path); setMenuOpen(false); };
 
   const menuItems = [
-    { label: "Tìm phòng", action: () => { navigate("/tim-phong"); setMenuOpen(false); } },
-    { label: "Yêu thích", action: () => setMenuOpen(false) },
-    { label: "Đăng tin tìm phòng", action: () => setMenuOpen(false), sub: true },
-    { label: "Đăng tin cho thuê", action: () => { navigate("/chu-tro/dang-tin"); setMenuOpen(false); }, sub: true },
-    { label: "Tin nhắn", action: () => setMenuOpen(false) },
+    { label: "Tìm phòng", action: go("/tim-phong") },
+    { label: "Tin nhu cầu", action: go("/tin-nhu-cau") },
+    { label: "Đăng tin tìm phòng", action: go("/dang-tin-nhu-cau"), sub: true },
+    { label: "Đăng tin cho thuê", action: go("/chu-tro/dang-tin"), sub: true },
+    ...(user ? [{ label: "Tin nhắn", action: go("/tin-nhan") }] : []),
+    ...(isStaff ? [{ label: "Quản trị hệ thống", action: go("/quan-tri") }] : []),
     user
       ? { label: "Đăng xuất", action: () => { signOut(); setMenuOpen(false); } }
-      : { label: "Đăng nhập", action: () => { navigate("/dang-nhap"); setMenuOpen(false); } },
+      : { label: "Đăng nhập", action: go("/dang-nhap") },
   ];
 
   return (
