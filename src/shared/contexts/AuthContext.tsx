@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState, useCallback } from "react";
+import React, { createContext, useContext, useEffect, useState, useCallback, useRef } from "react";
 import { User } from "@supabase/supabase-js";
 import { supabase } from "../supabaseClient";
 import { Profile } from "../types/auth";
@@ -24,6 +24,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [profile, setProfile] = useState<Profile | null>(null);
   const [roles, setRoles] = useState<Role[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+
+  /**
+   * `user.id` của lần xử lý auth event trước.
+   *
+   * Là `useRef` chứ không phải state: nó chỉ dùng để SO SÁNH trong callback của
+   * `onAuthStateChange`, không tham gia render. Nếu để state thì mỗi lần gán lại
+   * gây thêm một lượt render — đúng thứ đang cần tránh.
+   */
+  const lastUserIdRef = useRef<string | null>(null);
 
   /**
    * profiles và user_roles không có FK với nhau nên phải là 2 query.
@@ -58,6 +67,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (error) logError("AuthContext.getSession", error);
         if (session?.user) {
           setUser(session.user);
+          // Ghi lại id ngay: `onAuthStateChange` sẽ emit INITIAL_SESSION cho cùng
+          // người này, và nếu ref còn null thì nó tưởng danh tính vừa đổi rồi bật
+          // spinner lần thứ hai một cách vô ích.
+          lastUserIdRef.current = session.user.id;
           await fetchIdentity(session.user.id);
         }
       } catch (err) {
@@ -70,18 +83,35 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     getInitialSession();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      // CHỈ bật spinner ở các event thật sự đổi danh tính.
-      // Trước đây setIsLoading(true) chạy ở MỌI event kể cả TOKEN_REFRESHED
-      // → spinner của ProtectedRoute nháy mỗi giờ khi token tự gia hạn.
-      const identityChanged =
-        event === "INITIAL_SESSION" || event === "SIGNED_IN" || event === "SIGNED_OUT";
+      const currentUser = session?.user ?? null;
+
+      /**
+       * Spinner chỉ được bật khi NGƯỜI DÙNG thật sự đổi — so sánh `user.id`, không
+       * so sánh tên event.
+       *
+       * Vì sao: `supabase-js` emit `SIGNED_IN` mỗi lần nó khôi phục session, kể cả
+       * khi bạn vẫn đang đăng nhập bằng đúng tài khoản đó — điển hình là lúc quay
+       * lại tab sau khi alt-tab. Lọc theo tên event thì `SIGNED_IN` vẫn bật
+       * `isLoading`, `RequireAuth` thay `<Outlet/>` bằng màn "Đang kiểm tra..." và
+       * **unmount toàn bộ cây con**. Người đang nhập form đăng tin mở tab khác lấy
+       * ảnh, quay lại thì mất sạch dữ liệu đã điền — không có lỗi nào, chỉ là form
+       * trắng.
+       *
+       * Lần trước đã lọc bỏ `TOKEN_REFRESHED` vì lý do tương tự (spinner nháy mỗi
+       * giờ). `SIGNED_IN` sót lại vì lúc đó chưa ai alt-tab giữa lúc đang nhập form.
+       */
+      const previousUserId = lastUserIdRef.current;
+      const identityChanged = currentUser?.id !== previousUserId;
+      lastUserIdRef.current = currentUser?.id ?? null;
+
       if (identityChanged) setIsLoading(true);
 
-      const currentUser = session?.user ?? null;
       setUser(currentUser);
 
       if (currentUser) {
-        await fetchIdentity(currentUser.id);
+        // Cùng một người thì profile/roles không đổi — không cần nạp lại, và nạp
+        // lại còn tạo một nhịp render vô ích ở mọi component đọc context.
+        if (identityChanged) await fetchIdentity(currentUser.id);
       } else {
         setProfile(null);
         setRoles([]);

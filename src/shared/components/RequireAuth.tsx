@@ -13,7 +13,19 @@ export const RequireAuth: React.FC = () => {
   const { user, isLoading } = useAuth();
   const location = useLocation();
 
-  if (isLoading) return <AuthCheckingScreen />;
+  /**
+   * Chỉ che bằng spinner khi CHƯA biết người dùng là ai.
+   *
+   * `if (isLoading)` không kèm `!user` là một cái bẫy: bất cứ lúc nào `isLoading`
+   * bật lên giữa phiên, `<Outlet/>` bị thay bằng màn chờ và **cả cây route con bị
+   * unmount** — mọi state chưa lưu của trang đang mở biến mất. Cụ thể đã xảy ra:
+   * đang nhập form đăng tin, mở tab khác lấy ảnh, quay lại thì form trắng trơn.
+   *
+   * Đã có `user` thì cứ render tiếp; việc làm mới token hay session không phải lý
+   * do để dựng lại giao diện. `AuthContext` cũng đã được sửa để không bật
+   * `isLoading` khi danh tính không đổi — hai lớp này bổ trợ nhau, giữ cả hai.
+   */
+  if (isLoading && !user) return <AuthCheckingScreen />;
 
   if (!user) {
     const target = encodeURIComponent(location.pathname + location.search);

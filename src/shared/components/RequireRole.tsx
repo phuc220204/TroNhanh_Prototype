@@ -22,7 +22,10 @@ export type Role = "Renter" | "Seller" | "Admin" | "Moderator";
 export const RequireRole: React.FC<{ anyOf: Role[] }> = ({ anyOf }) => {
   const { user, roles, isLoading } = useAuth();
 
-  if (isLoading) return <AuthCheckingScreen />;
+  // Cùng lý do như `RequireAuth`: `isLoading` đơn độc sẽ unmount cả cây route con
+  // mỗi khi session được làm mới (ví dụ lúc quay lại tab), làm mất state chưa lưu
+  // của trang đang mở. Đã biết người dùng là ai thì cứ render tiếp.
+  if (isLoading && !user) return <AuthCheckingScreen />;
   if (!user) return <ForbiddenScreen reason="unauthenticated" />;
 
   const allowed = anyOf.some((r) => roles.includes(r));
