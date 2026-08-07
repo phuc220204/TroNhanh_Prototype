@@ -300,12 +300,37 @@ function CostTable({ listing }: { listing: any }) {
   const { metadata } = parseMetadataFromDescription(listing.description);
   const costsData = metadata.costs || {};
 
+  /**
+   * Chi phí: ưu tiên CỘT THẬT (có từ migration 0300), rồi mới tới `metadata.costs`
+   * của tin cũ. Thiếu cả hai thì ghi "Chưa cập nhật".
+   *
+   * Trước đây thiếu dữ liệu là rơi vào số mặc định: "3.500 đ/kWh",
+   * "100.000 đ/người", "150.000 đ/tháng". Người thuê đọc con số đó và tin rằng
+   * chủ nhà đã công bố như vậy — trong khi chủ nhà chưa khai gì cả. Đó không phải
+   * lỗi hiển thị mà là thông tin giá sai lệch, thứ người ta dựa vào để quyết định
+   * đi xem phòng hay không.
+   */
+  const NOT_SET = "Chưa cập nhật";
+  const formatVnd = (value: unknown): string | null => {
+    const num = Number(value);
+    return Number.isFinite(num) && num > 0 ? num.toLocaleString("vi-VN") : null;
+  };
+
   const priceFormatted = Number(listing.price).toLocaleString("vi-VN") + " đ/tháng";
-  const electricVal = costsData.electric ? `${costsData.electric} đ/kWh` : "3.500 đ/kWh";
-  const waterUnitStr = costsData.waterUnit === "cubic" ? "đ/m³" : "đ/người";
-  const waterVal = costsData.water ? `${costsData.water} ${waterUnitStr}` : "100.000 đ/người";
-  const serviceVal = costsData.service ? `${costsData.service} đ/tháng` : "150.000 đ/tháng";
-  const depositVal = costsData.deposit ? `${costsData.deposit} đ` : "1 tháng tiền thuê";
+
+  const electricAmount = formatVnd(listing.electricity_price) ?? formatVnd(costsData.electric);
+  const electricVal = electricAmount ? `${electricAmount} đ/kWh` : NOT_SET;
+
+  const waterUnitStr =
+    listing.water_unit === "cubic" || costsData.waterUnit === "cubic" ? "đ/m³" : "đ/người";
+  const waterAmount = formatVnd(listing.water_price) ?? formatVnd(costsData.water);
+  const waterVal = waterAmount ? `${waterAmount} ${waterUnitStr}` : NOT_SET;
+
+  const serviceAmount = formatVnd(listing.service_price) ?? formatVnd(costsData.service);
+  const serviceVal = serviceAmount ? `${serviceAmount} đ/tháng` : NOT_SET;
+
+  const depositAmount = formatVnd(listing.deposit) ?? formatVnd(costsData.deposit);
+  const depositVal = depositAmount ? `${depositAmount} đ` : NOT_SET;
 
   const costs = [
     { Icon: Key, label: "Giá thuê", value: priceFormatted },

@@ -523,11 +523,23 @@ function HeroSearchBox({ onSearch, isMobile }: { onSearch?: () => void; isMobile
    HERO SECTION
    ══════════════════════════════════════════ */
 function HeroSection({ onSearch, isMobile }: { onSearch?: () => void; isMobile?: boolean }) {
+  /**
+   * Bốn ô này trước đây là "50.000+ phòng đang đăng", "10.000+ chủ nhà uy tín",
+   * "< 5 phút phản hồi", "100% tin đăng xác thực" — bốn con số bịa, đặt ngay dòng
+   * đầu trang chủ. Trên hệ thống mới triển khai (0 tin đăng) thì đó là nói dối
+   * trắng trợn, và không có cách nào đo được ba con số sau kể cả khi có dữ liệu.
+   *
+   * Thay bằng bốn điều ĐÚNG SỰ THẬT và không cần con số nào:
+   *   • Đăng tin cho thuê miễn phí — PRD: "Tin đăng (Miễn phí) · luôn mở"
+   *   • Chuyển khoản qua VietQR ngay trên hóa đơn
+   *   • Nền tảng không giữ tiền thuê, không thu phí trung gian (AS-002)
+   *   • Nhắn tin trực tiếp với chủ nhà, không qua trung gian
+   */
   const STATS = [
-    { value: "50.000+", label: "Phòng đang đăng", Icon: Building2 },
-    { value: "10.000+", label: "Chủ nhà uy tín", Icon: UserCheck },
-    { value: "< 5 phút", label: "Phản hồi trung bình", Icon: Clock },
-    { value: "100%",     label: "Tin đăng xác thực", Icon: ShieldCheck },
+    { value: "Miễn phí", label: "Đăng tin cho thuê", Icon: Building2 },
+    { value: "VietQR", label: "Thanh toán trên hóa đơn", Icon: ShieldCheck },
+    { value: "0đ", label: "Phí trung gian", Icon: UserCheck },
+    { value: "Trực tiếp", label: "Nhắn tin với chủ nhà", Icon: Clock },
   ];
 
   if (isMobile) {
@@ -549,7 +561,7 @@ function HeroSection({ onSearch, isMobile }: { onSearch?: () => void; isMobile?:
         </h1>
 
         <p style={{ fontFamily: font, fontSize: 13.5, color: C.textSecondary, margin: "0 0 28px", lineHeight: 1.6 }}>
-          Kết nối hàng chục nghìn chủ nhà và người thuê mỗi ngày. Trọ Nhanh giúp bạn tìm phòng phù hợp chỉ trong vài phút.
+          Nơi chủ nhà và người thuê gặp nhau trực tiếp. Xem giá, chi phí điện nước và liên hệ chủ nhà ngay trên tin đăng — không qua trung gian.
         </p>
 
         <div style={{ marginBottom: 28 }}>
@@ -594,7 +606,7 @@ function HeroSection({ onSearch, isMobile }: { onSearch?: () => void; isMobile?:
           </h1>
 
           <p style={{ fontFamily: font, fontSize: 15.5, color: C.textSecondary, margin: "0 0 36px", lineHeight: 1.7, maxWidth: 540 }}>
-            Kết nối hàng chục nghìn chủ nhà và người thuê mỗi ngày. Trọ Nhanh giúp bạn tìm phòng phù hợp chỉ trong vài phút.
+            Nơi chủ nhà và người thuê gặp nhau trực tiếp. Xem giá, chi phí điện nước và liên hệ chủ nhà ngay trên tin đăng — không qua trung gian.
           </p>
 
           <div style={{ marginBottom: 40, width: "100%", maxWidth: 680 }}>

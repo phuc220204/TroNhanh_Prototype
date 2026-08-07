@@ -215,10 +215,16 @@ function PageHeader({ count, onHome }: { count: number; onHome?: () => void }) {
             <h1 style={{ fontFamily: font, fontSize: 28, fontWeight: 900, color: C.textPrimary, margin: "0 0 5px", letterSpacing: "-0.02em" }}>Tất cả phòng đang đăng</h1>
             <p style={{ fontFamily: font, fontSize: 14, color: C.textSecondary, margin: 0 }}>Khám phá các phòng trọ, căn hộ dịch vụ và chỗ ở phù hợp với nhu cầu của bạn.</p>
           </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-            <span style={{ fontFamily: font, fontSize: 28, fontWeight: 900, color: C.primary, letterSpacing: "-0.02em" }}>1.200+</span>
-            <span style={{ fontFamily: font, fontSize: 14, color: C.textSecondary }}>phòng đang đăng</span>
-          </div>
+          {/* Số THẬT từ `searchListings().totalCount`. Trước đây là "1.200+"
+              hardcode — trên hệ thống mới triển khai thì đó là con số bịa, và
+              ngay dưới nó là dòng "Hiển thị 0 trong 1.200+ phòng", tự mâu thuẫn
+              trong cùng một khung nhìn. */}
+          {count > 0 && (
+            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              <span style={{ fontFamily: font, fontSize: 28, fontWeight: 900, color: C.primary, letterSpacing: "-0.02em" }}>{count.toLocaleString("vi-VN")}</span>
+              <span style={{ fontFamily: font, fontSize: 14, color: C.textSecondary }}>phòng đang đăng</span>
+            </div>
+          )}
         </div>
       </div>
     </div>
@@ -363,7 +369,9 @@ function ListingToolbar({ count, sortBy, onSort, viewMode, onView, onMap }: {
   return (
     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16, flexWrap: "wrap", gap: 10 }}>
       <p style={{ fontFamily: font, fontSize: 14, color: C.textSecondary, margin: 0 }}>
-        Hiển thị <strong style={{ color: C.textPrimary }}>{count}</strong> trong <strong style={{ color: C.textPrimary }}>1.200+</strong> phòng
+        {count > 0
+          ? <>Tìm thấy <strong style={{ color: C.textPrimary }}>{count.toLocaleString("vi-VN")}</strong> phòng</>
+          : <>Chưa có phòng nào phù hợp</>}
       </p>
       <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
         {/* Sort */}
@@ -408,7 +416,7 @@ function MapPlaceholder() {
       </div>
       <div style={{ textAlign: "center", zIndex: 1 }}>
         <p style={{ fontFamily: font, fontSize: 16, fontWeight: 600, color: C.textPrimary, margin: "0 0 4px" }}>Chế độ xem bản đồ</p>
-        <p style={{ fontFamily: font, fontSize: 13, color: C.textSecondary, margin: 0 }}>Hiển thị 1.200+ phòng trên bản đồ TP. Hồ Chí Minh</p>
+        <p style={{ fontFamily: font, fontSize: 13, color: C.textSecondary, margin: 0 }}>Xem vị trí các phòng đang đăng trên bản đồ</p>
       </div>
     </div>
   );
@@ -417,17 +425,30 @@ function MapPlaceholder() {
 /* ══════════════════════════════════════════
    EMPTY STATE
 ══════════════════════════════════════════ */
-function EmptyState({ onClear }: { onClear: () => void }) {
+/**
+ * Hai trạng thái rỗng khác nhau, và trước đây bị gộp thành một:
+ *   • ĐANG LỌC mà không ra kết quả → khuyên nới bộ lọc, cho nút "Xóa lọc"
+ *   • CHƯA LỌC gì mà vẫn rỗng      → hệ thống chưa có tin nào
+ *
+ * Bản cũ luôn hiện "Thử mở rộng khu vực… hoặc xóa bớt tiện ích" kèm nút "Xóa lọc"
+ * — trên hệ thống mới triển khai, người dùng chưa chạm bộ lọc nào mà bị bảo đi
+ * xóa lọc, và tưởng mình đang lọc sai chứ không biết là chưa có tin nào cả.
+ */
+function EmptyState({ onClear, isFiltered }: { onClear: () => void; isFiltered: boolean }) {
   return (
-    <div style={{ textAlign: "center", padding: "72px 24px", background: C.white, border: `1px solid ${C.border}`, borderRadius: 16 }}>
+    <div style={{ textAlign: "center", padding: "72px 24px", background: C.white, border: `1px solid ${C.border}`, borderRadius: 16 }} data-testid="all-listings-empty">
       <div style={{ width: 64, height: 64, borderRadius: "50%", background: C.cream, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px" }}>
         <Search size={28} color={C.sand} />
       </div>
-      <p style={{ fontFamily: font, fontSize: 17, fontWeight: 700, color: C.textPrimary, margin: "0 0 8px" }}>Không tìm thấy phòng phù hợp</p>
-      <p style={{ fontFamily: font, fontSize: 14, color: C.textSecondary, margin: "0 auto 24px", maxWidth: 320 }}>
-        Thử mở rộng khu vực, thay đổi khoảng giá hoặc xóa bớt tiện ích.
+      <p style={{ fontFamily: font, fontSize: 17, fontWeight: 700, color: C.textPrimary, margin: "0 0 8px" }}>
+        {isFiltered ? "Không tìm thấy phòng phù hợp" : "Chưa có tin đăng nào"}
       </p>
-      <Btn variant="outline" label="Xóa lọc" onClick={onClear} />
+      <p style={{ fontFamily: font, fontSize: 14, color: C.textSecondary, margin: "0 auto 24px", maxWidth: 340 }}>
+        {isFiltered
+          ? "Thử mở rộng khu vực, thay đổi khoảng giá hoặc xóa bớt tiện ích."
+          : "Hiện chưa có phòng nào được đăng công khai. Bạn có phòng cho thuê? Đăng tin để tiếp cận người đang tìm trọ."}
+      </p>
+      {isFiltered && <Btn variant="outline" label="Xóa lọc" onClick={onClear} />}
     </div>
   );
 }
@@ -719,6 +740,15 @@ export function AllListingsPage() {
     setPage(1);
   };
 
+  // Có bộ lọc nào đang bật? Quyết định EmptyState nói gì.
+  const isFiltered =
+    filters.region !== "" ||
+    filters.priceLabel !== "" ||
+    filters.area !== "" ||
+    filters.roomTypes.length > 0 ||
+    filters.amenities.length > 0 ||
+    filters.status.length > 0;
+
   const clearAll = () => {
     setFilters(EMPTY_FILTERS);
     setPending(EMPTY_FILTERS);
@@ -763,7 +793,7 @@ export function AllListingsPage() {
               {dbRooms.map(r => <RoomCard key={r.id} room={r} onClick={() => navigate(`/phong/${r.id}`)} />)}
             </div>
           ) : (
-            <div style={{ padding: 16 }}><EmptyState onClear={clearAll} /></div>
+            <div style={{ padding: 16 }}><EmptyState onClear={clearAll} isFiltered={isFiltered} /></div>
           )}
         </div>
 
@@ -823,7 +853,7 @@ export function AllListingsPage() {
               )}
             </>
           ) : (
-            <EmptyState onClear={clearAll} />
+            <EmptyState onClear={clearAll} isFiltered={isFiltered} />
           )}
         </main>
       </div>
