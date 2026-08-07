@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router";
 import { useBreakpoint } from "./useBreakpoint";
 import {
-  Search, User, ChevronDown,
+  Search, Heart, User, ChevronDown,
   Key, UserSearch,
   LayoutGrid, LayoutDashboard, Building2, FileText, BookOpen, HelpCircle, X,
   Bell, Menu, Database, MessageSquare, UserCheck
@@ -84,6 +84,8 @@ function AccountDropdown({ onLandlord, onSignOut, onClose }: { onLandlord: () =>
   const items = [
     { label: "Hồ sơ", action: () => navigate("/tai-khoan") },
     { label: "Tin nhắn", action: () => navigate("/tin-nhan") },
+    // Cùng đích với nút trái tim trên navbar: "Tin đã lưu" và "Yêu thích" là một.
+    { label: "Tin đã lưu", action: () => navigate("/yeu-thich") },
     ...(isStaff
       ? [{ label: "Quản trị hệ thống", action: () => navigate("/quan-tri"), highlight: true }]
       : []),
@@ -246,12 +248,19 @@ export function PublicNavbarDesktop({
         {/* Tìm phòng */}
         <NavLink label="Tìm phòng" onClick={goSearch} />
 
-        {/* Tin nhu cầu — thay nút "Yêu thích" cũ.
-            Nút đó không có `onClick`: bấm vào chỉ đổi màu nền rồi thôi. Chức năng
-            lưu tin yêu thích chưa tồn tại (không có route, không có bảng), nên để
-            lại một nút bấm-không-làm-gì ngay trên navbar chính là thứ khách phát
-            hiện trong 5 giây đầu. Thay bằng lối vào một trang có thật. */}
         <NavLink label="Tin nhu cầu" onClick={() => navigate("/tin-nhu-cau")} />
+
+        {/* Yêu thích — nút này từng KHÔNG có `onClick` (bấm chỉ đổi màu nền) vì
+            tính năng lưu tin chưa được làm. Giờ đã có bảng `saved_listings` +
+            trang `/yeu-thich`, nên nó dẫn tới đúng chỗ. */}
+        <button onClick={() => navigate("/yeu-thich")}
+          data-testid="nav-saved-listings"
+          style={{ display: "flex", alignItems: "center", gap: 5, background: "none", border: "none", cursor: "pointer", padding: "8px 12px", borderRadius: 8 }}
+          onMouseEnter={e => (e.currentTarget.style.background = C.cream)}
+          onMouseLeave={e => (e.currentTarget.style.background = "none")}>
+          <Heart size={15} color={C.textSecondary} strokeWidth={1.8} />
+          <span style={{ fontFamily: font, fontSize: 13.5, color: C.textSecondary, whiteSpace: "nowrap" }}>Yêu thích</span>
+        </button>
 
         {user && (
           <button
@@ -374,15 +383,15 @@ export function PublicNavbarMobile({ onSearch }: { onSearch?: () => void }) {
 
   /**
    * "Yêu thích", "Đăng tin tìm phòng" và "Tin nhắn" trước đây chỉ gọi
-   * `setMenuOpen(false)` — bấm vào thì menu đóng lại và không đi đâu cả. Hai mục
-   * sau có route thật (`/dang-tin-nhu-cau`, `/tin-nhan`), chỉ là chưa được nối.
-   * "Yêu thích" không có route nào nên bỏ hẳn.
+   * `setMenuOpen(false)` — bấm vào thì menu đóng lại và không đi đâu cả. Cả ba
+   * giờ đều có route thật.
    */
   const go = (path: string) => () => { navigate(path); setMenuOpen(false); };
 
   const menuItems = [
     { label: "Tìm phòng", action: go("/tim-phong") },
     { label: "Tin nhu cầu", action: go("/tin-nhu-cau") },
+    ...(user ? [{ label: "Yêu thích", action: go("/yeu-thich") }] : []),
     { label: "Đăng tin tìm phòng", action: go("/dang-tin-nhu-cau"), sub: true },
     { label: "Đăng tin cho thuê", action: go("/chu-tro/dang-tin"), sub: true },
     ...(user ? [{ label: "Tin nhắn", action: go("/tin-nhan") }] : []),

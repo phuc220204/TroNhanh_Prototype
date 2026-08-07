@@ -20,6 +20,7 @@ import { logError } from "../../shared/services/supabase-error";
 import { getFeaturedListings, getListingById, incrementViewCount } from "../services/listing-queries";
 import { listActiveDemandPosts } from "../services/demand-post-service";
 import { DemandPostCard } from "../components/DemandPostCard";
+import { SaveListingButton } from "../components/SaveListingButton";
 import { PROPERTY_TYPES, PRICE_RANGES, TAGLINE } from "../../shared/constants/catalog";
 import { useAuth } from "../../shared/contexts/AuthContext";
 import { startConversation } from "../../shared/services/messaging-service";
@@ -108,7 +109,6 @@ function Btn({
 function RoomCard({ room, mobile, onClick }: {
   room: { id: any; title: string; price: string; area: number | string; loc: string; amenities: string[]; badge?: string | null; img: string }; mobile?: boolean; onClick?: () => void;
 }) {
-  const [saved, setSaved] = useState(false);
   const [hov, setHov] = useState(false);
   return (
     <div onClick={onClick}
@@ -125,12 +125,7 @@ function RoomCard({ room, mobile, onClick }: {
       <div style={{ position: "relative", flexShrink: 0, width: mobile ? 140 : "100%", overflow: "hidden" }}>
         <img src={room.img} alt={room.title}
           style={{ width: "100%", height: mobile ? 140 : 190, objectFit: "cover", display: "block", transition: "transform 0.4s ease-in-out", transform: hov ? "scale(1.06)" : "none" }} />
-        <button onClick={e => { e.stopPropagation(); setSaved(v => !v); }}
-          style={{ position: "absolute", top: 12, right: 12, background: "rgba(255,255,255,0.92)", border: "none", borderRadius: "50%", width: 34, height: 34, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", boxShadow: "0 2px 8px rgba(0,0,0,0.08)", transition: "all 0.15s ease" }}
-          onMouseEnter={e => { e.currentTarget.style.transform = "scale(1.05)"; }}
-          onMouseLeave={e => { e.currentTarget.style.transform = "none"; }}>
-          <Heart size={15} color={saved ? "#E74C3C" : C.textSecondary} fill={saved ? "#E74C3C" : "none"} strokeWidth={saved ? 0 : 2} />
-        </button>
+        <SaveListingButton listingId={room.id} overlay size={15} />
         <span style={{ position: "absolute", top: 12, left: 12, background: C.available, color: "#fff", fontFamily: font, fontSize: 10.5, fontWeight: 700, borderRadius: 999, padding: "4px 10px", boxShadow: "0 2px 6px rgba(79,122,74,0.2)" }}>Còn trống</span>
         {room.badge && (
           <span style={{ position: "absolute", bottom: 12, left: 12, background: C.primary, color: "#fff", fontFamily: font, fontSize: 10, fontWeight: 700, borderRadius: 6, padding: "3px 8px", display: "inline-flex", alignItems: "center", gap: 3, boxShadow: "0 2px 6px rgba(138,74,32,0.2)" }}>

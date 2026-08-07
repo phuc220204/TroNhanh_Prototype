@@ -53,6 +53,15 @@ export const qk = {
     matches: (sellerId: string | undefined) => ["demandPosts", "matches", sellerId] as const,
   },
 
+  /** Tin đã lưu / yêu thích — gộp làm một khái niệm. */
+  savedListings: {
+    all: ["savedListings"] as const,
+    /** Tập id để tô trái tim trên mọi danh sách. */
+    ids: (userId: string | undefined) => ["savedListings", "ids", userId] as const,
+    /** Danh sách đầy đủ để render trang /yeu-thich. */
+    list: (userId: string | undefined) => ["savedListings", "list", userId] as const,
+  },
+
   reviews: {
     all: ["reviews"] as const,
     byProperty: (propertyId: string) => ["reviews", "property", propertyId] as const,

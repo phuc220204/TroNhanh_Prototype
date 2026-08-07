@@ -11,6 +11,7 @@ import { PublicNavbarDesktop, PublicNavbarMobile, DemoFAB } from "../../shared/c
 import { DemoBanner } from "../../shared/components/common/DemoBanner";
 import { PROPERTY_TYPES, PRICE_RANGES, AMENITIES as CATALOG_AMENITIES, REGIONS, AREA_RANGES } from "../../shared/constants/catalog";
 import { getListingImage, mapAmenityToKey, mapTypeToKey } from "../services/listing-mappers";
+import { SaveListingButton } from "../components/SaveListingButton";
 import { searchListings } from "../services/listing-queries";
 import { parsePriceRangeLabel, parseAreaRangeLabel } from "../../shared/utils/catalog-bounds";
 import { logError } from "../../shared/services/supabase-error";
@@ -164,7 +165,6 @@ function Btn({
 }
 
 function RoomCard({ room, mobile, onClick }: { room: Room; mobile?: boolean; onClick?: () => void }) {
-  const [saved, setSaved] = useState(false);
   const [hov, setHov] = useState(false);
   return (
     <div
@@ -182,10 +182,7 @@ function RoomCard({ room, mobile, onClick }: { room: Room; mobile?: boolean; onC
       <div style={{ position: "relative", flexShrink: 0, width: mobile ? 140 : "100%" }}>
         <img src={room.img} alt={room.title}
           style={{ width: "100%", height: mobile ? 140 : 172, objectFit: "cover", display: "block" }} />
-        <button onClick={e => { e.stopPropagation(); setSaved(v => !v); }}
-          style={{ position: "absolute", top: 10, right: 10, background: "rgba(255,255,255,0.92)", border: "none", borderRadius: 999, width: 34, height: 34, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", boxShadow: "0 1px 6px rgba(0,0,0,0.12)" }}>
-          <Heart size={16} color={saved ? C.repairing : C.secondary} fill={saved ? C.repairing : "none"} strokeWidth={2} />
-        </button>
+        <SaveListingButton listingId={room.id} overlay size={16} />
         <span style={{ position: "absolute", top: 10, left: 10, background: C.available, color: "#fff", fontFamily: font, fontSize: 11, fontWeight: 700, borderRadius: 999, padding: "3px 10px" }}>
           Trống
         </span>

@@ -15,6 +15,7 @@ import { PROPERTY_TYPES, PRICE_RANGES, AMENITIES as CATALOG_AMENITIES, REGIONS, 
 import { parsePriceRangeLabel, parseAreaRangeLabel } from "../../shared/utils/catalog-bounds";
 import { searchListings } from "../services/listing-queries";
 import { getListingImage, mapAmenityToKey, mapTypeToKey } from "../services/listing-mappers";
+import { SaveListingButton } from "../components/SaveListingButton";
 
 /* ══════════════════════════════════════════
    TYPES & CONSTANTS
@@ -121,17 +122,13 @@ function Btn({ variant = "primary", label, icon, fullWidth, size = "md", onClick
 }
 
 function RoomCard({ room, onClick, listView }: { room: Room; onClick?: () => void; listView?: boolean }) {
-  const [saved, setSaved] = useState(false);
   const [hov, setHov] = useState(false);
   return (
     <div onClick={onClick} onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
       style={{ background: C.white, border: `1px solid ${hov ? C.sand : C.border}`, borderRadius: 14, overflow: "hidden", boxShadow: hov ? "0 8px 24px rgba(92,70,50,0.14)" : "0 2px 10px rgba(92,70,50,0.07)", transform: hov ? "translateY(-2px)" : "none", transition: "all 0.18s", cursor: "pointer", display: "flex", flexDirection: listView ? "row" : "column" }}>
       <div style={{ position: "relative", flexShrink: 0, width: listView ? 220 : "100%" }}>
         <img src={room.img} alt={room.title} style={{ width: "100%", height: listView ? "100%" : 172, objectFit: "cover", display: "block", minHeight: listView ? 140 : 0 }} />
-        <button onClick={e => { e.stopPropagation(); setSaved(v => !v); }}
-          style={{ position: "absolute", top: 10, right: 10, background: "rgba(255,255,255,0.92)", border: "none", borderRadius: "50%", width: 34, height: 34, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", boxShadow: "0 1px 6px rgba(0,0,0,0.12)" }}>
-          <Heart size={16} color={saved ? C.repairing : C.secondary} fill={saved ? C.repairing : "none"} strokeWidth={2} />
-        </button>
+        <SaveListingButton listingId={room.id} overlay size={16} />
         <span style={{ position: "absolute", top: 10, left: 10, background: C.available, color: "#fff", fontFamily: font, fontSize: 11, fontWeight: 700, borderRadius: 999, padding: "3px 10px" }}>Còn trống</span>
         {room.badge && (
           <span style={{ position: "absolute", bottom: 10, left: 10, background: room.badge === "Nổi bật" ? C.primary : C.repairing, color: "#fff", fontFamily: font, fontSize: 10, fontWeight: 700, borderRadius: 6, padding: "2px 8px", display: "inline-flex", alignItems: "center", gap: 3 }}>

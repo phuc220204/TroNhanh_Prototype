@@ -22,6 +22,7 @@ import { useQuery } from "@tanstack/react-query";
 import { listPropertyReviews } from "../services/review-service";
 import { getListingById, incrementViewCount, getSimilarListings } from "../services/listing-queries";
 import type { ListingCardItem } from "../services/listing-mappers";
+import { SaveListingButton } from "../components/SaveListingButton";
 import { parseMetadataFromDescription } from "../utils/listingMetadata";
 import { logError } from "../../shared/services/supabase-error";
 import { startConversation } from "../../shared/services/messaging-service";
@@ -126,8 +127,8 @@ function GalleryLightbox({
    DESKTOP — IMAGE GALLERY
 ══════════════════════════════════════════ */
 function ImageGallery({
-  images, saved, onSave, onOpen,
-}: { images: string[]; saved: boolean; onSave: () => void; onOpen: (idx: number) => void }) {
+  images, listingId, onOpen,
+}: { images: string[]; listingId: string; onOpen: (idx: number) => void }) {
   const [mainIdx, setMainIdx] = useState(0);
 
   // Số ảnh thay đổi theo tin (3 ảnh thật, hoặc 5 ảnh fallback) — luôn kẹp chỉ số
@@ -145,10 +146,7 @@ function ImageGallery({
         <div style={{ position: "absolute", top: 14, left: 14, background: "rgba(0,0,0,0.42)", borderRadius: 999, padding: "5px 13px" }}>
           <span style={{ fontFamily: font, fontSize: 12, fontWeight: 600, color: "white" }}>{safeMain + 1}/{images.length} ảnh</span>
         </div>
-        <button onClick={e => { e.stopPropagation(); onSave(); }}
-          style={{ position: "absolute", top: 14, right: 14, background: "rgba(255,255,255,0.92)", border: "none", borderRadius: "50%", width: 40, height: 40, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", boxShadow: "0 2px 8px rgba(0,0,0,0.15)" }}>
-          <Heart size={18} color={saved ? "#E05C5C" : C.secondary} fill={saved ? "#E05C5C" : "none"} strokeWidth={2} />
-        </button>
+        <SaveListingButton listingId={listingId} overlay size={18} />
         <button onClick={e => e.stopPropagation()}
           style={{ position: "absolute", bottom: 14, right: 14, background: "rgba(255,255,255,0.92)", border: "none", borderRadius: "50%", width: 36, height: 36, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", boxShadow: "0 2px 8px rgba(0,0,0,0.12)" }}>
           <Share2 size={15} color={C.textSecondary} />
@@ -621,8 +619,8 @@ function StickyContactCard({ listing, onChat, onPhone, user }: { listing: any; o
    MOBILE — IMAGE CAROUSEL
 ══════════════════════════════════════════ */
 function MobileImageCarousel({
-  images, onBack, saved, onSave, onOpen,
-}: { images: string[]; onBack: () => void; saved: boolean; onSave: () => void; onOpen: (i: number) => void }) {
+  images, onBack, listingId, onOpen,
+}: { images: string[]; onBack: () => void; listingId: string; onOpen: (i: number) => void }) {
   const [idx, setIdx] = useState(0);
 
   return (
@@ -633,10 +631,7 @@ function MobileImageCarousel({
         style={{ position: "absolute", top: 14, left: 14, width: 38, height: 38, borderRadius: "50%", background: "rgba(255,255,255,0.88)", border: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", boxShadow: "0 2px 8px rgba(0,0,0,0.15)" }}>
         <ArrowLeft size={18} color={C.textPrimary} />
       </button>
-      <button onClick={onSave}
-        style={{ position: "absolute", top: 14, right: 14, width: 38, height: 38, borderRadius: "50%", background: "rgba(255,255,255,0.88)", border: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", boxShadow: "0 2px 8px rgba(0,0,0,0.15)" }}>
-        <Heart size={17} color={saved ? "#E05C5C" : C.secondary} fill={saved ? "#E05C5C" : "none"} strokeWidth={2} />
-      </button>
+      <SaveListingButton listingId={listingId} overlay size={17} />
       <div style={{ position: "absolute", bottom: 14, right: 14, background: "rgba(0,0,0,0.5)", borderRadius: 999, padding: "4px 10px" }}>
         <span style={{ fontFamily: font, fontSize: 12, fontWeight: 600, color: "white" }}>{idx + 1}/{images.length} ảnh</span>
       </div>
@@ -860,7 +855,6 @@ export function RoomDetailPage() {
   const [listing, setListing]           = useState<any>(null);
   const [similarListings, setSimilarListings] = useState<ListingCardItem[]>([]);
   const [isLoading, setIsLoading]       = useState(true);
-  const [saved, setSaved]               = useState(false);
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [lightboxIdx, setLightboxIdx]   = useState(0);
   const [phoneModal, setPhoneModal]     = useState(false);
@@ -963,8 +957,7 @@ export function RoomDetailPage() {
           <MobileImageCarousel
             images={detailImages}
             onBack={onBack}
-            saved={saved}
-            onSave={() => setSaved(v => !v)}
+            listingId={listing.id}
             onOpen={openLightbox}
           />
           <DemoBanner mobile />
@@ -1056,8 +1049,7 @@ export function RoomDetailPage() {
       <div style={{ flex: 1, maxWidth: 1200, margin: "0 auto", width: "100%", padding: "28px 32px 80px" }}>
         <ImageGallery
           images={detailImages}
-          saved={saved}
-          onSave={() => setSaved(v => !v)}
+          listingId={listing.id}
           onOpen={openLightbox}
         />
 

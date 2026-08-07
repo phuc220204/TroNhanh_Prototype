@@ -45,6 +45,10 @@ export const router = createHashRouter([
           { path: "tai-khoan/cai-dat", lazy: async () => ({ Component: (await import("../shared/pages/AccountPage")).AccountSettingsPage }) },
           { path: "tai-khoan/tin-nhu-cau", lazy: async () => ({ Component: (await import("../marketplace/pages/MyDemandPostsPage")).MyDemandPostsPage }) },
 
+          // Tin đã lưu / yêu thích — MỘT trang cho cả hai nhãn.
+          { path: "yeu-thich", lazy: async () => ({ Component: (await import("../marketplace/pages/SavedListingsPage")).SavedListingsPage }) },
+          { path: "tai-khoan/tin-da-luu", loader: () => redirect("/yeu-thich") },
+
           // Landlord SaaS Workspace Routes
           { path: "chu-tro", lazy: async () => ({ Component: (await import("../workspace/pages/ChuTroDashboardPage")).ChuTroDashboardPage }) },
           { path: "chu-tro/tin-dang", lazy: async () => ({ Component: (await import("../marketplace/pages/QuanLyPage")).QuanLyPage }) },
