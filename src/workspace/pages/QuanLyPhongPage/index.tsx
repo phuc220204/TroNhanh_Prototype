@@ -14,7 +14,7 @@ import { RoomsView } from "./RoomsView";
 import { OccupantsView } from "./OccupantsView";
 import { PaymentsView } from "./PaymentsView";
 import { SettingsView } from "./SettingsView";
-import { RoomDrawer } from "./RoomDrawer";
+import { RoomDetailModal } from "./RoomDetailModal";
 import { UtilityReadingForm } from "./UtilityReadingForm";
 import { InvoicePreview } from "./InvoicePreview";
 import { AddRoomModal } from "../../components/AddRoomModal";
@@ -270,7 +270,7 @@ export function QuanLyPhongPage() {
 
       {/* Slideover Detail Drawer */}
       {detailRoom && (
-        <RoomDrawer
+        <RoomDetailModal
           room={detailRoom}
           onClose={() => setDetailRoom(null)}
           onOpenActionModal={(type, room) => setActionModal({ type, room })}
