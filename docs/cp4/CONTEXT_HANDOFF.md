@@ -113,7 +113,7 @@ npx tsc --noEmit --noUnusedLocals   để bắt import chết nó bỏ lại
 
 ## 5. Trạng thái hiện tại
 
-### Đã xong (31 commit)
+### Đã xong (44 commit)
 
 | Nhóm | Việc |
 |---|---|
@@ -126,24 +126,38 @@ npx tsc --noEmit --noUnusedLocals   để bắt import chết nó bỏ lại
 | Luồng 5 | T24 occupancy + hợp đồng |
 | Extra | T25 nhắn tin in-app · bản đồ thật (Leaflet + OSM) · **nhiều người ở / một hợp đồng** |
 | Luồng 5 | **T27** — VietQR thật (EMVCo tự sinh) · audit READ_ONLY · BR-011 delete guard · `/chu-tro/hoa-don` |
+| Polish | **T28** — 0 `[Demo]`, 0 `alert(`, 0 nhãn phiên bản · "Lưu nháp" thật · copy marketing khớp thực tế |
+| Bảo mật | **Đóng lỗ boost** — `boost_listing()` + trigger canh cột; trước đó client tự cấp boost miễn phí qua 2 đường |
+| Extra | **Gia hạn hợp đồng** (`extend_contract`, kiểm BR-006) · **Đăng nhập Google** (tự gộp identity cùng email) |
+| Dữ liệu | **T32 phần 1** — dọn 16 bảng nghiệp vụ về 0, giữ tài khoản + cấu hình |
 
 ### Còn lại
 
 | Task | Nội dung | Giao ai |
 |---|---|---|
-| **T28** | Dẹp `[Demo]`: "Lưu nháp" thật (`p_submit=false`), bỏ alert | Antigravity |
+| **T32 phần 2** | Đi luồng trên DB trống — checklist 32 mục ở `09_T32_CHECKLIST_DB_TRONG.md` | **Chủ dự án** (cần click, đăng ký, quét QR — không tự động hoá được) |
 | **T29–T31** | QA cuối, E2E, bật strict Nấc B | Claude (task xác minh mà báo cáo sai thì vô nghĩa) |
 
-**Số đo nợ hiện tại:** `[Demo]` = 3 · `alert(` = 11 · `useCanWrite` dùng ở **13** file · `as any` trên supabase = **0** · không còn file `workspace/` nào > 600 dòng
+**Số đo nợ hiện tại:** `[Demo]` = **0** · `alert(` = **0** · nhãn phiên bản = **0** ·
+`useCanWrite`/`requiresWrite` dùng ở **14** file · `as any` trên supabase = **0** ·
+26 migration đã apply · không còn file `workspace/` nào > 600 dòng
 
-### Chưa verify tay — nợ của T27
+### ⚠️ Chưa verify tay — quan trọng nhất khi tiếp nhận
 
-- **Mã VietQR chưa quét thử bằng app ngân hàng thật.** CRC đã kiểm bằng check
-  value chuẩn (`crc16("123456789") === "29B1"`) và payload parse ngược đúng cấu
-  trúc TLV, nhưng **bảng BIN 28 ngân hàng chưa đối chiếu với NAPAS**. BIN sai thì
-  QR vẫn hiện đẹp và vẫn quét ra — chỉ là ra sai ngân hàng.
-- **Luồng thu một phần** (`PartiallyPaid` → "Đã thu" số còn thiếu) chưa chạy tay.
-- **Xóa khu trọ** chưa chạy tay trên DB thật (RPC vừa push).
+Bốn RPC + một trigger **chưa từng được gọi thật lần nào**. Chúng đã lên remote
+nhưng chưa có bằng chứng nào là hoạt động:
+
+| Việc | Cách kiểm |
+|---|---|
+| **Trigger canh boost** | Mở Console ở `/chu-tro/tin-dang`, chạy `window.__sb.from("rental_listings").update({boost_expire_at:"2030-01-01"}).eq("id","<id>")`. Phải ra `BOOST_REQUIRES_PAYMENT`. **Nếu thành công thì lỗ boost vẫn mở** |
+| `soft_delete_property` | Xóa khu còn phòng `Rented` → phải bị chặn |
+| `extend_contract` | Gia hạn lấn sang hợp đồng Active khác → `ROOM_HAS_ACTIVE_CONTRACT` |
+| `boost_listing` | Chọn gói → tin có badge nổi bật, `payments` có dòng purpose `Boost` |
+| **VietQR** | **Quét bằng app ngân hàng thật.** CRC đã kiểm (`crc16("123456789")==="29B1"`) và payload parse ngược đúng TLV, nhưng **28 mã BIN chưa đối chiếu NAPAS** — BIN sai thì QR vẫn quét ra, chỉ là ra sai ngân hàng |
+| **Google login gộp tài khoản** | Đăng nhập Google bằng email đã có tài khoản mật khẩu → phải vào đúng tài khoản cũ, `/tai-khoan` giữ tên cũ |
+
+`window.__sb` chỉ có ở dev (`import.meta.env.DEV`), đã kiểm không lọt vào bundle
+production.
 
 ---
 
@@ -228,7 +242,14 @@ Mật khẩu chung `TroNhanh@2026`. Chi tiết ở `docs/cp4/DEMO_ACCOUNTS.md`.
 | `renter.a@tronhanh.demo` | Renter |
 | `admin@tronhanh.demo` | Admin |
 
+> ⚠️ **Sau T32, các tài khoản này KHÔNG còn dữ liệu nghiệp vụ** — tài khoản và
+> vai trò còn nguyên, nhưng khu trọ / phòng / hợp đồng / hóa đơn đã bị dọn sạch.
+> Muốn có dữ liệu để demo: đăng nhập `seller.a` rồi bấm **"Khởi tạo dữ liệu mẫu"**
+> trên dải onboarding của `DemoBanner` (chỉ hiện khi tài khoản chưa có khu nào).
+
 App dùng **hash router**: `http://localhost:5173/#/chu-tro/quan-ly-phong`.
+⚠️ **Đừng đổi port dev server khỏi 5173** — Google Cloud Console khai redirect URI
+cố định theo port đó.
 Luồng đánh giá cần **DemoFAB → "Tôi là người ở demo"** (gọi `demo_link_me_to_seeded_occupancy`) — **đừng nới `can_review_contract()`** để demo cho dễ.
 
 ---
@@ -239,8 +260,23 @@ Luồng đánh giá cần **DemoFAB → "Tôi là người ở demo"** (gọi `d
   `requiresWrite` của `Button`/`PrimaryBtn`/`GhostBtn`; thêm `useWriteBlockReason()`
   vì `NONE` ("chưa kích hoạt") và `READ_ONLY` ("hết hạn, dữ liệu còn nguyên") phải
   nói khác nhau.
-- **`RoomDetailPage.tsx` 1.237 dòng** — vượt ngưỡng 600 của §8.2, là page lớn nhất chưa split.
+- ~~Bật boost khi SỬA tin bị bỏ qua~~ — ✅ **đã trả, và nợ thật nghiêm trọng hơn
+  dòng ghi cũ.** Không phải "một field bị quên": client tự đặt được
+  `boost_expire_at` qua **hai** đường (`boostListing()` update thẳng cột, và
+  `useListingForm` tự tính `Date.now()+7 ngày`), không qua thanh toán nào. Với
+  BR-005 thì đó là tin xếp đầu marketplace miễn phí. Đóng bằng RPC `boost_listing()`
+  + trigger `trg_guard_boost_expire_at`. **Bài học: một dòng nợ ghi nhẹ có thể đang
+  che một lỗ nặng — đọc code trước khi tin mô tả.**
+- **`RoomDetailPage.tsx` 1.077 dòng** — vượt ngưỡng 600 của §8.2, là page lớn nhất chưa split.
 - **`ChuTroDashboardPage` import `listing-queries` của marketplace** — cross-import §2.1 còn sót từ T11b.
 - **`dbSeeder.ts` 526 dòng** chưa chia (phần còn lại của T18).
-- **Bật boost khi SỬA tin bị bỏ qua** — `boostExpireAt` không truyền cho `updateListing`. Thuộc T28.
+- **~9 chỗ ghép `err.message` vào UI** (`LoginPage`, `RegisterPage`, `QuanLyPage`,
+  `useListingForm`) — vi phạm §7, lộ văn bản Postgres thô. Đăng nhập sai mật khẩu
+  hiện chuỗi tiếng Anh của Supabase thay vì câu tiếng Việt. Phải đi qua
+  `toUserMessage()`.
+- **`subscription_plans` có 3 gói nhưng KHÔNG ai đọc được** — RLS bật (bật ở ngoài
+  migrations) mà không có policy SELECT nào. Nên `subscription-service` embed
+  `subscription_plans(*)` luôn trả `null`. Chưa hỏng gì thấy được vì `TrialModal`
+  hardcode danh sách gói — nhưng đó là nguồn chân lý kép. Sửa: thêm policy SELECT
+  cho `anon, authenticated` (bảng giá là thông tin công khai).
 - `secondaryHover: #B08D63` / `secondaryPress: #9A784F` do Antigravity tự đặt ở `theme.ts` — chưa ai xác nhận.
