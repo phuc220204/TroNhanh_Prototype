@@ -36,6 +36,9 @@ const ERROR_MESSAGES: Record<string, string> = {
   // Khu trọ & phòng (BR-011)
   PROPERTY_HAS_RENTED_ROOMS:
     "Không thể xóa khu trọ khi vẫn còn phòng đang cho thuê. Hãy kết thúc hợp đồng của các phòng đó trước.",
+  ROOM_NOT_FOUND: "Không tìm thấy phòng.",
+  ROOM_ALREADY_LISTED:
+    "Phòng này đã được gắn với một tin đăng khác đang hiển thị. Hãy ẩn tin đó trước, hoặc chọn phòng khác.",
 
   // Hợp đồng & phòng
   ROOM_HAS_ACTIVE_CONTRACT:

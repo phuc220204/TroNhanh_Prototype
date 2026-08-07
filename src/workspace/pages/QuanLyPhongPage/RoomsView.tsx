@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Plus, Search, ChevronDown, Home, Zap, FileText, Lock, Users, AlertTriangle } from "lucide-react";
 import { C, font } from "../../../shared/theme";
+import { Button } from "../../../shared/components/common";
 import type { Room, Property } from "../../types/room";
 import type { RoomStatus } from "../../../shared/types/status";
 import { ROOM_STATUS_META } from "../../../shared/utils/statusMaps";
@@ -48,6 +49,7 @@ interface RoomsViewProps {
   onSelectRoom: (room: Room) => void;
   onOpenActionModal: (type: any, room: Room) => void;
   onAddRoom: () => void;
+  onAddProperty: () => void;
   isReadOnly?: boolean;
   mobile?: boolean;
 }
@@ -64,6 +66,7 @@ export function RoomsView({
   onSelectRoom,
   onOpenActionModal,
   onAddRoom,
+  onAddProperty,
   isReadOnly,
   mobile,
 }: RoomsViewProps) {
@@ -142,16 +145,50 @@ export function RoomsView({
         </button>
       </div>
 
-      {/* Rooms Grid */}
+      {/* Rooms Grid.
+          BA trạng thái rỗng khác nhau, bản cũ gộp cả ba thành "Thử đổi từ khóa
+          tìm kiếm" — kể cả khi người dùng chưa có khu trọ nào và chưa gõ gì. Khi
+          đó lời khuyên đó vô nghĩa, mà việc thật cần làm (tạo khu) thì không có
+          nút nào. */}
       {filteredRooms.length === 0 ? (
-        <div style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: 16, padding: "48px 16px", textAlign: "center" }}>
+        <div style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: 16, padding: "48px 16px", textAlign: "center" }} data-testid="rooms-empty">
           <Home size={36} color={C.textSecondary} style={{ marginBottom: 10 }} />
-          <p style={{ fontFamily: font, fontSize: 15, fontWeight: 700, color: C.textPrimary, margin: "0 0 6px" }}>
-            Không tìm thấy phòng phù hợp
-          </p>
-          <p style={{ fontFamily: font, fontSize: 13, color: C.textSecondary, margin: 0 }}>
-            Thử đổi từ khóa tìm kiếm hoặc lọc theo trạng thái khác.
-          </p>
+          {!property ? (
+            <>
+              <p style={{ fontFamily: font, fontSize: 15, fontWeight: 700, color: C.textPrimary, margin: "0 0 6px" }}>
+                Bạn chưa có khu trọ nào
+              </p>
+              <p style={{ fontFamily: font, fontSize: 13, color: C.textSecondary, margin: "0 auto 16px", maxWidth: 380, lineHeight: 1.5 }}>
+                Khu trọ là nơi chứa các phòng của bạn. Tạo khu đầu tiên để bắt đầu
+                thêm phòng, ghi điện nước và xuất hóa đơn.
+              </p>
+              <Button variant="primary" requiresWrite onClick={onAddProperty} data-testid="create-first-property-btn">
+                Tạo khu trọ đầu tiên
+              </Button>
+            </>
+          ) : rooms.length === 0 ? (
+            <>
+              <p style={{ fontFamily: font, fontSize: 15, fontWeight: 700, color: C.textPrimary, margin: "0 0 6px" }}>
+                Khu này chưa có phòng nào
+              </p>
+              <p style={{ fontFamily: font, fontSize: 13, color: C.textSecondary, margin: "0 auto 16px", maxWidth: 380, lineHeight: 1.5 }}>
+                Thêm phòng đầu tiên vào <strong>{property.name}</strong> để quản lý
+                người ở, chỉ số điện nước và hóa đơn.
+              </p>
+              <Button variant="primary" requiresWrite onClick={onAddRoom} data-testid="create-first-room-btn">
+                Thêm phòng đầu tiên
+              </Button>
+            </>
+          ) : (
+            <>
+              <p style={{ fontFamily: font, fontSize: 15, fontWeight: 700, color: C.textPrimary, margin: "0 0 6px" }}>
+                Không tìm thấy phòng phù hợp
+              </p>
+              <p style={{ fontFamily: font, fontSize: 13, color: C.textSecondary, margin: 0 }}>
+                Thử đổi từ khóa tìm kiếm hoặc lọc theo trạng thái khác.
+              </p>
+            </>
+          )}
         </div>
       ) : (
         <div style={{ display: "grid", gridTemplateColumns: mobile ? "1fr" : "repeat(auto-fill, minmax(260px, 1fr))", gap: 16 }}>

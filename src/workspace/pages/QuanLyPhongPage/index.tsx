@@ -17,6 +17,8 @@ import { SettingsView } from "./SettingsView";
 import { RoomDrawer } from "./RoomDrawer";
 import { UtilityReadingForm } from "./UtilityReadingForm";
 import { InvoicePreview } from "./InvoicePreview";
+import { AddRoomModal } from "../../components/AddRoomModal";
+import { AddPropertyModal } from "../../components/AddPropertyModal";
 
 const mapDbRoomToRoom = (dbRoom: any): Room => {
   const activeContract = dbRoom.contracts?.find((c: any) => c.status === "Active" || c.status === "active") || dbRoom.contracts?.[0];
@@ -79,6 +81,8 @@ export function QuanLyPhongPage() {
   const [switcherOpen, setSwitcherOpen] = useState(false);
   const [actionModal, setActionModal] = useState<{ type: "utility" | "invoice"; room: Room } | null>(null);
   const [loading, setLoading] = useState(true);
+  const [showAddRoom, setShowAddRoom] = useState(false);
+  const [showAddProperty, setShowAddProperty] = useState(false);
 
   const loadDbData = async () => {
     if (!user) return;
@@ -228,7 +232,8 @@ export function QuanLyPhongPage() {
                 setSort={setSort}
                 onSelectRoom={(r) => setDetailRoom(r)}
                 onOpenActionModal={(type, room) => setActionModal({ type, room })}
-                onAddRoom={() => {}}
+                onAddRoom={() => setShowAddRoom(true)}
+                onAddProperty={() => setShowAddProperty(true)}
                 isReadOnly={isReadOnly}
                 mobile={isMobile}
               />
@@ -289,6 +294,26 @@ export function QuanLyPhongPage() {
           onClose={() => setActionModal(null)}
           onSuccess={loadDbData}
           isReadOnly={isReadOnly}
+        />
+      )}
+
+      {showAddRoom && (
+        <AddRoomModal
+          properties={properties.map((p) => ({ id: p.id, name: p.name }))}
+          defaultPropertyId={selectedId}
+          onClose={() => setShowAddRoom(false)}
+          onCreated={loadDbData}
+        />
+      )}
+
+      {showAddProperty && (
+        <AddPropertyModal
+          onClose={() => setShowAddProperty(false)}
+          onCreated={(id) => {
+            setShowAddProperty(false);
+            setSelectedId(id);
+            loadDbData();
+          }}
         />
       )}
     </LandlordShell>

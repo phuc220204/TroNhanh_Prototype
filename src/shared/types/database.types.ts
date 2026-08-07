@@ -670,7 +670,7 @@ export type Database = {
           id?: string
           is_public_profile_enabled?: boolean
           name: string
-          owner_id: string
+          owner_id?: string
           public_slug?: string | null
           review_count?: number
           service_fee?: number
@@ -928,7 +928,7 @@ export type Database = {
           description?: string | null
           floor?: number | null
           id?: string
-          owner_id: string
+          owner_id?: string
           price: number
           property_id: string
           room_code: string
@@ -1351,6 +1351,10 @@ export type Database = {
       is_linked_occupant: { Args: { p_occupancy: string }; Returns: boolean }
       is_moderator: { Args: never; Returns: boolean }
       is_property_public: { Args: { p_property: string }; Returns: boolean }
+      link_listing_to_room: {
+        Args: { p_listing_id: string; p_room_id: string }
+        Returns: undefined
+      }
       link_renter_account: {
         Args: { p_email: string; p_occupancy_id: string }
         Returns: undefined

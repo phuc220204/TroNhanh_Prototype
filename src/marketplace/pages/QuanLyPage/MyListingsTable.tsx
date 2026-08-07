@@ -38,6 +38,7 @@ interface MyListingsTableProps {
   toPost: () => void;
   resetFilters: () => void;
   handleToggleStatus: (id: string, currentStatus: string) => void;
+  onLinkRoom: (listing: DbListing) => void;
   handleDeleteListing: (id: string) => void;
   setBoostTarget: (listing: DbListing) => void;
 }
@@ -52,6 +53,7 @@ export function MyListingsTable({
   toPost,
   resetFilters,
   handleToggleStatus,
+  onLinkRoom,
   handleDeleteListing,
   setBoostTarget
 }: MyListingsTableProps) {
@@ -190,8 +192,22 @@ export function MyListingsTable({
                     </div>
                   </td>
 
-                  <td style={{ ...cellStyle, color: C.textSecondary, fontWeight: 650 }}>
-                    {l.room_id ? `Phòng #${l.room_id.slice(0,6).toUpperCase()}` : "—"}
+                  {/* Ô này từng là chữ tĩnh "—", không có cách nào gắn phòng cho
+                      tin đã đăng. Giờ là nút mở LinkRoomModal. */}
+                  <td style={{ ...cellStyle, fontWeight: 650 }}>
+                    <button
+                      type="button"
+                      onClick={(e) => { e.stopPropagation(); onLinkRoom(l); }}
+                      data-testid="link-room-cell-btn"
+                      style={{
+                        background: "none", border: "none", padding: 0, cursor: "pointer",
+                        fontFamily: font, fontSize: 13, fontWeight: 650,
+                        color: l.room_id ? C.primary : C.textSecondary,
+                        textDecoration: "underline", textUnderlineOffset: 3,
+                      }}
+                    >
+                      {l.room_id ? `Phòng #${l.room_id.slice(0, 6).toUpperCase()}` : "Gắn phòng"}
+                    </button>
                   </td>
 
                   <td style={{ ...cellStyle, color: C.textSecondary, fontWeight: 650 }}>{l.district}</td>

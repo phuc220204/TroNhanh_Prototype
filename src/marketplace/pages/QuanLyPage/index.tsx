@@ -12,11 +12,12 @@ import { useAuth } from "../../../shared/contexts/AuthContext";
 import { supabase } from "../../../shared/supabaseClient";
 import { DemoFAB } from "../../../shared/components/PublicNavbar";
 import { searchListings } from "../../services/listing-queries";
-import { updateListingStatus, deleteListing, boostListing } from "../../services/listing-mutations";
+import { updateListingStatus, deleteListing, boostListing, linkListingToRoom } from "../../services/listing-mutations";
 import { formatVND } from "../../utils/listingMetadata";
 import { logError, toUserMessage } from "../../../shared/services/supabase-error";
 import { MyListingsTable, type DbListing } from "./MyListingsTable";
 import { BoostModal } from "./BoostModal";
+import { LinkRoomModal } from "./LinkRoomModal";
 
 const FILTERS = [
   { label: "Tất cả", value: "all" },
@@ -105,6 +106,9 @@ export function QuanLyPage() {
   const [boostTarget, setBoostTarget] = useState<DbListing | null>(null);
   const [boostSubmitting, setBoostSubmitting] = useState(false);
   const [boostError, setBoostError] = useState<string | null>(null);
+  const [linkTarget, setLinkTarget] = useState<DbListing | null>(null);
+  const [linkSubmitting, setLinkSubmitting] = useState(false);
+  const [linkError, setLinkError] = useState<string | null>(null);
   const [mutatingId, setMutatingId]   = useState<string | null>(null);
 
   const showToast = (msg: string) => {
@@ -169,6 +173,23 @@ export function QuanLyPage() {
       showToast("Có lỗi xảy ra: " + err.message);
     } finally {
       setMutatingId(null);
+    }
+  };
+
+  const handleConfirmRoomLink = async (roomId: string | null) => {
+    if (!linkTarget) return;
+    setLinkError(null);
+    try {
+      setLinkSubmitting(true);
+      await linkListingToRoom(linkTarget.id, roomId);
+      setDbListings(prev => prev.map(l => l.id === linkTarget.id ? { ...l, room_id: roomId } : l));
+      setLinkTarget(null);
+      showToast(roomId ? "Đã gắn phòng cho tin đăng." : "Đã bỏ gắn phòng khỏi tin đăng.");
+    } catch (err: unknown) {
+      logError("QuanLyPage.handleConfirmRoomLink", err);
+      setLinkError(toUserMessage(err));
+    } finally {
+      setLinkSubmitting(false);
     }
   };
 
@@ -444,6 +465,7 @@ export function QuanLyPage() {
               toPost={toPost}
               resetFilters={resetFilters}
               handleToggleStatus={handleToggleStatus}
+            onLinkRoom={(l) => { setLinkError(null); setLinkTarget(l); }}
               handleDeleteListing={handleDeleteListing}
               setBoostTarget={setBoostTarget}
             />
@@ -549,6 +571,17 @@ export function QuanLyPage() {
           </aside>
         </div>
       </div>
+
+      {linkTarget && (
+        <LinkRoomModal
+          listingTitle={linkTarget.title}
+          currentRoomId={linkTarget.room_id}
+          submitting={linkSubmitting}
+          errorMessage={linkError}
+          onCancel={() => { setLinkTarget(null); setLinkError(null); }}
+          onSubmit={handleConfirmRoomLink}
+        />
+      )}
 
       <BoostModal
         open={!!boostTarget}

@@ -174,6 +174,47 @@ export async function deleteListing(id: string): Promise<void> {
 }
 
 /**
+ * Gán phòng cho một tin đăng đã có, hoặc bỏ gán (`roomId = null`).
+ *
+ * ⚠️ Đi qua RPC `link_listing_to_room`, KHÔNG update cột trực tiếp. Cần assert
+ * HAI quyền sở hữu cùng lúc — tin là của tôi VÀ phòng cũng là của tôi. RLS trên
+ * `rental_listings` chỉ kiểm điều thứ nhất, nên update trực tiếp cho phép gán
+ * phòng của người khác vào tin của mình; sau đó BR-027 sẽ đổi trạng thái tin của
+ * tôi theo phòng người ta.
+ *
+ * `property_id` do server suy ra từ phòng — không nhận từ client, nếu không tin
+ * có thể trỏ tới một khu khác với khu của phòng.
+ *
+ * Domain error: `LISTING_NOT_FOUND` · `FORBIDDEN` · `ROOM_NOT_FOUND` ·
+ * `ROOM_NOT_OWNED` · `ROOM_ALREADY_LISTED`.
+ */
+export async function linkListingToRoom(
+  listingId: string,
+  roomId: string | null
+): Promise<void> {
+  try {
+    // `p_room_id = null` là giá trị HỢP LỆ theo thiết kế RPC (bỏ gán phòng), nhưng
+    // generated types khai nó là `string` vì SQL không có `DEFAULT` — Supabase chỉ
+    // sinh optional cho param có default.
+    //
+    // Cast ở ĐÚNG một chỗ, không sửa dữ liệu cho khớp type. Ở T11c từng có lần
+    // chọn `input.contractId || ""` để qua typecheck, và Postgres cast `""` sang
+    // uuid rồi ném 22P02 — sửa lỗi type bằng cách tạo ra lỗi runtime.
+    // Cùng cách xử lý như `createInvoiceWithItems` trong billing-service.
+    const args = {
+      p_listing_id: listingId,
+      p_room_id: roomId,
+    } as unknown as Parameters<typeof supabase.rpc<"link_listing_to_room">>[1];
+
+    const { error } = await supabase.rpc("link_listing_to_room", args);
+    if (error) throw error;
+  } catch (err) {
+    logError("listing-mutations.linkListingToRoom", err);
+    throw err;
+  }
+}
+
+/**
  * Đẩy tin nổi bật (boost) — BR-005.
  *
  * ⚠️ ĐI QUA RPC, KHÔNG update cột trực tiếp. Bản trước của hàm này chạy

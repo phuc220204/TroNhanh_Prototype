@@ -65,6 +65,52 @@ export async function getPropertyById(id: string): Promise<PropertyItem | null> 
   }
 }
 
+export interface CreatePropertyInput {
+  name: string;
+  address?: string;
+  district?: string;
+  electricity_unit_price?: number;
+  water_unit_price?: number;
+  service_fee?: number;
+}
+
+/**
+ * Tạo khu trọ mới.
+ *
+ * ⚠️ KHÔNG gửi `owner_id`: cột đó có `default auth.uid()` (migration
+ * `20260807140000`) và policy `for all using (auth.uid() = owner_id)` chặn ghi
+ * row của người khác. Gửi từ client là biến danh tính thành tham số (§6.1).
+ *
+ * Không cần RPC: một bảng, một insert, RLS đã cưỡng chế đủ.
+ *
+ * @returns id khu vừa tạo — caller cần nó để chọn khu đó ngay.
+ */
+export async function createProperty(input: CreatePropertyInput): Promise<string> {
+  try {
+    const { data, error } = await supabase
+      .from("properties")
+      .insert({
+        name: input.name.trim(),
+        address: input.address?.trim() || null,
+        district: input.district?.trim() || null,
+        // Đơn giá để 0 nếu chưa khai; màn Cài đặt khu trọ là nơi nhập chính thức,
+        // và ở đó có validate "> 0". Đặt số mặc định bịa ở đây sẽ thành giá thật
+        // trên hóa đơn đầu tiên mà chủ trọ không hề nhập.
+        electricity_unit_price: input.electricity_unit_price ?? 0,
+        water_unit_price: input.water_unit_price ?? 0,
+        service_fee: input.service_fee ?? 0,
+      })
+      .select("id")
+      .single();
+
+    if (error) throw error;
+    return data.id;
+  } catch (err) {
+    logError("property-service.createProperty", err);
+    throw err;
+  }
+}
+
 /** Đúng những cột màn Cài đặt khu trọ được phép ghi. */
 export interface PropertySettingsInput {
   name?: string;
