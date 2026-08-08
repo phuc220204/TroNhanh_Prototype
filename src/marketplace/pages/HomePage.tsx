@@ -141,7 +141,7 @@ function RoomCard({ room, mobile, onClick }: {
           {room.title}
         </p>
         <p style={{ fontFamily: font, fontSize: 19, fontWeight: 800, color: C.primary, margin: "0 0 6px", letterSpacing: "-0.01em" }}>
-          {room.price} đ<span style={{ fontSize: 12, fontWeight: 400, color: C.textSecondary }}>/tháng</span>
+          {room.price}<span style={{ fontSize: 12, fontWeight: 400, color: C.textSecondary }}>/tháng</span>
         </p>
         <div style={{ display: "flex", alignItems: "center", gap: 4, marginBottom: 14 }}>
           <MapPin size={12} color={C.textSecondary} />

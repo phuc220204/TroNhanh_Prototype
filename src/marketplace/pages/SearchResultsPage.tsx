@@ -200,7 +200,7 @@ function RoomCard({ room, mobile, onClick }: { room: Room; mobile?: boolean; onC
           {room.title}
         </p>
         <p style={{ fontFamily: font, fontSize: 18, fontWeight: 700, color: C.primary, margin: "0 0 4px" }}>
-          {room.price} đ<span style={{ fontSize: 12, fontWeight: 400, color: C.textSecondary }}>/tháng</span>
+          {room.price}<span style={{ fontSize: 12, fontWeight: 400, color: C.textSecondary }}>/tháng</span>
         </p>
         <div style={{ display: "flex", alignItems: "center", gap: 4, marginBottom: 10 }}>
           <MapPin size={12} color={C.textSecondary} />

@@ -88,10 +88,18 @@ export interface ListingCardItem {
  * Map DB row from rental_listings to standardized ListingCardItem.
  */
 export function toListingCard(row: any): ListingCardItem {
+  // Chỉ định dạng SỐ TIỀN, cố ý KHÔNG kèm "/tháng".
+  //
+  // Bản cũ trả sẵn "5,5 tr/tháng", nhưng mọi card lại ghép thêm " đ" và
+  // "/tháng" của riêng nó để cho kỳ hạn cỡ chữ nhỏ hơn — ra "5,5 tr/tháng
+  // đ/tháng" trên Trang chủ, Tất cả phòng, Tìm phòng và khối "Phòng tương tự".
+  // Một chuỗi mang sẵn đơn vị thì chỗ hiển thị không tách được cỡ chữ, nên nơi
+  // nào cũng phải nối tay và sớm muộn cũng lệch nhau.
+  // Giờ: formatter lo tiền, card lo kỳ hạn.
   const priceNum = Number(row?.price || 0);
   const formattedPrice = priceNum >= 1_000_000
-    ? `${(priceNum / 1_000_000).toLocaleString("vi-VN", { maximumFractionDigits: 1 })} tr/tháng`
-    : `${priceNum.toLocaleString("vi-VN")} đ/tháng`;
+    ? `${(priceNum / 1_000_000).toLocaleString("vi-VN", { maximumFractionDigits: 1 })} tr`
+    : `${priceNum.toLocaleString("vi-VN")} đ`;
 
   const rawAmenities = row?.listing_amenities
     ? row.listing_amenities.map((a: any) => a.amenity)

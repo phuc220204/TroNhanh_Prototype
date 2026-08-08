@@ -45,7 +45,7 @@ function SavedCard({ item, onOpen }: { item: ListingCardItem; onOpen: () => void
             <Maximize2 size={12} color={C.secondary} /> {item.area} m²
           </span>
         </div>
-        <span style={{ fontFamily: font, fontSize: 15, fontWeight: 800, color: C.primary }}>{item.price}</span>
+        <span style={{ fontFamily: font, fontSize: 15, fontWeight: 800, color: C.primary }}>{item.price}<span style={{ fontSize: 12, fontWeight: 400, color: C.textSecondary }}>/tháng</span></span>
       </div>
     </div>
   );
