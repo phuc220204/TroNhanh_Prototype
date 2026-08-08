@@ -37,7 +37,7 @@ Repo **không có `tsconfig.json`** và **`typescript` chưa được cài**. ~1
 ### Nấc B → D (không chặn CP4)
 | Nấc | Flag | Khi nào | Vì sao thứ tự đó |
 |---|---|---|---|
-| B | `noImplicitAny: true` | **sau** khi có service layer | Để cách sửa là "thêm type thật", không phải "thêm `: any`". Dự kiến 150–400 lỗi, ~90% sửa 1 từ. |
+| B ✅ | `noImplicitAny: true` | **BẬT 2026-08-08 (T31-2)** | Để cách sửa là "thêm type thật", không phải "thêm `: any`". Dự kiến 150–400 lỗi; **thực tế chỉ 7** — service layer đã có kiểu sẵn, và `strictNullChecks` còn tắt nên nhiều chỗ chưa lộ ra. Sửa bằng `NearbyCategory`, `SearchFilters`, `OccupancyItem`, `Record<string,string>`, không thêm `: any` nào. |
 | C | `strictNullChecks: true` | **sau** khi mọi page đọc qua `src/*/services/` | Với generated types, mọi `data` là `T[] | null`. Làm sau thì nullability co lại còn ~40 hàm service thay vì rải khắp 9 page. **Đây là flag sẽ ra "hàng trăm lỗi" nếu làm trước.** |
 | D | `strict: true` cho **code mới** | **CP4, cùng Nấc A** | `tsconfig.strict.json` extends base, `include` chỉ `src/**/services`, `src/shared/types`, `src/shared/query`. Đây là cơ chế giữ code mới sạch mà không phải chờ dọn legacy. |
 
@@ -45,11 +45,17 @@ Repo **không có `tsconfig.json`** và **`typescript` chưa được cài**. ~1
 ```json
 "typecheck":        "tsc -p tsconfig.json --noEmit",
 "typecheck:strict": "tsc -p tsconfig.strict.json --noEmit",
-"build":            "vite build",
-"build:ci":         "pnpm typecheck && pnpm typecheck:strict && vite build",
+"build":            "pnpm typecheck && pnpm typecheck:strict && vite build",
+"build:raw":        "vite build",
 "db:types":         "supabase gen types typescript --linked --schema public > src/shared/types/database.types.ts"
 ```
-Giữ `tsc` **ngoài `build`** trong lúc migrate để luôn deploy được (Vercel gọi `build`). Chuyển `build` → `build:ci` khi Nấc B xong.
+✅ **Đã chuyển 2026-08-08 (T31-3).** Trong lúc migrate, `tsc` cố ý nằm NGOÀI
+`build` để luôn deploy được (Vercel gọi `build`). Nấc B xong nên đảo lại: type
+error giờ **chặn deploy**. `build:raw` giữ lại lối build nhanh khi cần dựng bundle
+mà chưa quan tâm type — đừng dùng nó trong CI.
+
+`tsconfig.json` cũng `include` thư mục `tests`: Playwright chỉ transpile bằng
+esbuild, không type-check, nên spec sai kiểu sẽ trôi qua nếu không có bước này.
 
 ---
 

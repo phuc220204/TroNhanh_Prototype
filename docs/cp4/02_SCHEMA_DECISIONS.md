@@ -568,10 +568,22 @@ Ghi thêm 2 quyết định để tra cứu về sau:
 
 ## 13. Drop trước production
 
+> Đã đối chiếu 2026-08-08 với `database.types.ts` sinh từ DB thật. Đúng **hai**
+> hàm `demo_*` tồn tại trên remote, cả hai đều liệt kê dưới đây.
+
 | Object | Vì sao tồn tại | Vì sao phải drop |
 |---|---|---|
-| `demo_link_me_to_seeded_occupancy(uuid)` | Review verified-only bất khả thi trên DB sạch (cần link Confirmed + hợp đồng ≥30 ngày). Đây là thứ khiến luồng 4a demo được. | **Nó backdate `contracts.created_at`/`start_date`** và set `link_status='Confirmed'` mà không có ownership assert (đó chính là mục đích). Chỉ chấp nhận được trên DB demo. |
+| `demo_link_me_to_seeded_occupancy(p_property_id uuid default null)` | Review verified-only bất khả thi trên DB sạch (cần link Confirmed + hợp đồng ≥30 ngày). Đây là thứ khiến luồng 4a demo được. | **Nó backdate `contracts.created_at`/`start_date`** và set `link_status='Confirmed'` mà không có ownership assert (đó chính là mục đích). Chỉ chấp nhận được trên DB demo. |
+| `demo_enable_public_profiles()` | BR-024: review chỉ hiện công khai khi khu bật `is_public_profile_enabled`. Hàm bật hàng loạt + sinh `public_slug` để `/khu-tro/:slug` mở được ngay. | Ít nguy hiểm hơn hàm trên — nó chỉ đụng khu của **chính caller** (`where owner_id = auth.uid()`). Vẫn phải drop: nó bật hồ sơ công khai HÀNG LOẠT, tức người dùng thật có thể vô tình công khai mọi khu chỉ bằng một lời gọi mà UI không hỏi lại. |
 
-Ràng buộc bắt buộc của hàm này: chỉ tác động lên `occupancies` có `user_id is null`, chỉ trong property mà chủ có email kết thúc `@tronhanh.demo`, và **phải mang tiền tố `demo_`**.
+Ràng buộc bắt buộc của `demo_link_me_to_seeded_occupancy`: chỉ tác động lên
+`occupancies` có `user_id is null`, chỉ trong property mà chủ có email kết thúc
+`@tronhanh.demo`, và **phải mang tiền tố `demo_`**.
+
+⚠️ Comment header của `demo_enable_public_profiles` trong migration
+`20260725101100_demo_helpers.sql` ghi nhầm tên là
+`demo_enable_property_public_profile` (số ít, có `property_`). Hàm đó **không tồn
+tại**; grep theo tên trong comment sẽ ra 0 hit trên DB. Tên thật là
+`demo_enable_public_profiles()`.
 
 Mọi hàm `demo_*` thêm sau này phải được thêm vào bảng này.

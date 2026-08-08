@@ -5,8 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
-    "build:ci": "pnpm typecheck && pnpm typecheck:strict && vite build",
+    "build": "pnpm typecheck && pnpm typecheck:strict && vite build",
+    "build:raw": "vite build",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "typecheck:strict": "tsc -p tsconfig.strict.json --noEmit",
     "db:push": "npx supabase db push",

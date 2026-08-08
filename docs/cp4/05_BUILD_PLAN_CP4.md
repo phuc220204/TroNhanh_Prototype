@@ -58,13 +58,28 @@ T13–T16 song song được sau T07.
 | **T27** | **Polish quản lý khu/phòng** — form cấu hình bank+đơn giá, `/chu-tro/hoa-don`, audit READ_ONLY qua `useCanWrite()` | luồng 5 | T11b, T10 |
 | **T28** ⇄ | Dẹp mọi `[Demo]` alert còn lại; "Lưu nháp" → `Draft` thật; map toggle → `[Bản đồ — V1]` | — | T20 |
 
-## Phase 3 — Verification ❌ CHƯA LÀM
+## Phase 3 — Verification 🟡 ĐANG LÀM (cập nhật 2026-08-08)
 
-| # | Task |
-|---|---|
-| **T29** | Playwright + `playwright.config.ts` + 7 spec. `data-testid` là DoD của **từng task Phase 2**, không dồn về đây |
-| **T30** | Chạy `supabase/tests/rls.sql` (đã viết) + hoàn thiện QA checklist + README demo accounts |
-| **T31** | Rà AC + bật Nấc B (`noImplicitAny`) + `build` → `build:ci` + cập nhật docs |
+| # | Task | Trạng thái |
+|---|---|---|
+| **T29** | Playwright + `playwright.config.ts` + 7 spec (30 test) ở `tests/e2e/` | ✅ **đã viết, CHƯA CHẠY** — cố ý: T32 phần 2 phải xong trước, xem ghi chú dưới |
+| **T30-1** | Chạy `supabase/tests/rls.sql` trong SQL Editor | ❌ chủ dự án — cần dữ liệu `seller.a` trước |
+| **T30-2** | Test storage cross-folder qua console | ❌ chủ dự án |
+| **T30-3** | README: 4 account demo · lệnh setup · tắt email confirmation · SQL bootstrap Admin | ✅ |
+| **T31-1** | Rà toàn bộ AC ở `06_QA_CHECKLIST.md` §5 | ❌ chủ dự án |
+| **T31-2** | Bật Nấc B `noImplicitAny` | ✅ — **chỉ 7 lỗi**, không phải 150–400 |
+| **T31-3** | `build` = `build:ci` (chặn type error ở Vercel) | ✅ |
+| **T31-4** | Dọn docs (`05_BUILD_PLAN`, `02_SCHEMA_DECISIONS` §13, `04_FRONTEND_ARCH`) | ✅ |
+| **T31-5** | Video demo 30–60s luồng điện nước → VietQR | ❌ chủ dự án |
+
+> ⚠️ **T32 phần 2 phải chạy TRƯỚC `pnpm test:e2e`.** Bộ E2E tạo khu trọ, phòng,
+> tin đăng và tin nhắn. Chạy nó trước khi đi hết `09_T32_CHECKLIST_DB_TRONG.md`
+> là mất vĩnh viễn cơ hội kiểm "trải nghiệm người dùng đầu tiên trên hệ thống
+> trống" — trạng thái đó không dựng lại được sau khi đã có dữ liệu.
+
+> `data-testid` là DoD của **từng task Phase 2**, không dồn về T29. Thực tế T29
+> vẫn phải bổ sung testid cho form đăng nhập / đăng ký / tin nhu cầu / ghi chỉ số
+> và menu tài khoản — chúng chưa từng có.
 
 ---
 
