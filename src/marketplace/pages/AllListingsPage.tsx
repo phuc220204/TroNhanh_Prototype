@@ -11,7 +11,9 @@ import { useBreakpoint } from "../../shared/components/useBreakpoint";
 import { PublicNavbarDesktop, PublicNavbarMobile, DemoFAB } from "../../shared/components/PublicNavbar";
 import { DemoBanner } from "../../shared/components/common/DemoBanner";
 import { logError } from "../../shared/services/supabase-error";
-import { PROPERTY_TYPES, PRICE_RANGES, AMENITIES as CATALOG_AMENITIES, REGIONS, AREA_RANGES } from "../../shared/constants/catalog";
+import { PROPERTY_TYPES, PRICE_RANGES, AMENITIES as CATALOG_AMENITIES, AREA_RANGES } from "../../shared/constants/catalog";
+import { AreaSelect } from "../../shared/components/common";
+import { provinceName, loadVnWards, type VnWard } from "../../shared/utils/vn-regions";
 import { parsePriceRangeLabel, parseAreaRangeLabel } from "../../shared/utils/catalog-bounds";
 import { searchListings } from "../services/listing-queries";
 import { getListingImage, mapAmenityToKey, mapTypeToKey } from "../services/listing-mappers";
@@ -21,7 +23,10 @@ import { SaveListingButton } from "../components/SaveListingButton";
    TYPES & CONSTANTS
 ══════════════════════════════════════════ */
 interface AllFilters {
-  region: string;
+  /** Mã tỉnh/thành. `null` = tất cả. Cấp quận/huyện đã bỏ từ 01/07/2025. */
+  provinceCode: number | null;
+  /** Mã phường/xã. `null` = cả tỉnh. */
+  wardCode: number | null;
   priceLabel: string;
   roomTypes: string[];
   area: string;
@@ -30,7 +35,7 @@ interface AllFilters {
 }
 
 const EMPTY_FILTERS: AllFilters = {
-  region: "", priceLabel: "", roomTypes: [], area: "", amenities: [], status: [],
+  provinceCode: null, wardCode: null, priceLabel: "", roomTypes: [], area: "", amenities: [], status: [],
 };
 
 type Room = {
@@ -42,7 +47,6 @@ type Room = {
   rating?: number | null; reviewCount?: number; propertySlug?: string | null;
 };
 
-const REGION_OPTIONS = [...REGIONS];
 const PRICE_OPTIONS  = [...PRICE_RANGES];
 const AREA_OPTIONS   = [...AREA_RANGES];
 const AMENITY_OPTS   = [...CATALOG_AMENITIES];
@@ -86,9 +90,15 @@ export { getListingImage, mapAmenityToKey, mapTypeToKey } from "../services/list
    T11a — chúng đã thành dead code sau khi chuyển sang service layer, và để lại
    thì agent sau dễ tưởng còn dùng rồi lọc hai lần.
 ══════════════════════════════════════════ */
-function getChips(f: AllFilters): string[] {
+/**
+ * Chip khu vực cần TÊN, mà bộ lọc chỉ giữ MÃ. Tên tỉnh tra được ngay (danh sách
+ * 34 mục nạp sẵn); tên phường phải chờ chunk phường/xã tải xong nên truyền vào
+ * từ ngoài — chưa có thì tạm hiện tên tỉnh, không hiện mã trần.
+ */
+function getChips(f: AllFilters, wardLabel: string | null): string[] {
   const c: string[] = [];
-  if (f.region) c.push(f.region);
+  if (f.wardCode != null && wardLabel) c.push(wardLabel);
+  else if (f.provinceCode != null) c.push(provinceName(f.provinceCode) ?? "");
   if (f.priceLabel) c.push(f.priceLabel);
   if (f.area) c.push(f.area);
   ROOM_TYPE_OPTS.filter(o => f.roomTypes.includes(o.value)).forEach(o => c.push(o.label));
@@ -280,14 +290,14 @@ function FilterSidebar({ filters, onChange, onApply, onClear }: {
 
       {/* 1. Khu vực */}
       <SidebarSection title="Khu vực">
-        <div style={{ position: "relative" }}>
-          <select value={filters.region} onChange={e => onChange({ ...filters, region: e.target.value })}
-            style={{ width: "100%", padding: "9px 36px 9px 12px", border: `1.5px solid ${filters.region ? C.primary : C.border}`, borderRadius: 10, background: C.white, fontFamily: font, fontSize: 14, color: filters.region ? C.textPrimary : C.textSecondary, cursor: "pointer", appearance: "none", outline: "none" }}>
-            <option value="">Tất cả khu vực</option>
-            {REGION_OPTIONS.map(r => <option key={r} value={r}>{r}</option>)}
-          </select>
-          <ChevronDown size={14} color={C.textSecondary} style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", pointerEvents: "none" }} />
-        </div>
+        <AreaSelect
+          value={{ provinceCode: filters.provinceCode, wardCode: filters.wardCode }}
+          onChange={(a) => onChange({ ...filters, provinceCode: a.provinceCode, wardCode: a.wardCode })}
+          allowAllProvinces
+          allowAllWards
+          labels={false}
+          testIdPrefix="all-listings-area"
+        />
       </SidebarSection>
 
       {/* 2. Khoảng giá */}
@@ -574,14 +584,14 @@ function MobileFilterSheet({ open, filters, onChange, onApply, onClose, onClear 
 
           <div style={{ padding: "16px 0", borderBottom: `1px solid ${C.border}` }}>
             {grpTitle("Khu vực")}
-            <div style={{ position: "relative" }}>
-              <select value={filters.region} onChange={e => onChange({ ...filters, region: e.target.value })}
-                style={{ width: "100%", padding: "12px 36px 12px 14px", border: `1.5px solid ${filters.region ? C.primary : C.border}`, borderRadius: 12, background: C.white, fontFamily: font, fontSize: 15, color: filters.region ? C.textPrimary : C.textSecondary, appearance: "none", outline: "none", minHeight: 44 }}>
-                <option value="">Tất cả khu vực</option>
-                {REGION_OPTIONS.map(r => <option key={r} value={r}>{r}</option>)}
-              </select>
-              <ChevronDown size={15} color={C.textSecondary} style={{ position: "absolute", right: 14, top: "50%", transform: "translateY(-50%)", pointerEvents: "none" }} />
-            </div>
+            <AreaSelect
+              value={{ provinceCode: filters.provinceCode, wardCode: filters.wardCode }}
+              onChange={(a) => onChange({ ...filters, provinceCode: a.provinceCode, wardCode: a.wardCode })}
+              allowAllProvinces
+              allowAllWards
+              labels={false}
+              testIdPrefix="all-listings-area-mobile"
+            />
           </div>
 
           <div style={{ padding: "16px 0", borderBottom: `1px solid ${C.border}` }}>
@@ -691,7 +701,8 @@ export function AllListingsPage() {
         const { areaMin, areaMax } = parseAreaRangeLabel(filters.area);
 
         const result = await searchListings({
-          districts: filters.region ? [filters.region] : undefined,
+          provinceCode: filters.provinceCode,
+          wardCodes: filters.wardCode != null ? [filters.wardCode] : undefined,
           priceMin,
           priceMax,
           areaMin,
@@ -740,7 +751,8 @@ export function AllListingsPage() {
 
   // Có bộ lọc nào đang bật? Quyết định EmptyState nói gì.
   const isFiltered =
-    filters.region !== "" ||
+    filters.provinceCode !== null ||
+    filters.wardCode !== null ||
     filters.priceLabel !== "" ||
     filters.area !== "" ||
     filters.roomTypes.length > 0 ||
@@ -755,7 +767,7 @@ export function AllListingsPage() {
 
   const removeChip = (chip: string) => {
     setFilters(f => {
-      if (f.region === chip)                          return { ...f, region: "" };
+      if (chip === areaChipLabel)                     return { ...f, provinceCode: null, wardCode: null };
       if (f.priceLabel === chip)                      return { ...f, priceLabel: "" };
       if (f.area === chip)                            return { ...f, area: "" };
       const typeVal = ROOM_TYPE_OPTS.find(o => o.label === chip)?.value;
@@ -767,7 +779,30 @@ export function AllListingsPage() {
     setPage(1);
   };
 
-  const chips = getChips(filters);
+  // Tên phường cho chip: chỉ tra khi người dùng thực sự lọc tới phường, nên
+  // chunk 3.321 mục vẫn không bị tải ở lần vào trang đầu tiên.
+  const [wardLabel, setWardLabel] = useState<string | null>(null);
+  useEffect(() => {
+    if (filters.wardCode == null) { setWardLabel(null); return; }
+    let cancelled = false;
+    loadVnWards()
+      .then((ws: readonly VnWard[]) => {
+        if (cancelled) return;
+        setWardLabel(ws.find((w) => w.code === filters.wardCode)?.name ?? null);
+      })
+      .catch(() => { if (!cancelled) setWardLabel(null); });
+    return () => { cancelled = true; };
+  }, [filters.wardCode]);
+
+  const chips = getChips(filters, wardLabel);
+  // Chip khu vực chỉ có tối đa một cái, và `removeChip` cần biết nhãn của nó để
+  // xóa đúng cặp tỉnh+phường thay vì dò theo chuỗi.
+  const areaChipLabel =
+    filters.wardCode != null && wardLabel
+      ? wardLabel
+      : filters.provinceCode != null
+        ? provinceName(filters.provinceCode)
+        : null;
 
   /* ── MOBILE ──────────────────────────────────── */
   if (isMobile) {

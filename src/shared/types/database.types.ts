@@ -129,6 +129,8 @@ export type Database = {
           description: string | null
           desired_amenities: string[]
           desired_districts: string[]
+          desired_province_code: number | null
+          desired_ward_codes: number[]
           district: string | null
           expire_at: string | null
           gender_requirement: string | null
@@ -158,6 +160,8 @@ export type Database = {
           description?: string | null
           desired_amenities?: string[]
           desired_districts: string[]
+          desired_province_code?: number | null
+          desired_ward_codes?: number[]
           district?: string | null
           expire_at?: string | null
           gender_requirement?: string | null
@@ -187,6 +191,8 @@ export type Database = {
           description?: string | null
           desired_amenities?: string[]
           desired_districts?: string[]
+          desired_province_code?: number | null
+          desired_ward_codes?: number[]
           district?: string | null
           expire_at?: string | null
           gender_requirement?: string | null
@@ -650,10 +656,12 @@ export type Database = {
           is_public_profile_enabled: boolean
           name: string
           owner_id: string
+          province_code: number | null
           public_slug: string | null
           review_count: number
           service_fee: number
           updated_at: string
+          ward_code: number | null
           water_unit_price: number
         }
         Insert: {
@@ -671,10 +679,12 @@ export type Database = {
           is_public_profile_enabled?: boolean
           name: string
           owner_id?: string
+          province_code?: number | null
           public_slug?: string | null
           review_count?: number
           service_fee?: number
           updated_at?: string
+          ward_code?: number | null
           water_unit_price?: number
         }
         Update: {
@@ -692,10 +702,12 @@ export type Database = {
           is_public_profile_enabled?: boolean
           name?: string
           owner_id?: string
+          province_code?: number | null
           public_slug?: string | null
           review_count?: number
           service_fee?: number
           updated_at?: string
+          ward_code?: number | null
           water_unit_price?: number
         }
         Relationships: []
@@ -727,6 +739,7 @@ export type Database = {
           price: number
           property_id: string | null
           property_type: string
+          province_code: number | null
           rejection_reason: string | null
           room_id: string | null
           seller_id: string
@@ -735,6 +748,7 @@ export type Database = {
           title: string
           updated_at: string
           view_count: number
+          ward_code: number | null
           water_price: number | null
           water_unit: string | null
         }
@@ -764,6 +778,7 @@ export type Database = {
           price: number
           property_id?: string | null
           property_type: string
+          province_code?: number | null
           rejection_reason?: string | null
           room_id?: string | null
           seller_id: string
@@ -772,6 +787,7 @@ export type Database = {
           title: string
           updated_at?: string
           view_count?: number
+          ward_code?: number | null
           water_price?: number | null
           water_unit?: string | null
         }
@@ -801,6 +817,7 @@ export type Database = {
           price?: number
           property_id?: string | null
           property_type?: string
+          province_code?: number | null
           rejection_reason?: string | null
           room_id?: string | null
           seller_id?: string
@@ -809,6 +826,7 @@ export type Database = {
           title?: string
           updated_at?: string
           view_count?: number
+          ward_code?: number | null
           water_price?: number | null
           water_unit?: string | null
         }

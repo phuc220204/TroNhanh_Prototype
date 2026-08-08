@@ -24,7 +24,8 @@ const DEFAULT_BOOST_DAYS = 7;
 const step1Schema = Yup.object().shape({
   title: Yup.string().min(10, "Tiêu đề quá ngắn (tối thiểu 10 ký tự)").required("Vui lòng nhập tiêu đề"),
   address: Yup.string().required("Vui lòng nhập địa chỉ cụ thể"),
-  district: Yup.string().required("Vui lòng chọn khu vực"),
+  district: Yup.string().required("Vui lòng chọn phường/xã"),
+  wardCode: Yup.number().nullable().required("Vui lòng chọn phường/xã"),
   area: Yup.number()
     .typeError("Diện tích phải là số")
     .required("Vui lòng nhập diện tích")
@@ -76,7 +77,10 @@ export function useListingForm(prefill: any = {}, showToast: (msg: string) => vo
       title: prefill.title || "",
       roomType: prefill.roomType || "Phòng trọ",
       address: prefill.address || "",
-      district: prefill.district || "Quận 7",
+      district: prefill.district || "",
+      // Mã khu vực theo mô hình 2 cấp. `district` chỉ còn là TÊN hiển thị.
+      provinceCode: (prefill.provinceCode ?? null) as number | null,
+      wardCode: (prefill.wardCode ?? null) as number | null,
       area: prefill.area || "",
       price: prefill.price ? formatVND(prefill.price) : "",
       maxPeople: prefill.maxPeople || "",
@@ -188,7 +192,9 @@ export function useListingForm(prefill: any = {}, showToast: (msg: string) => vo
           title: listing.title || "",
           roomType: listing.property_type || "Phòng trọ",
           address: listing.address || "",
-          district: listing.district || "Quận 7",
+          district: listing.district || "",
+          provinceCode: listing.province_code ?? null,
+          wardCode: listing.ward_code ?? null,
           area: listing.area ? String(listing.area) : "",
           price: listing.price ? formatVND(listing.price) : "",
           maxPeople: meta.costs ? (meta as any).maxPeople || "" : "",
@@ -369,6 +375,8 @@ export function useListingForm(prefill: any = {}, showToast: (msg: string) => vo
           area: parseFloat(formik.values.area),
           address: formik.values.address,
           district: formik.values.district,
+          provinceCode: formik.values.provinceCode,
+          wardCode: formik.values.wardCode,
           contactPhone: formik.values.phone,
           contactName: user.email || "Chủ nhà",
           electricityPrice: electricPrice,
@@ -403,6 +411,8 @@ export function useListingForm(prefill: any = {}, showToast: (msg: string) => vo
           area: parseFloat(formik.values.area),
           address: formik.values.address,
           district: formik.values.district,
+          provinceCode: formik.values.provinceCode,
+          wardCode: formik.values.wardCode,
           contactPhone: formik.values.phone,
           contactName: user.email || "Chủ nhà",
           amenities: amenityLabels,

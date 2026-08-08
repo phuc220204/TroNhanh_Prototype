@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { ChevronDown, AlertCircle, MapPin } from "lucide-react";
 import { C, font } from "../../../shared/theme";
-import { PROPERTY_TYPES, REGIONS } from "../../../shared/constants/catalog";
+import { PROPERTY_TYPES } from "../../../shared/constants/catalog";
+import { AreaSelect } from "../../../shared/components/common";
 import { formatVND, cleanVND } from "../../utils/listingMetadata";
 import { LocationPicker } from "./LocationPicker";
 
@@ -71,27 +72,20 @@ export function Step1Basic({ formik }: Step1BasicProps) {
           </select>
         </FieldGroup>
 
-        <FieldGroup label="Khu vực quận/huyện" required error={errors.district}>
-          <select
-            name="district"
-            value={values.district}
-            onChange={(e) => setFieldValue("district", e.target.value)}
-            style={{
-              width: "100%",
-              fontFamily: font,
-              fontSize: 14,
-              color: C.textPrimary,
-              padding: "11px 14px",
-              background: C.white,
-              border: `1.5px solid ${errors.district ? C.repairing : C.border}`,
-              borderRadius: 10,
-              outline: "none",
+        {/* Khu vực theo mô hình hành chính 2 cấp (từ 01/07/2025 không còn cấp
+            quận/huyện). Lưu MÃ để lọc, và lưu TÊN vào `district` để hiển thị —
+            tên là ảnh chụp tại thời điểm đăng, mã mới là thứ tra cứu được. */}
+        <FieldGroup label="Khu vực" required error={errors.wardCode || errors.district}>
+          <AreaSelect
+            value={{ provinceCode: values.provinceCode, wardCode: values.wardCode }}
+            onChange={(a) => {
+              setFieldValue("provinceCode", a.provinceCode);
+              setFieldValue("wardCode", a.wardCode);
+              setFieldValue("district", a.wardName ?? "");
             }}
-          >
-            {REGIONS.map((r) => (
-              <option key={r} value={r}>{r}</option>
-            ))}
-          </select>
+            labels={false}
+            testIdPrefix="listing-area"
+          />
         </FieldGroup>
       </div>
 

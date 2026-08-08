@@ -4,6 +4,18 @@ import { toListingCard, ListingCardItem } from "./listing-mappers";
 
 export interface ListingQueryParams {
   keyword?: string;
+  /**
+   * Lọc theo tỉnh/thành (mã Cục Thống kê, mô hình 2 cấp từ 01/07/2025).
+   * Đây là bậc lọc địa lý chính — người tìm trọ chọn tỉnh trước, phường sau.
+   */
+  provinceCode?: number | null;
+  /** Lọc sâu tới phường/xã. Rỗng = lấy cả tỉnh. */
+  wardCodes?: number[];
+  /**
+   * @deprecated Lọc theo TÊN quận cũ. Cấp quận/huyện đã bị bãi bỏ 01/07/2025
+   * (Nghị quyết 1685) nên tham số này chỉ còn để đọc tin cũ chưa chuẩn hóa.
+   * Code mới dùng `provinceCode` / `wardCodes`.
+   */
   districts?: string[];
   priceMin?: number;
   priceMax?: number;
@@ -52,6 +64,12 @@ export async function searchListings(params: ListingQueryParams = {}): Promise<S
 
     if (params.sellerId) {
       q = q.eq("seller_id", params.sellerId);
+    }
+    if (params.provinceCode != null) {
+      q = q.eq("province_code", params.provinceCode);
+    }
+    if (params.wardCodes && params.wardCodes.length > 0) {
+      q = q.in("ward_code", params.wardCodes);
     }
     if (params.districts && params.districts.length > 0) {
       q = q.in("district", params.districts);

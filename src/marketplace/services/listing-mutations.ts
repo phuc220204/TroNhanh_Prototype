@@ -11,7 +11,11 @@ export interface CreateListingInput {
   price: number;
   area: number;
   address: string;
+  /** TÊN phường/xã — lưu để hiển thị. */
   district: string;
+  /** Mã tỉnh/thành và phường/xã (mô hình 2 cấp từ 01/07/2025) — lưu để LỌC. */
+  provinceCode?: number | null;
+  wardCode?: number | null;
   contactPhone: string;
   contactName: string;
   amenities?: string[];
@@ -41,6 +45,8 @@ export async function createListing(input: CreateListingInput): Promise<string> 
         area: input.area,
         address: input.address,
         district: input.district,
+        province_code: input.provinceCode ?? null,
+        ward_code: input.wardCode ?? null,
         contact_phone: input.contactPhone,
         contact_name: input.contactName,
         // `boost_expire_at` CỐ Ý không có ở đây: boost chỉ đặt được qua RPC
@@ -70,7 +76,11 @@ export interface UpdateListingInput {
   price: number;
   area: number;
   address: string;
+  /** TÊN phường/xã — lưu để hiển thị. */
   district: string;
+  /** Mã tỉnh/thành và phường/xã (mô hình 2 cấp từ 01/07/2025) — lưu để LỌC. */
+  provinceCode?: number | null;
+  wardCode?: number | null;
   contactPhone: string;
   contactName: string;
   electricityPrice?: number | null;
@@ -101,6 +111,8 @@ export async function updateListing(input: UpdateListingInput): Promise<string> 
       area: input.area,
       address: input.address,
       district: input.district,
+      province_code: input.provinceCode ?? null,
+      ward_code: input.wardCode ?? null,
       description: input.description,
       contact_phone: input.contactPhone,
       contact_name: input.contactName,
