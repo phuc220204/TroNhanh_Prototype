@@ -104,6 +104,19 @@ export interface CreateRoomInput {
   floor?: number;
   status?: RoomStatusDb;
   description?: string;
+  /**
+   * Đơn giá RIÊNG của phòng. `null`/`undefined` = dùng giá của khu.
+   *
+   * Giá điện nước không cố định một mức cho cả khu: chủ trọ có thể thu 3.500đ/kWh
+   * với hợp đồng cũ và 3.700đ/kWh với phòng ký mới. Để `null` thì phòng thừa hưởng
+   * giá khu, nên chỉ phải nhập cho những phòng thực sự khác.
+   *
+   * ⚠️ `0` KHÁC `null`: `0` nghĩa là miễn phí (khu không thu phí dịch vụ), `null`
+   * nghĩa là chưa khai và lấy theo khu.
+   */
+  electricityPrice?: number | null;
+  waterPrice?: number | null;
+  serviceFee?: number | null;
 }
 
 /**
@@ -130,6 +143,11 @@ export async function createRoom(input: CreateRoomInput): Promise<string> {
         floor: input.floor ?? 1,
         status: input.status ?? "Available",
         description: input.description?.trim() || null,
+        // `?? null` chứ không `|| null`: `0` là mức giá hợp lệ (miễn phí) và phải
+        // được ghi đúng, chứ không bị coi là "chưa khai" rồi rơi về giá khu.
+        electricity_price: input.electricityPrice ?? null,
+        water_price: input.waterPrice ?? null,
+        service_fee: input.serviceFee ?? null,
       })
       .select("id")
       .single();

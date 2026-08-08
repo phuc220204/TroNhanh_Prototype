@@ -52,6 +52,12 @@ export function AddRoomModal({ properties, defaultPropertyId, onClose, onCreated
   const [submitting, setSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
 
+  // Đơn giá riêng của phòng. Để trống = theo giá khu.
+  const [customPrice, setCustomPrice] = useState(false);
+  const [elecPrice, setElecPrice] = useState("");
+  const [waterPrice, setWaterPrice] = useState("");
+  const [serviceFee, setServiceFee] = useState("");
+
   useEffect(() => {
     if (!propId && properties.length > 0) setPropId(properties[0]!.id);
   }, [properties, propId]);
@@ -79,6 +85,16 @@ export function AddRoomModal({ properties, defaultPropertyId, onClose, onCreated
       return;
     }
 
+    // Chỉ gửi giá riêng khi người dùng chủ động bật và điền. Ô để trống ⇒ `null`
+    // ⇒ phòng thừa hưởng giá khu. `parseOptionalPrice` phân biệt "" (chưa khai)
+    // với "0" (miễn phí) — hai ý khác nhau, không được gộp.
+    const parseOptionalPrice = (raw: string): number | null => {
+      const digits = raw.replace(/\D/g, "");
+      if (digits === "") return null;
+      const num = Number(digits);
+      return Number.isFinite(num) ? num : null;
+    };
+
     try {
       setSubmitting(true);
       await createRoom({
@@ -89,6 +105,9 @@ export function AddRoomModal({ properties, defaultPropertyId, onClose, onCreated
         floor: Number(floor) || 1,
         status,
         description: notes,
+        electricityPrice: customPrice ? parseOptionalPrice(elecPrice) : null,
+        waterPrice: customPrice ? parseOptionalPrice(waterPrice) : null,
+        serviceFee: customPrice ? parseOptionalPrice(serviceFee) : null,
       });
       onCreated();
       onClose();
@@ -159,6 +178,40 @@ export function AddRoomModal({ properties, defaultPropertyId, onClose, onCreated
             {STATUS_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
           </select>
         </label>
+
+        {/* Đơn giá riêng — mặc định TẮT.
+            Giá điện nước không cố định một mức cho cả khu: chủ trọ có thể thu
+            3.500đ/kWh với hợp đồng cũ và 3.700đ/kWh với phòng ký mới. Nhưng phần
+            lớn phòng dùng chung giá khu, nên để mặc định tắt và chỉ mở khi cần —
+            bắt nhập giá cho từng phòng sẽ khiến người dùng điền số bừa. */}
+        <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: 12 }}>
+          <label style={{ display: "flex", alignItems: "flex-start", gap: 9, cursor: "pointer" }}>
+            <input
+              type="checkbox"
+              checked={customPrice}
+              onChange={(e) => setCustomPrice(e.target.checked)}
+              data-testid="add-room-custom-price-toggle"
+              style={{ marginTop: 3, width: 16, height: 16, accentColor: C.primary, cursor: "pointer" }}
+            />
+            <span>
+              <span style={{ display: "block", fontFamily: font, fontSize: 13.5, fontWeight: 700, color: C.textPrimary }}>
+                Phòng này có đơn giá riêng
+              </span>
+              <span style={{ display: "block", fontFamily: font, fontSize: 12, color: C.textSecondary, lineHeight: 1.45 }}>
+                Bỏ trống thì phòng dùng đơn giá của khu trọ. Bật khi phòng này ký
+                hợp đồng ở mức giá khác các phòng còn lại.
+              </span>
+            </span>
+          </label>
+
+          {customPrice && (
+            <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 12 }}>
+              <Field label="Đơn giá điện (VND/kWh)" value={elecPrice} onChange={setElecPrice} placeholder="Để trống = theo khu" />
+              <Field label="Đơn giá nước" value={waterPrice} onChange={setWaterPrice} placeholder="Để trống = theo khu" />
+              <Field label="Phí dịch vụ (VND/tháng)" value={serviceFee} onChange={setServiceFee} placeholder="Để trống = theo khu" />
+            </div>
+          )}
+        </div>
 
         <Field label="Ghi chú nội bộ" value={notes} onChange={setNotes} placeholder="Ghi chú về phòng này" textarea rows={3} />
       </div>
