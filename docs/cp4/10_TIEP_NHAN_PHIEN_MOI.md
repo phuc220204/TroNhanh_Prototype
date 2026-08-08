@@ -7,21 +7,16 @@
 
 ---
 
-## 1. VIỆC ĐANG DỞ — làm ngay khi vào phiên
+## 1. Trạng thái build — SẠCH, không có việc dở
 
-### Migration `20260807170000_per_room_utility_price.sql` CHƯA push
-
-`pnpm typecheck` đang có **3 lỗi**, tất cả ở `src/workspace/services/room-service.ts`:
-`Type 'number' is not assignable to type 'never'` — `never` nghĩa là ba cột
-`electricity_price` / `water_price` / `service_fee` chưa tồn tại trong
-`database.types.ts`.
-
-**Việc cần làm:**
 ```
-pnpm db:push
-pnpm db:types
-pnpm build:ci     # phải xanh sau đó
+29/29 migration đã lên remote
+pnpm typecheck / typecheck:strict / build  đều xanh
 ```
+
+Không có blocker. Việc tiếp theo chọn từ §3.
+
+### Hai luật về migration — vẫn phải nhớ
 
 > ⚠️ **ĐỪNG sửa `database.types.ts` bằng tay. ĐỪNG bọc `as any`.** Ba lỗi đó là
 > tín hiệu ĐÚNG cho biết migration chưa lên DB. Trong dự án này việc "làm cho lỗi
@@ -37,8 +32,9 @@ pnpm build:ci     # phải xanh sau đó
 > `db:types` không dùng được làm bằng chứng khi migration chỉ sửa trigger/policy
 > (PostgREST không expose nên file types không đổi).
 
-Sau khi push xong, phần "đơn giá theo phòng" đã hoàn chỉnh cả SQL, service và UI
-(form tạo phòng có ô "Phòng này có đơn giá riêng").
+Phần "đơn giá theo phòng" đã hoàn chỉnh cả SQL, service và UI (form tạo phòng có
+ô "Phòng này có đơn giá riêng"). Còn thiếu **UI SỬA giá của phòng đã tạo** — hiện
+chỉ đặt được lúc tạo phòng; xem §6.
 
 ---
 
@@ -155,6 +151,10 @@ Sáu RPC + hai trigger đã lên remote nhưng **chưa từng được gọi th�
 - **`dbSeeder.ts` 526 dòng** chưa chia. Nó cũng **chưa biết** ba cột giá mới của
   `rooms` — dữ liệu seed sẽ để `null` (thừa hưởng giá khu), đúng nhưng không test
   được nhánh giá riêng.
+- **Chưa có UI sửa phòng.** `createRoom` có, nhưng không có `updateRoom` — nên
+  đơn giá riêng của phòng chỉ đặt được **lúc tạo**. Chủ trọ muốn đổi giá một phòng
+  đã tạo thì hiện không có đường nào. Cần `updateRoom()` + modal sửa phòng (mở từ
+  modal chi tiết phòng). Đây là việc còn thiếu rõ nhất của tính năng giá theo phòng.
 - **Gắn tin từ phía PHÒNG chưa làm, và có lý do.** Chủ dự án yêu cầu, nhưng
   `RoomDetailTabs` nằm ở `workspace/` còn `rental_listings` thuộc marketplace —
   thêm UI đó là **cross-import vi phạm §2.1**. Hiện chỉ có một lối vào từ tin đăng
@@ -171,7 +171,7 @@ Sáu RPC + hai trigger đã lên remote nhưng **chưa từng được gọi th�
 [Demo] = 0 · alert( = 0 · nhãn phiên bản = 0
 as any trên supabase.rpc/.from = 0
 useCanWrite/requiresWrite dùng ở 14 file
-30 migration (29 đã lên remote, 1 chờ push — xem §1)
+29 migration, tất cả đã lên remote
 console.* ngoài supabase-error.ts = 0
 ```
 
