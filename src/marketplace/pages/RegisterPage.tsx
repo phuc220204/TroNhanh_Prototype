@@ -133,6 +133,7 @@ export function RegisterPage() {
 
         {errorMessage && (
           <div
+            data-testid="register-error"
             style={{
               background: "#FDF2F0",
               border: "1px solid #F5C2B9",
@@ -151,6 +152,7 @@ export function RegisterPage() {
 
         {successMessage && (
           <div
+            data-testid="register-success"
             style={{
               background: "#F2F9EE",
               border: "1px solid #C9E8BB",
@@ -186,6 +188,7 @@ export function RegisterPage() {
               />
               <input
                 type="text"
+                data-testid="register-fullname"
                 placeholder="Nguyễn Văn A"
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
@@ -224,6 +227,7 @@ export function RegisterPage() {
               />
               <input
                 type="tel"
+                data-testid="register-phone"
                 placeholder="09xx xxx xxx"
                 value={contactPhone}
                 onChange={(e) => setContactPhone(e.target.value)}
@@ -262,6 +266,7 @@ export function RegisterPage() {
               />
               <input
                 type="email"
+                data-testid="register-email"
                 placeholder="ten@example.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
@@ -300,6 +305,7 @@ export function RegisterPage() {
               />
               <input
                 type={showPassword ? "text" : "password"}
+                data-testid="register-password"
                 placeholder="••••••••"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
@@ -345,6 +351,7 @@ export function RegisterPage() {
           {/* Submit button */}
           <button
             type="submit"
+            data-testid="register-submit"
             disabled={isLoading}
             style={{
               background: isLoading ? "#D8C9B2" : C.primary,

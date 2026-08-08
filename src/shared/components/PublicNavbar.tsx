@@ -82,16 +82,19 @@ function AccountDropdown({ onLandlord, onSignOut, onClose }: { onLandlord: () =>
    * `localhost:5173/quan-tri` còn ra trang chủ, phải là `localhost:5173/#/quan-tri`.
    */
   const items = [
-    { label: "Hồ sơ", action: () => navigate("/tai-khoan") },
-    { label: "Tin nhắn", action: () => navigate("/tin-nhan") },
+    { label: "Hồ sơ", testId: "account-menu-profile", action: () => navigate("/tai-khoan") },
+    { label: "Tin nhắn", testId: "account-menu-messages", action: () => navigate("/tin-nhan") },
     // Cùng đích với nút trái tim trên navbar: "Tin đã lưu" và "Yêu thích" là một.
-    { label: "Tin đã lưu", action: () => navigate("/yeu-thich") },
+    { label: "Tin đã lưu", testId: "account-menu-saved", action: () => navigate("/yeu-thich") },
     ...(isStaff
-      ? [{ label: "Quản trị hệ thống", action: () => navigate("/quan-tri"), highlight: true }]
+      ? [{ label: "Quản trị hệ thống", testId: "account-menu-admin", action: () => navigate("/quan-tri"), highlight: true }]
       : []),
-    { label: "Dashboard chủ trọ", action: onLandlord, highlight: true },
-    { label: "Đăng xuất", action: onSignOut, danger: true },
-  ] as Array<{ label: string; action: () => void; highlight?: boolean; danger?: boolean }>;
+    { label: "Dashboard chủ trọ", testId: "account-menu-landlord", action: onLandlord, highlight: true },
+    { label: "Đăng xuất", testId: "account-menu-signout", action: onSignOut, danger: true },
+    // `testId` khai ngay tại chỗ, KHÔNG suy từ `label`: nhãn tiếng Việt là copy
+    // hiển thị và sẽ đổi; selector E2E thì không được đổi theo. Bản cũ gán chung
+    // `account-menu-item` cho mọi mục nên không chọn được "Đăng xuất".
+  ] as Array<{ label: string; testId: string; action: () => void; highlight?: boolean; danger?: boolean }>;
   return (
     <div style={{
       position: "absolute", top: "calc(100% + 10px)", right: 0,
@@ -99,9 +102,9 @@ function AccountDropdown({ onLandlord, onSignOut, onClose }: { onLandlord: () =>
       borderRadius: 14, boxShadow: "0 12px 40px rgba(92,70,50,0.16)",
       padding: "6px 0", width: 200, zIndex: 200,
     }}>
-      {items.map(({ label, action, highlight, danger }) => (
+      {items.map(({ label, testId, action, highlight, danger }) => (
         <button key={label} onClick={() => { action(); onClose(); }}
-          data-testid={`account-menu-${label === "Quản trị hệ thống" ? "admin" : "item"}`}
+          data-testid={testId}
           style={{
             display: "block", width: "100%", padding: "11px 16px",
             border: "none", borderTop: danger ? `1px solid ${C.border}` : "none",
@@ -310,6 +313,7 @@ export function PublicNavbarDesktop({
         <div ref={accountRef} style={{ position: "relative" }}>
           {user ? (
             <button
+              data-testid="account-menu-trigger"
               onClick={() => { setAccountOpen(v => !v); setDangTinOpen(false); }}
               style={{
                 display: "flex", alignItems: "center", gap: 8,
@@ -329,6 +333,7 @@ export function PublicNavbarDesktop({
             </button>
           ) : (
             <button
+              data-testid="navbar-login-btn"
               onClick={() => navigate("/dang-nhap")}
               style={{
                 display: "flex", alignItems: "center", gap: 6,
@@ -535,14 +540,15 @@ export function DemoFAB() {
     }
   };
 
+  // `testId` khai tại chỗ, không suy từ `label` — nhãn là copy hiển thị và sẽ đổi.
   const shortcuts = [
-    { Icon: LayoutDashboard, label: "Dashboard chủ trọ",        action: () => navigate("/chu-tro") },
-    { Icon: Building2,       label: "Quản lý khu trọ & phòng",  action: () => navigate("/chu-tro/quan-ly-phong") },
-    { Icon: FileText,        label: "Quản lý tin đăng",          action: () => navigate("/chu-tro/tin-dang") },
-    { Icon: BookOpen,        label: "Design System",              action: () => navigate("/styleguide") },
-    { Icon: Database,        label: "Seed Dữ liệu mẫu",           action: handleSeed },
-    { Icon: UserCheck,       label: "Tôi là người ở demo",        action: handleLinkDemoOccupancy },
-    { Icon: HelpCircle,      label: "Trợ giúp",                  action: () => {} },
+    { Icon: LayoutDashboard, label: "Dashboard chủ trọ",        testId: "demo-fab-dashboard",   action: () => navigate("/chu-tro") },
+    { Icon: Building2,       label: "Quản lý khu trọ & phòng",  testId: "demo-fab-rooms",       action: () => navigate("/chu-tro/quan-ly-phong") },
+    { Icon: FileText,        label: "Quản lý tin đăng",          testId: "demo-fab-listings",    action: () => navigate("/chu-tro/tin-dang") },
+    { Icon: BookOpen,        label: "Design System",              testId: "demo-fab-styleguide",  action: () => navigate("/styleguide") },
+    { Icon: Database,        label: "Seed Dữ liệu mẫu",           testId: "demo-fab-seed",        action: handleSeed },
+    { Icon: UserCheck,       label: "Tôi là người ở demo",        testId: "demo-fab-link-occupancy", action: handleLinkDemoOccupancy },
+    { Icon: HelpCircle,      label: "Trợ giúp",                  testId: "demo-fab-help",        action: () => {} },
   ];
 
   return (
@@ -572,8 +578,8 @@ export function DemoFAB() {
               <X size={14} color={C.textSecondary} />
             </button>
           </div>
-          {shortcuts.map(({ Icon, label, action }) => (
-            <button key={label} onClick={() => { action(); setOpen(false); }}
+          {shortcuts.map(({ Icon, label, testId, action }) => (
+            <button key={label} data-testid={testId} onClick={() => { action(); setOpen(false); }}
               style={{
                 display: "flex", alignItems: "center", gap: 12, width: "100%",
                 padding: "10px 16px", border: "none", background: "transparent",
@@ -592,6 +598,7 @@ export function DemoFAB() {
 
       {/* FAB button */}
       <button
+        data-testid="demo-fab-trigger"
         onClick={() => setOpen(v => !v)}
         style={{
           width: fabSize, height: fabSize, borderRadius: "50%",

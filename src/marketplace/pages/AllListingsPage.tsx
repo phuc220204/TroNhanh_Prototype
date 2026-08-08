@@ -124,7 +124,8 @@ function Btn({ variant = "primary", label, icon, fullWidth, size = "md", onClick
 function RoomCard({ room, onClick, listView }: { room: Room; onClick?: () => void; listView?: boolean }) {
   const [hov, setHov] = useState(false);
   return (
-    <div onClick={onClick} onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
+    <div onClick={onClick} data-testid="listing-card" data-listing-id={room.id}
+      onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
       style={{ background: C.white, border: `1px solid ${hov ? C.sand : C.border}`, borderRadius: 14, overflow: "hidden", boxShadow: hov ? "0 8px 24px rgba(92,70,50,0.14)" : "0 2px 10px rgba(92,70,50,0.07)", transform: hov ? "translateY(-2px)" : "none", transition: "all 0.18s", cursor: "pointer", display: "flex", flexDirection: listView ? "row" : "column" }}>
       <div style={{ position: "relative", flexShrink: 0, width: listView ? 220 : "100%" }}>
         <img src={room.img} alt={room.title} style={{ width: "100%", height: listView ? "100%" : 172, objectFit: "cover", display: "block", minHeight: listView ? 140 : 0 }} />

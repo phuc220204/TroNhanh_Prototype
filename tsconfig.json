@@ -51,5 +51,9 @@
     "noUnusedLocals": false,
     "noUnusedParameters": false
   },
-  "include": ["src", "vite.config.ts"]
+  // `tests` nằm trong đây để `pnpm typecheck` bắt luôn lỗi trong spec E2E.
+  // Playwright chỉ transpile bằng esbuild lúc chạy — nó KHÔNG type-check, nên
+  // một testid gõ sai hay đổi chữ ký helper sẽ chỉ lộ ra khi test đỏ vì lý do
+  // khó hiểu, có khi vài tuần sau.
+  "include": ["src", "tests", "vite.config.ts", "playwright.config.ts"]
 }

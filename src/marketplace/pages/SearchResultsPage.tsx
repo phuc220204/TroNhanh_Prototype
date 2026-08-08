@@ -169,6 +169,8 @@ function RoomCard({ room, mobile, onClick }: { room: Room; mobile?: boolean; onC
   return (
     <div
       onClick={onClick}
+      data-testid="listing-card"
+      data-listing-id={room.id}
       onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
       style={{
         background: C.white, border: `1px solid ${hov ? C.sand : C.border}`,

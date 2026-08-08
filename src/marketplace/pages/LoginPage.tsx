@@ -131,6 +131,7 @@ export function LoginPage() {
 
         {errorMessage && (
           <div
+            data-testid="login-error"
             style={{
               background: "#FDF2F0",
               border: "1px solid #F5C2B9",
@@ -166,6 +167,7 @@ export function LoginPage() {
               />
               <input
                 type="email"
+                data-testid="login-email"
                 placeholder="ten@example.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
@@ -204,6 +206,7 @@ export function LoginPage() {
               />
               <input
                 type={showPassword ? "text" : "password"}
+                data-testid="login-password"
                 placeholder="••••••••"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
@@ -249,6 +252,7 @@ export function LoginPage() {
           {/* Submit button */}
           <button
             type="submit"
+            data-testid="login-submit"
             disabled={isLoading}
             style={{
               background: isLoading ? "#D8C9B2" : C.primary,

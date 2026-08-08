@@ -112,6 +112,8 @@ function RoomCard({ room, mobile, onClick }: {
   const [hov, setHov] = useState(false);
   return (
     <div onClick={onClick}
+      data-testid="listing-card"
+      data-listing-id={room.id}
       onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
       style={{
         background: C.white, border: `1.5px solid ${hov ? C.secondary : C.border}`,

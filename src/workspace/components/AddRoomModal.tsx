@@ -163,10 +163,10 @@ export function AddRoomModal({ properties, defaultPropertyId, onClose, onCreated
           </select>
         </label>
 
-        <Field label="Mã phòng *" value={code} onChange={setCode} placeholder="VD: P101" />
+        <Field label="Mã phòng *" data-testid="add-room-code" value={code} onChange={setCode} placeholder="VD: P101" />
         <Field label="Số tầng" value={floor} onChange={setFloor} placeholder="VD: 1" />
-        <Field label="Diện tích (m²) *" value={area} onChange={setArea} placeholder="VD: 25" />
-        <Field label="Giá thuê (đ/tháng) *" value={price} onChange={setPrice} placeholder="VD: 3.200.000" />
+        <Field label="Diện tích (m²) *" data-testid="add-room-area" value={area} onChange={setArea} placeholder="VD: 25" />
+        <Field label="Giá thuê (đ/tháng) *" data-testid="add-room-price" value={price} onChange={setPrice} placeholder="VD: 3.200.000" />
 
         <label style={{ display: "flex", flexDirection: "column", gap: 5 }}>
           <span style={{ fontFamily: font, fontSize: 13, fontWeight: 700, color: C.textPrimary }}>Trạng thái ban đầu</span>
@@ -206,7 +206,7 @@ export function AddRoomModal({ properties, defaultPropertyId, onClose, onCreated
 
           {customPrice && (
             <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 12 }}>
-              <Field label="Đơn giá điện (VND/kWh)" value={elecPrice} onChange={setElecPrice} placeholder="Để trống = theo khu" />
+              <Field label="Đơn giá điện (VND/kWh)" data-testid="add-room-elec-price" value={elecPrice} onChange={setElecPrice} placeholder="Để trống = theo khu" />
               <Field label="Đơn giá nước" value={waterPrice} onChange={setWaterPrice} placeholder="Để trống = theo khu" />
               <Field label="Phí dịch vụ (VND/tháng)" value={serviceFee} onChange={setServiceFee} placeholder="Để trống = theo khu" />
             </div>

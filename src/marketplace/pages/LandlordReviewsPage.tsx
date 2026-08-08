@@ -180,6 +180,7 @@ export function LandlordReviewsPage() {
                           size="sm"
                           disabled={!(replyDraft[r.id] ?? "").trim() || replyMutation.isPending}
                           onClick={() => replyMutation.mutate({ reviewId: r.id, reply: replyDraft[r.id] ?? "" })}
+                          data-testid="seller-reply-submit"
                           style={{ alignSelf: "flex-start" }}
                         >
                           Gửi phản hồi

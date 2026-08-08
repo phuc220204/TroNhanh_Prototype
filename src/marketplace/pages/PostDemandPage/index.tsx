@@ -178,6 +178,7 @@ export function PostDemandPage() {
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
               <div
                 onClick={() => setKind("RoomWanted")}
+                data-testid="demand-kind-room-wanted"
                 style={{
                   border: `2px solid ${C.primary}`,
                   borderRadius: 16,
@@ -198,6 +199,7 @@ export function PostDemandPage() {
 
               <div
                 onClick={() => setKind("RoommateWanted")}
+                data-testid="demand-kind-roommate-wanted"
                 style={{
                   border: `2px solid ${C.secondary}`,
                   borderRadius: 16,
@@ -229,7 +231,7 @@ export function PostDemandPage() {
             </div>
 
             {errorMsg && (
-              <div style={{ background: C.cream, border: `1px solid ${C.error}`, color: C.error, padding: "10px 14px", borderRadius: 10, fontSize: 13, fontFamily: font, marginBottom: 20, display: "flex", alignItems: "center", gap: 8 }}>
+              <div data-testid="demand-error" style={{ background: C.cream, border: `1px solid ${C.error}`, color: C.error, padding: "10px 14px", borderRadius: 10, fontSize: 13, fontFamily: font, marginBottom: 20, display: "flex", alignItems: "center", gap: 8 }}>
                 <AlertCircle size={16} />
                 {errorMsg}
               </div>
@@ -243,6 +245,7 @@ export function PostDemandPage() {
                 <input
                   type="text"
                   required
+                  data-testid="demand-title-input"
                   placeholder={kind === "RoomWanted" ? "VD: Tìm phòng trọ khép kín gần ĐH Bách Khoa" : "VD: Tìm 1 bạn nữ ở ghép căn hộ 2PN Quận 7"}
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
@@ -261,6 +264,8 @@ export function PostDemandPage() {
                       <button
                         type="button"
                         key={r}
+                        data-testid="demand-district-chip"
+                        data-district={r}
                         onClick={() => toggleDistrict(r)}
                         style={{
                           padding: "6px 12px",
@@ -341,6 +346,7 @@ export function PostDemandPage() {
                 </label>
                 <textarea
                   rows={4}
+                  data-testid="demand-description-input"
                   placeholder="Nhập thông tin thêm..."
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}

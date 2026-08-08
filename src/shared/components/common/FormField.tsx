@@ -7,13 +7,18 @@ import { C, font } from "../../theme";
 ══════════════════════════════════════════ */
 const fieldBase = { fontFamily: font, fontSize: 14, color: C.textPrimary, border: `1.5px solid ${C.border}`, borderRadius: 10, padding: "10px 13px", width: "100%", boxSizing: "border-box" as const, background: C.white, outline: "none" };
 
-export function Field({ label, placeholder, textarea, rows = 2, value, onChange }: { label: string; placeholder?: string; textarea?: boolean; rows?: number; value?: string; onChange?: (val: string) => void }) {
+/**
+ * `data-testid` đặt trên chính ô nhập, không phải trên `<label>` bọc ngoài.
+ * Codebase có zero `className` (§8.1) nên testid là selector E2E duy nhất; đặt
+ * nó ở label thì `fill()` không dùng được vì label không phải input.
+ */
+export function Field({ label, placeholder, textarea, rows = 2, value, onChange, "data-testid": testId }: { label: string; placeholder?: string; textarea?: boolean; rows?: number; value?: string; onChange?: (val: string) => void; "data-testid"?: string }) {
   return (
     <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
       <span style={{ fontFamily: font, fontSize: 13, fontWeight: 600, color: C.textPrimary }}>{label}</span>
       {textarea
-        ? <textarea placeholder={placeholder} value={value} onChange={e => onChange?.(e.target.value)} rows={rows} style={{ ...fieldBase, resize: "vertical" }} />
-        : <input placeholder={placeholder} value={value} onChange={e => onChange?.(e.target.value)} style={fieldBase} />}
+        ? <textarea data-testid={testId} placeholder={placeholder} value={value} onChange={e => onChange?.(e.target.value)} rows={rows} style={{ ...fieldBase, resize: "vertical" }} />
+        : <input data-testid={testId} placeholder={placeholder} value={value} onChange={e => onChange?.(e.target.value)} style={fieldBase} />}
     </label>
   );
 }

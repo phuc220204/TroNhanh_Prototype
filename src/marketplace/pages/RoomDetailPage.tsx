@@ -588,14 +588,14 @@ function StickyContactCard({ listing, onChat, onPhone, user }: { listing: any; o
         </div>
 
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-          <button onClick={onChat}
+          <button onClick={onChat} data-testid="listing-chat-btn"
             style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, padding: "14px 20px", background: C.primary, color: C.white, border: "none", borderRadius: 12, fontFamily: font, fontSize: 15, fontWeight: 700, cursor: "pointer", transition: "background 0.12s", boxShadow: "0 2px 12px rgba(138,106,69,0.3)" }}
             onMouseEnter={e => (e.currentTarget.style.background = C.primaryHover)}
             onMouseLeave={e => (e.currentTarget.style.background = C.primary)}>
             <MessageSquare size={17} />
             Gửi tin nhắn
           </button>
-          <button onClick={onPhone}
+          <button onClick={onPhone} data-testid="listing-phone-btn"
             style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, padding: "13px 20px", background: "transparent", color: C.primary, border: `1.5px solid ${C.primary}`, borderRadius: 12, fontFamily: font, fontSize: 15, fontWeight: 600, cursor: "pointer", transition: "all 0.12s" }}
             onMouseEnter={e => { e.currentTarget.style.background = "#F0E7D6"; }}
             onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}>
@@ -684,7 +684,7 @@ function PhoneModal({ open, onClose, phone, user, sellerName }: { open: boolean;
               Số điện thoại đã bị ẩn một phần. Vui lòng đăng nhập để xem đầy đủ số điện thoại của chủ trọ.
             </p>
             <div style={{ background: C.caramelSoft, borderRadius: 12, padding: "12px 20px", margin: "16px 0 24px" }}>
-              <p style={{ fontFamily: font, fontSize: 22, fontWeight: 800, color: C.primary, margin: 0, letterSpacing: "0.03em" }}>{displayPhone}</p>
+              <p data-testid="listing-phone-value" style={{ fontFamily: font, fontSize: 22, fontWeight: 800, color: C.primary, margin: 0, letterSpacing: "0.03em" }}>{displayPhone}</p>
             </div>
             <div style={{ display: "flex", gap: 10 }}>
               <button onClick={onClose} style={{ flex: 1, padding: "12px", background: "transparent", border: `1.5px solid ${C.border}`, borderRadius: 10, fontFamily: font, fontSize: 14, fontWeight: 600, color: C.textSecondary, cursor: "pointer" }}>Đóng</button>
@@ -694,7 +694,7 @@ function PhoneModal({ open, onClose, phone, user, sellerName }: { open: boolean;
         ) : (
           <>
             <div style={{ background: C.caramelSoft, borderRadius: 12, padding: "12px 20px", margin: "16px 0 24px" }}>
-              <p style={{ fontFamily: font, fontSize: 22, fontWeight: 800, color: C.primary, margin: 0, letterSpacing: "0.03em" }}>{displayPhone}</p>
+              <p data-testid="listing-phone-value" style={{ fontFamily: font, fontSize: 22, fontWeight: 800, color: C.primary, margin: 0, letterSpacing: "0.03em" }}>{displayPhone}</p>
             </div>
             <div style={{ display: "flex", gap: 10 }}>
               <button onClick={onClose} style={{ flex: 1, padding: "12px", background: "transparent", border: `1.5px solid ${C.border}`, borderRadius: 10, fontFamily: font, fontSize: 14, fontWeight: 600, color: C.textSecondary, cursor: "pointer" }}>Hủy</button>

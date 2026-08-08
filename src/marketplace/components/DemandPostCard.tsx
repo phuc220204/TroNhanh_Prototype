@@ -51,6 +51,7 @@ export function DemandPostCard({ post, kind, onMessage, onView }: DemandPostCard
   return (
     <article
       data-testid="demand-post-card"
+      data-demand-id={post.id}
       style={{
         background: `linear-gradient(160deg, ${C.white} 0%, ${C.bg} 100%)`,
         border: `1px solid ${C.border}`,

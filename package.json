@@ -10,7 +10,9 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "typecheck:strict": "tsc -p tsconfig.strict.json --noEmit",
     "db:push": "npx supabase db push",
-    "db:types": "npx supabase gen types typescript --linked --schema public > src/shared/types/database.types.ts"
+    "db:types": "npx supabase gen types typescript --linked --schema public > src/shared/types/database.types.ts",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.110.0",
@@ -26,6 +28,7 @@
     "yup": "^1.7.1"
   },
   "devDependencies": {
+    "@playwright/test": "^1.62.1",
     "@tailwindcss/vite": "4.1.12",
     "@types/leaflet": "^1.9.21",
     "@types/node": "^22.10.0",

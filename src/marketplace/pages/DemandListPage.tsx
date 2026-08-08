@@ -178,7 +178,11 @@ export function DemandListPage() {
               <DemandPostCard
                 key={post.id}
                 post={post}
-                onMessage={() => handleMessage(post)}
+                /* BR-030: tin của chính mình thì KHÔNG truyền `onMessage`, và
+                   `DemandPostCard` bỏ luôn nút. Trước đây nút vẫn hiện nhưng
+                   `handleMessage` return sớm — bấm không có gì xảy ra, không có
+                   lời giải thích nào. Nút chết còn tệ hơn không có nút. */
+                onMessage={post.renter_id === user?.id ? undefined : () => handleMessage(post)}
                 onView={() => navigate(`/tin-nhu-cau/${post.id}`)}
               />
             ))}

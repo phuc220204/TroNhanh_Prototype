@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Plus, Search, ChevronDown, Home, Zap, FileText, Lock, Users, AlertTriangle } from "lucide-react";
+import { Plus, Search, ChevronDown, Home, Zap, FileText, Lock, Users, AlertTriangle, Building2 } from "lucide-react";
 import { C, font } from "../../../shared/theme";
 import { Button } from "../../../shared/components/common";
 import type { Room, Property } from "../../types/room";
@@ -121,28 +121,59 @@ export function RoomsView({
           </div>
         </div>
 
-        {/* Add Room Button */}
-        <button
-          type="button"
-          disabled={isReadOnly}
-          onClick={onAddRoom}
-          style={{
-            display: "inline-flex",
-            alignItems: "center",
-            gap: 6,
-            padding: "9px 16px",
-            background: isReadOnly ? C.border : C.primary,
-            color: isReadOnly ? C.textSecondary : "white",
-            border: "none",
-            borderRadius: 10,
-            fontFamily: font,
-            fontSize: 13.5,
-            fontWeight: 700,
-            cursor: isReadOnly ? "not-allowed" : "pointer",
-          }}
-        >
-          <Plus size={16} /> Thêm phòng mới
-        </button>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          {/* Thêm khu trọ.
+              Trước đây lối vào DUY NHẤT để tạo khu là nút trong empty state, mà
+              empty state chỉ hiện khi chưa có phòng nào. Nghĩa là chủ trọ có một
+              khu rồi thì vĩnh viễn không tạo được khu thứ hai — cùng loại lỗ với
+              cái migration 20260807140000 đã vá, chỉ là ở một mức sâu hơn. */}
+          <button
+            type="button"
+            disabled={isReadOnly}
+            onClick={onAddProperty}
+            data-testid="add-property-btn"
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 6,
+              padding: "9px 16px",
+              background: C.white,
+              color: isReadOnly ? C.textSecondary : C.primary,
+              border: `1.5px solid ${isReadOnly ? C.border : C.primary}`,
+              borderRadius: 10,
+              fontFamily: font,
+              fontSize: 13.5,
+              fontWeight: 700,
+              cursor: isReadOnly ? "not-allowed" : "pointer",
+            }}
+          >
+            <Building2 size={16} /> Thêm khu trọ
+          </button>
+
+          {/* Add Room Button */}
+          <button
+            type="button"
+            disabled={isReadOnly}
+            onClick={onAddRoom}
+            data-testid="add-room-btn"
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 6,
+              padding: "9px 16px",
+              background: isReadOnly ? C.border : C.primary,
+              color: isReadOnly ? C.textSecondary : "white",
+              border: "none",
+              borderRadius: 10,
+              fontFamily: font,
+              fontSize: 13.5,
+              fontWeight: 700,
+              cursor: isReadOnly ? "not-allowed" : "pointer",
+            }}
+          >
+            <Plus size={16} /> Thêm phòng mới
+          </button>
+        </div>
       </div>
 
       {/* Rooms Grid.
@@ -195,6 +226,8 @@ export function RoomsView({
           {filteredRooms.map((room) => (
             <div
               key={room.id}
+              data-testid="room-card"
+              data-room-code={room.code}
               onClick={() => onSelectRoom(room)}
               style={{
                 background: C.white,
@@ -231,6 +264,7 @@ export function RoomsView({
                 <button
                   type="button"
                   title="Ghi chỉ số điện nước"
+                  data-testid="room-utility-btn"
                   onClick={() => onOpenActionModal("utility", room)}
                   style={{ flex: 1, padding: "6px", background: C.bg, border: `1px solid ${C.border}`, borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 4 }}
                 >
@@ -239,6 +273,7 @@ export function RoomsView({
                 <button
                   type="button"
                   title="Tạo hóa đơn"
+                  data-testid="room-invoice-btn"
                   onClick={() => onOpenActionModal("invoice", room)}
                   style={{ flex: 1, padding: "6px", background: C.bg, border: `1px solid ${C.border}`, borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 4 }}
                 >

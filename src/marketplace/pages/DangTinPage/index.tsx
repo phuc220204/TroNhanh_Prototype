@@ -175,7 +175,7 @@ export function DangTinPage() {
             <div style={{ width: 72, height: 72, borderRadius: "50%", background: "#E8F5E1", display: "flex", alignItems: "center", justifyContent: "center", color: "#4A7A34", margin: "0 auto 20px" }}>
               <CheckCircle size={36} strokeWidth={2.5} />
             </div>
-            <h1 style={{ fontFamily: font, fontSize: 24, fontWeight: 800, color: C.textPrimary, margin: "0 0 10px" }}>
+            <h1 data-testid="listing-success" style={{ fontFamily: font, fontSize: 24, fontWeight: 800, color: C.textPrimary, margin: "0 0 10px" }}>
               {successTitle}
             </h1>
             <p style={{ fontFamily: font, fontSize: 14, color: C.textSecondary, margin: "0 0 28px", lineHeight: 1.6 }}>
@@ -258,6 +258,7 @@ export function DangTinPage() {
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderTop: `1px solid ${C.border}`, paddingTop: 20, marginTop: 12 }}>
             <button
               type="button"
+              data-testid="listing-prev-btn"
               disabled={step === 0 || isSubmitting}
               onClick={prev}
               style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "10px 18px", background: C.white, border: `1.5px solid ${C.border}`, borderRadius: 10, fontFamily: font, fontSize: 13.5, fontWeight: 600, color: C.textSecondary, cursor: step === 0 || isSubmitting ? "not-allowed" : "pointer", opacity: step === 0 ? 0.5 : 1 }}
@@ -269,6 +270,7 @@ export function DangTinPage() {
               {!isEditMode && (
                 <button
                   type="button"
+                  data-testid="listing-draft-btn"
                   disabled={isSubmitting}
                   onClick={() => handlePostSubmit(false, true)}
                   style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "10px 18px", background: C.white, border: `1.5px solid ${C.border}`, borderRadius: 10, fontFamily: font, fontSize: 13.5, fontWeight: 600, color: C.textPrimary, cursor: isSubmitting ? "not-allowed" : "pointer" }}
@@ -280,6 +282,7 @@ export function DangTinPage() {
               {step < 3 ? (
                 <button
                   type="button"
+                  data-testid="listing-next-btn"
                   onClick={next}
                   style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "10px 22px", background: C.primary, color: "white", border: "none", borderRadius: 10, fontFamily: font, fontSize: 14, fontWeight: 700, cursor: "pointer" }}
                 >
@@ -288,6 +291,7 @@ export function DangTinPage() {
               ) : (
                 <button
                   type="button"
+                  data-testid="listing-submit-btn"
                   disabled={isSubmitting}
                   onClick={next}
                   style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "12px 28px", background: isSubmitting ? "#C9B09A" : C.primary, color: "white", border: "none", borderRadius: 10, fontFamily: font, fontSize: 14, fontWeight: 800, cursor: isSubmitting ? "not-allowed" : "pointer" }}

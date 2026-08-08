@@ -82,7 +82,7 @@ export function UtilityReadingForm({ room, onClose, onSuccess, isReadOnly }: Uti
         </div>
 
         {errorMsg && (
-          <div style={{ background: "#FDF2F0", border: "1px solid #F5C2B9", color: "#B5503C", padding: "10px 14px", borderRadius: 8, fontSize: 13, fontFamily: font, marginBottom: 16, display: "flex", alignItems: "center", gap: 6 }}>
+          <div data-testid="utility-form-error" style={{ background: "#FDF2F0", border: "1px solid #F5C2B9", color: "#B5503C", padding: "10px 14px", borderRadius: 8, fontSize: 13, fontFamily: font, marginBottom: 16, display: "flex", alignItems: "center", gap: 6 }}>
             <AlertCircle size={16} />
             {errorMsg}
           </div>
@@ -95,6 +95,7 @@ export function UtilityReadingForm({ room, onClose, onSuccess, isReadOnly }: Uti
             </label>
             <input
               type="month"
+              data-testid="utility-period-input"
               value={period}
               onChange={(e) => setPeriod(e.target.value)}
               style={{ width: "100%", padding: "10px 12px", fontFamily: font, fontSize: 14, border: `1px solid ${C.border}`, borderRadius: 8, outline: "none", boxSizing: "border-box" }}
@@ -108,6 +109,7 @@ export function UtilityReadingForm({ room, onClose, onSuccess, isReadOnly }: Uti
             </label>
             <input
               type="number"
+              data-testid="utility-elec-input"
               placeholder={lastElec !== null ? `> ${lastElec}` : "Nhập chỉ số điện"}
               value={elecValue}
               onChange={(e) => setElecValue(e.target.value)}
@@ -122,6 +124,7 @@ export function UtilityReadingForm({ room, onClose, onSuccess, isReadOnly }: Uti
             </label>
             <input
               type="number"
+              data-testid="utility-water-input"
               placeholder={lastWater !== null ? `> ${lastWater}` : "Nhập chỉ số nước"}
               value={waterValue}
               onChange={(e) => setWaterValue(e.target.value)}
@@ -131,7 +134,7 @@ export function UtilityReadingForm({ room, onClose, onSuccess, isReadOnly }: Uti
 
           <div style={{ display: "flex", gap: 10, justifyContent: "flex-end", marginTop: 12 }}>
             <button type="button" onClick={onClose} style={{ padding: "10px 16px", background: "none", border: `1px solid ${C.border}`, borderRadius: 8, fontFamily: font, fontSize: 13.5, color: C.textSecondary, cursor: "pointer" }}>Hủy</button>
-            <button type="submit" disabled={loading || isReadOnly} style={{ padding: "10px 18px", background: C.primary, color: "white", border: "none", borderRadius: 8, fontFamily: font, fontSize: 13.5, fontWeight: 700, cursor: isReadOnly ? "not-allowed" : "pointer" }}>
+            <button type="submit" data-testid="utility-save-btn" disabled={loading || isReadOnly} style={{ padding: "10px 18px", background: C.primary, color: "white", border: "none", borderRadius: 8, fontFamily: font, fontSize: 13.5, fontWeight: 700, cursor: isReadOnly ? "not-allowed" : "pointer" }}>
               {loading ? "Đang lưu..." : "Lưu chỉ số"}
             </button>
           </div>

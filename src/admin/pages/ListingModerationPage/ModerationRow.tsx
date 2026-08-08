@@ -38,6 +38,7 @@ export function ModerationRowCard({ row, busy, onApprove, onReject, onHide, onRe
   return (
     <div
       data-testid="moderation-row"
+      data-listing-id={row.id}
       style={{
         display: "flex", gap: space[4], alignItems: "flex-start",
         background: C.white, border: `1px solid ${C.border}`,

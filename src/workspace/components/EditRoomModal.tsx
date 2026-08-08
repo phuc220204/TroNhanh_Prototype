@@ -203,10 +203,10 @@ export function EditRoomModal({ roomId, propertyPrices, onClose, onUpdated }: Ed
         </p>
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-          <Field label="Mã phòng *" value={code} onChange={setCode} placeholder="VD: P101" />
+          <Field label="Mã phòng *" data-testid="edit-room-code" value={code} onChange={setCode} placeholder="VD: P101" />
           <Field label="Số tầng" value={floor} onChange={setFloor} placeholder="VD: 1" />
           <Field label="Diện tích (m²) *" value={area} onChange={setArea} placeholder="VD: 25" />
-          <Field label="Giá thuê (đ/tháng) *" value={price} onChange={setPrice} placeholder="VD: 3200000" />
+          <Field label="Giá thuê (đ/tháng) *" data-testid="edit-room-price" value={price} onChange={setPrice} placeholder="VD: 3200000" />
 
           <label style={{ display: "flex", flexDirection: "column", gap: 5 }}>
             <span style={{ fontFamily: font, fontSize: 13, fontWeight: 700, color: C.textPrimary }}>Trạng thái</span>
@@ -249,7 +249,7 @@ export function EditRoomModal({ roomId, propertyPrices, onClose, onUpdated }: Ed
 
             {customPrice && (
               <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 12 }}>
-                <Field label="Đơn giá điện (VND/kWh)" value={elecPrice} onChange={setElecPrice} placeholder={inheritedHint(propertyPrices?.electricity, "đ/kWh")} />
+                <Field label="Đơn giá điện (VND/kWh)" data-testid="edit-room-elec-price" value={elecPrice} onChange={setElecPrice} placeholder={inheritedHint(propertyPrices?.electricity, "đ/kWh")} />
                 <Field label="Đơn giá nước" value={waterPrice} onChange={setWaterPrice} placeholder={inheritedHint(propertyPrices?.water, "đ")} />
                 <Field label="Phí dịch vụ (VND/tháng)" value={serviceFee} onChange={setServiceFee} placeholder={inheritedHint(propertyPrices?.service, "đ/tháng")} />
               </div>

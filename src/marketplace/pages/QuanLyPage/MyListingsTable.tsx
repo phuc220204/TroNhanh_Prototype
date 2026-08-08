@@ -178,7 +178,11 @@ export function MyListingsTable({
               const isBlocked = mutatingId === l.id;
 
               return (
-                <tr key={l.id} style={{ borderBottom: `1px solid ${C.border}`, background: idx % 2 ? "rgba(240,231,214,0.03)" : C.white, transition: "background 0.1s" }}
+                <tr key={l.id}
+                  data-testid="my-listing-row"
+                  data-listing-id={l.id}
+                  data-listing-status={l.status}
+                  style={{ borderBottom: `1px solid ${C.border}`, background: idx % 2 ? "rgba(240,231,214,0.03)" : C.white, transition: "background 0.1s" }}
                   onMouseEnter={e => e.currentTarget.style.background = "rgba(240,231,214,0.08)"}
                   onMouseLeave={e => e.currentTarget.style.background = idx % 2 ? "rgba(240,231,214,0.03)" : C.white}>
                   

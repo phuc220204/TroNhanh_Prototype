@@ -91,6 +91,7 @@ export function AddPropertyModal({ onClose, onCreated }: AddPropertyModalProps) 
 
         <Field
           label="Tên khu trọ *"
+          data-testid="add-property-name"
           value={name}
           onChange={setName}
           placeholder="VD: Nhà trọ Hoàng Diệu"
@@ -98,6 +99,7 @@ export function AddPropertyModal({ onClose, onCreated }: AddPropertyModalProps) 
 
         <Field
           label="Địa chỉ"
+          data-testid="add-property-address"
           value={address}
           onChange={setAddress}
           placeholder="VD: 123 Hoàng Diệu, Phường 9"
