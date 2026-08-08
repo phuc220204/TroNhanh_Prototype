@@ -29,6 +29,13 @@ export async function seedMockDataForUser(user: { id: string }, profile: any) {
   }
 
   // 1. Seed Listings
+  //
+  // ⚠️ KHÔNG có `boost_expire_at` ở đây, và đó là bắt buộc chứ không phải quên.
+  // Trigger `trg_guard_boost_expire_at` (migration 20260806150000) ném
+  // `BOOST_REQUIRES_PAYMENT` với mọi INSERT/UPDATE tự đặt cột này ngoài RPC
+  // `boost_listing()`. Vì 4 tin được insert trong MỘT câu lệnh, chỉ cần một tin
+  // mang `boost_expire_at` là cả 4 fail và seeder không tạo được gì.
+  // Boost được đặt sau, qua RPC — xem bước 1b.
   const listingsToSeed = [
     {
       seller_id: user.id,
@@ -38,7 +45,6 @@ export async function seedMockDataForUser(user: { id: string }, profile: any) {
       district: "Quận 7",
       area: 30,
       status: "Active",
-      boost_expire_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
       contact_phone: profile?.contact_phone || "0901234567",
       contact_name: profile?.full_name || "Nguyễn Minh Anh",
       address: "123 Đường số 7, Tân Phong, Quận 7",
@@ -52,7 +58,6 @@ export async function seedMockDataForUser(user: { id: string }, profile: any) {
       district: "Bình Thạnh",
       area: 45,
       status: "Active",
-      boost_expire_at: new Date(Date.now() + 6 * 24 * 60 * 60 * 1000).toISOString(),
       contact_phone: profile?.contact_phone || "0901234567",
       contact_name: profile?.full_name || "Lê Thảo Nhi",
       address: "456 Điện Biên Phủ, Phường 25, Bình Thạnh",
@@ -79,7 +84,6 @@ export async function seedMockDataForUser(user: { id: string }, profile: any) {
       district: "Gò Vấp",
       area: 38,
       status: "Active",
-      boost_expire_at: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toISOString(),
       contact_phone: profile?.contact_phone || "0901234567",
       contact_name: profile?.full_name || "Phạm Gia Huy",
       address: "101 Quang Trung, Phường 10, Gò Vấp",
@@ -118,6 +122,30 @@ export async function seedMockDataForUser(user: { id: string }, profile: any) {
       .insert(amenitiesToSeed);
 
     if (amenitiesError) throw amenitiesError;
+
+    // ── 1b. Đẩy tin qua ĐÚNG đường có thanh toán ──────────────────────────
+    // BR-005 cần vài tin còn hạn boost để chứng minh "tin nổi bật xếp trước".
+    // `boost_listing()` là đường DUY NHẤT đặt được `boost_expire_at`: nó tra giá
+    // từ `platform_settings.boost_config`, ghi một dòng `payments` purpose
+    // 'Boost', rồi mới mở cờ cho trigger. Nhờ vậy dữ liệu seed phản ánh đúng
+    // trạng thái thật của một tin đã trả tiền, thay vì một cột được nhét tay.
+    //
+    // `days` PHẢI là gói có thật trong `boost_config` (đã seed: 7 / 15 / 30),
+    // nếu không RPC ném `INVALID_BOOST_PACKAGE`.
+    const boostPlan: Array<{ index: number; days: number }> = [
+      { index: 0, days: 30 },
+      { index: 1, days: 7 },
+    ];
+
+    for (const { index, days } of boostPlan) {
+      const target = createdListings[index];
+      if (!target) continue;
+      const { error: boostError } = await supabase.rpc("boost_listing", {
+        p_listing_id: target.id,
+        p_days: days,
+      });
+      if (boostError) throw boostError;
+    }
   }
 
   // 2. Seed Demand Posts
