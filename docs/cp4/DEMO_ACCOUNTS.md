@@ -10,12 +10,12 @@
 Mật khẩu **giống nhau cho cả 4**: `TroNhanh@2026`
 Email confirmation đã **TẮT** → đăng ký/đăng nhập không cần xác nhận mail.
 
-| Email | Mật khẩu | Vai trò | Dữ liệu đã seed |
-|---|---|---|---|
-| `seller.a@tronhanh.demo` | `TroNhanh@2026` | Renter + Seller | **3 khu · 12 phòng · 18 hóa đơn · 36 chỉ số điện nước** (3 kỳ) |
-| `seller.b@tronhanh.demo` | `TroNhanh@2026` | Renter + Seller | 3 khu · 12 phòng · 18 hóa đơn · 36 chỉ số |
-| `renter.a@tronhanh.demo` | `TroNhanh@2026` | Renter | không có dữ liệu SaaS (đúng thiết kế) |
-| `admin@tronhanh.demo` | `TroNhanh@2026` | **Admin** + Renter | không có dữ liệu SaaS |
+| Email                    | Mật khẩu        | Vai trò            | Dữ liệu đã seed                                                |
+| ------------------------ | --------------- | ------------------ | -------------------------------------------------------------- |
+| `seller.a@tronhanh.demo` | `TroNhanh@2026` | Renter + Seller    | **3 khu · 12 phòng · 18 hóa đơn · 36 chỉ số điện nước** (3 kỳ) |
+| `seller.b@tronhanh.demo` | `TroNhanh@2026` | Renter + Seller    | 3 khu · 12 phòng · 18 hóa đơn · 36 chỉ số                      |
+| `renter.a@tronhanh.demo` | `TroNhanh@2026` | Renter             | không có dữ liệu SaaS (đúng thiết kế)                          |
+| `admin@tronhanh.demo`    | `TroNhanh@2026` | **Admin** + Renter | không có dữ liệu SaaS                                          |
 
 > ⚠️ **Đuôi `@tronhanh.demo` là bắt buộc, không đổi.** RPC `demo_link_me_to_seeded_occupancy()` chỉ tác động lên khu trọ mà chủ có email kết thúc `@tronhanh.demo` — đây là ràng buộc phạm vi cố ý để hàm demo không đụng dữ liệu thật.
 
@@ -23,13 +23,13 @@ Email confirmation đã **TẮT** → đăng ký/đăng nhập không cần xác
 
 ## 2. Dùng tài khoản nào cho việc gì
 
-| Bạn đang test | Đăng nhập bằng |
-|---|---|
-| Đăng tin cho thuê · sửa tin · quản lý khu/phòng · điện nước · hóa đơn · VietQR | `seller.a` |
-| **Cô lập dữ liệu (BR-007)** — A không thấy gì của B và ngược lại | `seller.b` |
-| Đăng tin tìm phòng / ở ghép · nhắn tin · đánh giá khu trọ | `renter.a` |
-| Kiểm duyệt tin · quản lý user · bật/tắt chế độ kiểm duyệt | `admin` |
-| Marketplace công khai · che SĐT (BR-014) | **cửa sổ ẩn danh**, không đăng nhập |
+| Bạn đang test                                                                  | Đăng nhập bằng                      |
+| ------------------------------------------------------------------------------ | ----------------------------------- |
+| Đăng tin cho thuê · sửa tin · quản lý khu/phòng · điện nước · hóa đơn · VietQR | `seller.a`                          |
+| **Cô lập dữ liệu (BR-007)** — A không thấy gì của B và ngược lại               | `seller.b`                          |
+| Đăng tin tìm phòng / ở ghép · nhắn tin · đánh giá khu trọ                      | `renter.a`                          |
+| Kiểm duyệt tin · quản lý user · bật/tắt chế độ kiểm duyệt                      | `admin`                             |
+| Marketplace công khai · che SĐT (BR-014)                                       | **cửa sổ ẩn danh**, không đăng nhập |
 
 **Cách test cô lập RLS:** làm gì đó bằng `seller.a`, rồi đăng nhập `seller.b` và xác nhận **không thấy gì** của A. Cả hai đều có 3 khu / 12 phòng nên phép thử này có ý nghĩa thật, không phải "pass vì bên kia rỗng".
 
@@ -39,15 +39,15 @@ Email confirmation đã **TẮT** → đăng ký/đăng nhập không cần xác
 
 **Khu trọ Phan Văn Trị** — Bình Thạnh — 7 phòng
 
-| Phòng | Trạng thái | Người ở | Giá |
-|---|---|---|---|
-| P101 | Trống | — | 3.200.000đ |
-| P102 | Đang thuê | Nguyễn Văn An | 2.800.000đ |
-| P201 | Đã ẩn | — | 3.500.000đ |
-| **P202** | Đang thuê | Trần Minh Khoa | 3.000.000đ |
-| P203 | Đang thuê | Lê Thị Hương | 2.900.000đ |
-| P301 | Đang thuê | Phạm Quốc Bảo | 3.600.000đ |
-| P302 | Trống | — | 2.600.000đ |
+| Phòng    | Trạng thái | Người ở        | Giá        |
+| -------- | ---------- | -------------- | ---------- |
+| P101     | Trống      | —              | 3.200.000đ |
+| P102     | Đang thuê  | Nguyễn Văn An  | 2.800.000đ |
+| P201     | Đã ẩn      | —              | 3.500.000đ |
+| **P202** | Đang thuê  | Trần Minh Khoa | 3.000.000đ |
+| P203     | Đang thuê  | Lê Thị Hương   | 2.900.000đ |
+| P301     | Đang thuê  | Phạm Quốc Bảo  | 3.600.000đ |
+| P302     | Trống      | —              | 2.600.000đ |
 
 **Căn hộ Quận 7** — Quận 7 — 3 phòng · **Nhà trọ Thủ Đức** — Thủ Đức — 2 phòng
 
@@ -59,13 +59,13 @@ Email confirmation đã **TẮT** → đăng ký/đăng nhập không cần xác
 
 ## 4. Route chính
 
-| Route | Cần đăng nhập? |
-|---|---|
-| `/` · `/tat-ca-phong` · `/tim-phong` · `/phong/:id` | không |
-| `/dang-nhap` · `/dang-ky` | không |
-| `/chu-tro` · `/chu-tro/quan-ly-phong` · `/chu-tro/tin-dang` · `/chu-tro/dang-tin` | có |
-| `/quan-tri/*` | **Admin/Moderator** — user thường phải thấy màn 403 |
-| `/styleguide` | không |
+| Route                                                                             | Cần đăng nhập?                                      |
+| --------------------------------------------------------------------------------- | --------------------------------------------------- |
+| `/` · `/tat-ca-phong` · `/tim-phong` · `/phong/:id`                               | không                                               |
+| `/dang-nhap` · `/dang-ky`                                                         | không                                               |
+| `/chu-tro` · `/chu-tro/quan-ly-phong` · `/chu-tro/tin-dang` · `/chu-tro/dang-tin` | có                                                  |
+| `/quan-tri/*`                                                                     | **Admin/Moderator** — user thường phải thấy màn 403 |
+| `/styleguide`                                                                     | không                                               |
 
 App dùng **hash router** → URL đầy đủ là `http://localhost:5173/#/chu-tro/quan-ly-phong`.
 
@@ -76,6 +76,7 @@ App dùng **hash router** → URL đầy đủ là `http://localhost:5173/#/chu-
 Seeder **không idempotent** — nó chặn nếu tài khoản đã có dữ liệu. Muốn seed lại phải xóa sạch trước.
 
 **Bước 1** — SQL Editor (đổi email cho đúng tài khoản):
+
 ```sql
 do $$
 declare v_uid uuid;
@@ -95,11 +96,13 @@ begin
   delete from public.demand_posts    where renter_id = v_uid;
 end $$;
 ```
+
 Giữ nguyên `auth.users` / `profiles` / `user_roles` — **không phải đăng ký lại tài khoản**.
 
 **Bước 2** — đăng nhập tài khoản đó → bấm **"Khởi tạo dữ liệu mẫu"** ở DemoBanner.
 
 **Kiểm lại:**
+
 ```sql
 select u.email,
        (select count(*) from public.properties       p  where p.owner_id  = u.id) as khu,
@@ -110,6 +113,7 @@ from auth.users u
 where u.email like '%@tronhanh.demo'
 order by u.email;
 ```
+
 Đúng thì `seller.a` và `seller.b` ra **3 / 12 / 18 / 36**.
 
 ---
@@ -121,6 +125,7 @@ order by u.email;
 Đã xảy ra một lần: một lệnh click bị timeout, công cụ retry liên tục trong lúc overlay đang che, và cú click rơi trúng nút bên dưới → **ghi nhầm một bản ghi `payments`** và **đổi trạng thái gói sang ACTIVE**.
 
 Nếu cần tự động hoá:
+
 - Chỉ **đọc** (screenshot, `read_page`, đọc console) — không click các nút ghi
 - Cần test luồng ghi thì làm **thủ công**, hoặc dựng Playwright spec riêng theo `T29` với dữ liệu tự dựng rồi dọn sau
 - Chạm nhầm dữ liệu thì **nói ra**, đừng im lặng — seed lại theo §5 là xong
