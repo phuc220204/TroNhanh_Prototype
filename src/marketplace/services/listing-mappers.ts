@@ -33,7 +33,13 @@ export const mapAmenityToKey = (amenity: string): string => {
   if (norm.includes("xe")) return "parking";
   if (norm.includes("wc") || norm.includes("phòng tắm") || norm.includes("toilet") || norm.includes("khép kín")) return "bath";
   if (norm.includes("tự do") || norm.includes("giờ giấc")) return "clock";
-  return "wifi";
+  if (norm.includes("thú cưng") || norm.includes("pet")) return "pets";
+  // Trả "other" chứ KHÔNG rơi về "wifi". Catch-all cũ bịa ra tiện ích không có
+  // thật, và tệ hơn: một tin vừa có "Wifi" vừa có tiện ích lạ sẽ sinh HAI phần
+  // tử cùng key "wifi" ⇒ React cảnh báo trùng key và có thể bỏ sót node.
+  // Chỗ render đã có nhánh `if (!m) return null` nên key lạ chỉ đơn giản không
+  // hiện, thay vì hiện sai.
+  return "other";
 };
 
 export const mapTypeToKey = (type: string): string => {

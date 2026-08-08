@@ -9,7 +9,7 @@ import { useBreakpoint } from "../../shared/components/useBreakpoint";
 import { useAuth } from "../../shared/contexts/AuthContext";
 import { listActiveDemandPosts, type DemandPostItem } from "../services/demand-post-service";
 import { startConversation } from "../../shared/services/messaging-service";
-import { REGIONS } from "../../shared/constants/catalog";
+import { AreaSelect } from "../../shared/components/common";
 
 export function DemandListPage() {
   const navigate = useNavigate();
@@ -17,27 +17,26 @@ export function DemandListPage() {
   const { user } = useAuth();
 
   const [kindFilter, setKindFilter] = useState<"all" | "RoomWanted" | "RoommateWanted">("all");
-  const [districtFilter, setDistrictFilter] = useState<string>("all");
+  const [area, setArea] = useState<{ provinceCode: number | null; wardCode: number | null }>({
+    provinceCode: null,
+    wardCode: null,
+  });
   const [posts, setPosts] = useState<DemandPostItem[]>([]);
   const [loading, setLoading] = useState(true);
 
   const fetchPosts = async () => {
     try {
       setLoading(true);
+      // Lọc hoàn toàn ở SERVER. Bản cũ gọi service rồi lọc lại y hệt ở client —
+      // hai tầng lọc cho cùng một điều kiện, và cái ở client chạy SAU phân
+      // trang nên số đếm không khớp danh sách.
       const data = await listActiveDemandPosts({
         kind: kindFilter,
-        district: districtFilter !== "all" ? districtFilter : undefined,
+        provinceCode: area.provinceCode,
+        wardCode: area.wardCode,
       });
 
-      let filtered = data;
-      if (districtFilter !== "all") {
-        filtered = data.filter((p) => {
-          if (p.kind === "RoomWanted") {
-            return p.desired_districts?.includes(districtFilter);
-          }
-          return p.district === districtFilter;
-        });
-      }
+      const filtered = data;
 
       setPosts(filtered);
     } catch (_) {
@@ -49,7 +48,7 @@ export function DemandListPage() {
 
   useEffect(() => {
     fetchPosts();
-  }, [kindFilter, districtFilter]);
+  }, [kindFilter, area.provinceCode, area.wardCode]);
 
   const handleMessage = async (post: DemandPostItem) => {
     if (!user) {
@@ -136,26 +135,17 @@ export function DemandListPage() {
             })}
           </div>
 
-          {/* District Select */}
-          <div style={{ marginLeft: "auto", minWidth: 160 }}>
-            <select
-              value={districtFilter}
-              onChange={(e) => setDistrictFilter(e.target.value)}
-              style={{
-                width: "100%",
-                padding: "8px 12px",
-                fontFamily: font,
-                fontSize: 13,
-                border: `1px solid ${C.border}`,
-                borderRadius: 10,
-                outline: "none",
-              }}
-            >
-              <option value="all">Tất cả khu vực</option>
-              {REGIONS.map((r) => (
-                <option key={r} value={r}>{r}</option>
-              ))}
-            </select>
+          {/* Khu vực */}
+          <div style={{ marginLeft: "auto", minWidth: 320 }}>
+            <AreaSelect
+              value={area}
+              onChange={(a) => setArea({ provinceCode: a.provinceCode, wardCode: a.wardCode })}
+              allowAllProvinces
+              allowAllWards
+              layout="inline"
+              labels={false}
+              testIdPrefix="demand-area"
+            />
           </div>
         </div>
 

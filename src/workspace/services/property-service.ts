@@ -68,7 +68,11 @@ export async function getPropertyById(id: string): Promise<PropertyItem | null> 
 export interface CreatePropertyInput {
   name: string;
   address?: string;
+  /** TÊN phường/xã — để hiển thị. */
   district?: string;
+  /** Mã khu vực (mô hình 2 cấp từ 01/07/2025) — để ghép nối với tin nhu cầu. */
+  provinceCode?: number | null;
+  wardCode?: number | null;
   electricity_unit_price?: number;
   water_unit_price?: number;
   service_fee?: number;
@@ -93,6 +97,8 @@ export async function createProperty(input: CreatePropertyInput): Promise<string
         name: input.name.trim(),
         address: input.address?.trim() || null,
         district: input.district?.trim() || null,
+        province_code: input.provinceCode ?? null,
+        ward_code: input.wardCode ?? null,
         // Đơn giá để 0 nếu chưa khai; màn Cài đặt khu trọ là nơi nhập chính thức,
         // và ở đó có validate "> 0". Đặt số mặc định bịa ở đây sẽ thành giá thật
         // trên hóa đơn đầu tiên mà chủ trọ không hề nhập.

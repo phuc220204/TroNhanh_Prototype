@@ -1214,6 +1214,8 @@ export type Database = {
           description: string | null
           desired_amenities: string[] | null
           desired_districts: string[] | null
+          desired_province_code: number | null
+          desired_ward_codes: number[] | null
           district: string | null
           expire_at: string | null
           gender_requirement: string | null

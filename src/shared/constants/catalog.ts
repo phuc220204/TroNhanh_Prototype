@@ -34,15 +34,23 @@ export const AMENITIES = [
   "Cho nuôi thú cưng",
 ] as const;
 
-/** Khu vực / Quận — danh sách hiển thị trong bộ lọc */
-export const REGIONS = [
-  "Quận 7",
-  "Bình Thạnh",
-  "Thủ Đức",
-  "Gò Vấp",
-  "Quận 10",
-  "Quận 12",
-] as const;
+/*
+ * `REGIONS` (Quận 7 · Bình Thạnh · Thủ Đức · Gò Vấp · Quận 10 · Quận 12) ĐÃ BỊ
+ * XÓA ngày 2026-08-09.
+ *
+ * Từ 01/07/2025, Nghị quyết 1685/NQ-UBTVQH15 bỏ cấp quận/huyện trên cả nước;
+ * sáu giá trị đó không còn là đơn vị hành chính. TP.HCM cũng đã sáp nhập với
+ * Bình Dương và Bà Rịa – Vũng Tàu.
+ *
+ * Thay bằng danh mục thật, sinh từ `scripts/gen-vn-regions.mjs`:
+ *   • dữ liệu  → `src/shared/constants/vn-provinces.generated.ts` + `vn-wards.generated.ts`
+ *   • tra cứu  → `src/shared/utils/vn-regions.ts`
+ *   • giao diện → `<AreaSelect />` ở `shared/components/common`
+ *
+ * Đừng dựng lại một danh sách quận cứng ở đây. Nếu cần "khu vực quen thuộc" cho
+ * người dùng chọn nhanh, làm bằng bảng ánh xạ tên cũ → nhóm mã phường, đừng
+ * quay lại lưu tên quận xuống DB.
+ */
 
 /** Diện tích */
 export const AREA_RANGES = [

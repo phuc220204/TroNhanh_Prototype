@@ -23,7 +23,20 @@ import { withErrorHandling } from "./supabase-error";
 export interface VacantRoomSummary {
   roomId: string;
   propertyName: string;
+  /** TÊN khu vực để hiển thị. Với khu tạo trước 01/07/2025 là tên quận cũ. */
   district: string | null;
+  /**
+   * Mã phường/xã của khu trọ.
+   *
+   * Ghi chú ở đầu file cấm thêm field vô cớ, nên nói rõ vì sao field này KHÔNG
+   * làm xói mòn ranh giới §2.2: nó không mang thông tin MỚI nào từ workspace
+   * sang marketplace — đó đúng là dữ liệu `district` đã có ở dòng trên, chỉ ở
+   * dạng mã thay vì tên. Sau khi cấp quận/huyện bị bãi bỏ, khớp theo tên là
+   * khớp trên một vốn từ đã chết.
+   *
+   * Vẫn KHÔNG có ở đây: đơn giá điện nước, số tài khoản, tình trạng hợp đồng.
+   */
+  wardCode: number | null;
   price: number;
   area: number;
 }
@@ -36,7 +49,7 @@ export async function getMyVacantRoomSummaries(): Promise<VacantRoomSummary[]> {
   return withErrorHandling("vacancy-service.getMyVacantRoomSummaries", async () => {
     const { data, error } = await supabase
       .from("rooms")
-      .select("id, price, area, properties!inner(name, district)")
+      .select("id, price, area, properties!inner(name, district, province_code, ward_code)")
       .eq("status", "Available")
       .is("deleted_at", null);
 
@@ -46,6 +59,7 @@ export async function getMyVacantRoomSummaries(): Promise<VacantRoomSummary[]> {
       roomId: r.id,
       propertyName: r.properties?.name ?? "",
       district: r.properties?.district ?? null,
+      wardCode: r.properties?.ward_code ?? null,
       price: Number(r.price),
       area: Number(r.area),
     }));
@@ -63,7 +77,9 @@ export async function getMyVacantRoomSummaries(): Promise<VacantRoomSummary[]> {
  */
 export function scoreDemandMatch(
   post: {
+    /** @deprecated Tên quận cũ — chỉ còn để khớp tin đăng trước 01/07/2025. */
     desired_districts: string[] | null;
+    desired_ward_codes?: number[] | null;
     price_min: number;
     price_max: number;
     min_area: number | null;
@@ -76,8 +92,17 @@ export function scoreDemandMatch(
   for (const room of rooms) {
     let score = 0;
 
+    // Khớp theo MÃ phường trước — mã ổn định và không phụ thuộc cách viết tên.
+    // Chỉ khi một trong hai phía chưa có mã (tin/khu trọ tạo trước khi chuyển
+    // sang mô hình 2 cấp) mới rơi về so khớp tên, nếu không dữ liệu cũ sẽ mất
+    // điểm khu vực và biến mất khỏi danh sách ghép nối.
+    const wardCodes = post.desired_ward_codes ?? [];
     const districts = post.desired_districts ?? [];
-    if (room.district && districts.includes(room.district)) score += 50;
+    if (room.wardCode != null && wardCodes.length > 0) {
+      if (wardCodes.includes(room.wardCode)) score += 50;
+    } else if (room.district && districts.includes(room.district)) {
+      score += 50;
+    }
 
     // Giao nhau của [price_min, price_max] và giá phòng
     if (room.price >= post.price_min && room.price <= post.price_max) {

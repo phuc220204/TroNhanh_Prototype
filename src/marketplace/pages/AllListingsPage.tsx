@@ -4,7 +4,7 @@ import {
   Search, Heart, MapPin, Wifi, Wind, Car, Bath, Clock, Layers,
   Home, Bell, User, X, Star, ArrowLeft, SlidersHorizontal,
   Map, LayoutGrid, List, ChevronDown, ChevronLeft, ChevronRight,
-  Check, ArrowUpDown,
+  Check, ArrowUpDown, PawPrint,
 } from "lucide-react";
 import { C, font } from "../../shared/theme";
 import { useBreakpoint } from "../../shared/components/useBreakpoint";
@@ -79,6 +79,7 @@ const AMENITY_META: Record<string, { Icon: React.ElementType; label: string }> =
   bath:    { Icon: Bath,   label: "WC riêng" },
   clock:   { Icon: Clock,  label: "Giờ tự do" },
   loft:    { Icon: Layers, label: "Gác lửng" },
+  pets:    { Icon: PawPrint, label: "Thú cưng" },
 };
 
 export { getListingImage, mapAmenityToKey, mapTypeToKey } from "../services/listing-mappers";

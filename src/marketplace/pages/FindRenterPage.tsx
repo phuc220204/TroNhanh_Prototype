@@ -8,7 +8,7 @@ import { getMyVacantRoomSummaries, scoreDemandMatch, type VacantRoomSummary } fr
 import { listActiveDemandPosts, type DemandPostItem } from "../services/demand-post-service";
 import { startConversation } from "../../shared/services/messaging-service";
 import { DemandPostCard } from "../components/DemandPostCard";
-import { REGIONS } from "../../shared/constants/catalog";
+import { AreaSelect } from "../../shared/components/common";
 import { logError, toUserMessage } from "../../shared/services/supabase-error";
 
 export function FindRenterPage() {
@@ -20,7 +20,10 @@ export function FindRenterPage() {
 
   // Filter states
   const [filterKind, setFilterKind] = useState<"all" | "RoomWanted" | "RoommateWanted">("all");
-  const [filterDistrict, setFilterDistrict] = useState<string>("");
+  const [filterArea, setFilterArea] = useState<{ provinceCode: number | null; wardCode: number | null }>({
+    provinceCode: null,
+    wardCode: null,
+  });
   const [filterPriceRange, setFilterPriceRange] = useState<string>("all");
 
   useEffect(() => {
@@ -70,6 +73,7 @@ export function FindRenterPage() {
         const { score, bestRoomId } = scoreDemandMatch(
           {
             desired_districts: post.desired_districts ?? (post.district ? [post.district] : null),
+            desired_ward_codes: post.desired_ward_codes ?? null,
             price_min: post.price_min ?? post.share_price ?? 0,
             price_max: post.price_max ?? post.share_price ?? 0,
             min_area: post.min_area ?? null,
@@ -82,9 +86,13 @@ export function FindRenterPage() {
       .filter(({ post }) => {
         if (filterKind !== "all" && post.kind !== filterKind) return false;
 
-        if (filterDistrict) {
-          const districts = post.desired_districts || (post.district ? [post.district] : []);
-          if (districts.length > 0 && !districts.includes(filterDistrict)) return false;
+        // Khớp theo MÃ; tin cũ chưa có mã thì không bị lọc bỏ, vì lọc mất chúng
+        // im lặng còn tệ hơn hiện thừa vài tin.
+        if (filterArea.wardCode != null) {
+          const codes = post.desired_ward_codes ?? [];
+          if (codes.length > 0 && !codes.includes(filterArea.wardCode)) return false;
+        } else if (filterArea.provinceCode != null) {
+          if (post.desired_province_code != null && post.desired_province_code !== filterArea.provinceCode) return false;
         }
 
         if (filterPriceRange === "under3m") {
@@ -102,7 +110,7 @@ export function FindRenterPage() {
         return true;
       })
       .sort((a, b) => b.score - a.score);
-  }, [demandPosts, vacantRooms, filterKind, filterDistrict, filterPriceRange]);
+  }, [demandPosts, vacantRooms, filterKind, filterArea.provinceCode, filterArea.wardCode, filterPriceRange]);
 
   if (!isLoading && vacantRooms.length === 0) {
     return (
@@ -229,27 +237,18 @@ export function FindRenterPage() {
             <option value="RoommateWanted">Tìm người ở ghép</option>
           </select>
 
-          {/* District Select */}
-          <select
-            value={filterDistrict}
-            onChange={(e) => setFilterDistrict(e.target.value)}
-            style={{
-              fontFamily: font,
-              fontSize: 13,
-              color: C.textPrimary,
-              padding: "7px 12px",
-              background: C.bg,
-              border: `1px solid ${C.border}`,
-              borderRadius: radius.sm,
-              outline: "none",
-              cursor: "pointer",
-            }}
-          >
-            <option value="">Tất cả khu vực</option>
-            {REGIONS.map((r) => (
-              <option key={r} value={r}>{r}</option>
-            ))}
-          </select>
+          {/* Khu vực */}
+          <div style={{ minWidth: 320 }}>
+            <AreaSelect
+              value={filterArea}
+              onChange={(a) => setFilterArea({ provinceCode: a.provinceCode, wardCode: a.wardCode })}
+              allowAllProvinces
+              allowAllWards
+              layout="inline"
+              labels={false}
+              testIdPrefix="find-renter-area"
+            />
+          </div>
 
           {/* Price Select */}
           <select

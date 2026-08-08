@@ -1,9 +1,10 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams, useParams } from "react-router";
 import { PublicNavbar } from "../../../shared/components/PublicNavbar";
-import { Home, Users, ArrowLeft, Save, AlertCircle } from "lucide-react";
+import { Home, Users, ArrowLeft, Save, AlertCircle, X } from "lucide-react";
 import { C, font } from "../../../shared/theme";
-import { REGIONS, PROPERTY_TYPES } from "../../../shared/constants/catalog";
+import { PROPERTY_TYPES } from "../../../shared/constants/catalog";
+import { AreaSelect } from "../../../shared/components/common";
 import { useAuth } from "../../../shared/contexts/AuthContext";
 import { createDemandPost, updateDemandPost, getDemandPostById } from "../../services/demand-post-service";
 import { toUserMessage } from "../../../shared/services/supabase-error";
@@ -40,7 +41,15 @@ export function PostDemandPage() {
 
   // RoommateWanted fields
   const [currentAddress, setCurrentAddress] = useState("");
-  const [district, setDistrict] = useState(REGIONS[0] || "Quận 1");
+  // Khu vực đang chọn dở ở ô picker — bấm "Thêm" mới đẩy vào danh sách.
+  const [areaDraft, setAreaDraft] = useState<{ provinceCode: number | null; wardCode: number | null }>({
+    provinceCode: null,
+    wardCode: null,
+  });
+  const [areaDraftName, setAreaDraftName] = useState<string>("");
+  // Song song hai mảng: mã để LỌC, tên để HIỂN THỊ. Cùng thứ tự, cùng độ dài.
+  const [selectedWardCodes, setSelectedWardCodes] = useState<number[]>([]);
+  const [provinceCode, setProvinceCode] = useState<number | null>(null);
   const [sharePrice, setSharePrice] = useState("2500000");
   const [neededCount, setNeededCount] = useState("1");
   const [genderReq, setGenderReq] = useState<"Any" | "Male" | "Female">("Any");
@@ -62,6 +71,8 @@ export function PostDemandPage() {
           setContactName(data.contact_name || "");
           setContactPhone(data.contact_phone || "");
           setSelectedDistricts(data.desired_districts || []);
+          setSelectedWardCodes(data.desired_ward_codes || []);
+          setProvinceCode(data.desired_province_code ?? null);
           setPriceMin(String(data.price_min || 0));
           setPriceMax(String(data.price_max || 0));
 
@@ -73,8 +84,7 @@ export function PostDemandPage() {
             setOccupantCount(String(data.occupant_count || 1));
           } else {
             setCurrentAddress(data.current_address || "");
-            if (data.district) setDistrict(data.district);
-            setSharePrice(String(data.share_price || 0));
+              setSharePrice(String(data.share_price || 0));
             setNeededCount(String(data.needed_count || 1));
             if (data.gender_requirement) setGenderReq(data.gender_requirement);
             setSelectedReqs(data.requirements || []);
@@ -105,6 +115,11 @@ export function PostDemandPage() {
       return;
     }
 
+    if (selectedWardCodes.length === 0) {
+      setErrorMsg("Vui lòng chọn ít nhất một khu vực mong muốn.");
+      return;
+    }
+
     if (kind === "RoommateWanted" && (!neededCount || Number(neededCount) < 1)) {
       setErrorMsg("Vui lòng nhập số người cần tìm (ít nhất 1 người).");
       return;
@@ -121,6 +136,8 @@ export function PostDemandPage() {
         contact_name: contactName.trim(),
         contact_phone: contactPhone.trim(),
         desired_districts: selectedDistricts,
+        desired_province_code: provinceCode,
+        desired_ward_codes: selectedWardCodes,
         price_min: minP,
         price_max: maxP,
         ...(kind === "RoomWanted"
@@ -133,7 +150,11 @@ export function PostDemandPage() {
             }
           : {
               current_address: currentAddress.trim(),
-              district,
+              // Phường của chỗ đang ở = khu vực đầu tiên người dùng chọn. Bản
+              // cũ để `district` mặc định là `REGIONS[0]` ("Quận 7") và KHÔNG
+              // có ô nhập nào — nên mọi tin ở ghép đều ghi Quận 7 bất kể thực
+              // tế, chỉ là không ai để ý vì card không hiện field này.
+              district: selectedDistricts[0] ?? null,
               share_price: Number(sharePrice) || 0,
               needed_count: Number(neededCount) || 1,
               gender_requirement: genderReq,
@@ -155,10 +176,24 @@ export function PostDemandPage() {
     }
   };
 
-  const toggleDistrict = (d: string) => {
-    setSelectedDistricts((prev) =>
-      prev.includes(d) ? prev.filter((item) => item !== d) : [...prev, d]
-    );
+  const addArea = () => {
+    if (areaDraft.wardCode == null || !areaDraftName) return;
+    if (selectedWardCodes.includes(areaDraft.wardCode)) return;
+    setSelectedWardCodes((prev) => [...prev, areaDraft.wardCode as number]);
+    setSelectedDistricts((prev) => [...prev, areaDraftName]);
+    // Tỉnh lấy từ lần chọn đầu: một tin nhu cầu nhắm nhiều phường TRONG cùng
+    // một tỉnh. Muốn đổi tỉnh thì xóa hết khu vực đã chọn — trộn phường của hai
+    // tỉnh vào một tin thì bộ lọc theo tỉnh không còn nghĩa gì.
+    setProvinceCode((prev) => prev ?? areaDraft.provinceCode);
+  };
+
+  const removeAreaAt = (index: number) => {
+    setSelectedWardCodes((prev) => prev.filter((_, i) => i !== index));
+    setSelectedDistricts((prev) => {
+      const next = prev.filter((_, i) => i !== index);
+      if (next.length === 0) setProvinceCode(null);
+      return next;
+    });
   };
 
   return (
@@ -255,35 +290,65 @@ export function PostDemandPage() {
 
               <div>
                 <label style={{ display: "block", fontFamily: font, fontSize: 13, fontWeight: 700, color: C.textPrimary, marginBottom: 6 }}>
-                  Khu vực mong muốn (chọn các quận) *
+                  Khu vực mong muốn *
                 </label>
-                <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-                  {REGIONS.map((r) => {
-                    const active = selectedDistricts.includes(r);
-                    return (
-                      <button
-                        type="button"
-                        key={r}
-                        data-testid="demand-district-chip"
-                        data-district={r}
-                        onClick={() => toggleDistrict(r)}
+                {/* Chọn từng phường rồi bấm "Thêm": người tìm trọ thường nhắm
+                    2–3 khu chứ không phải một, mà `AreaSelect` là ô chọn đơn.
+                    Gộp chúng lại ở đây thay vì làm `AreaSelect` hỗ trợ đa chọn —
+                    năm chỗ còn lại đều chỉ cần chọn một. */}
+                <AreaSelect
+                  value={areaDraft}
+                  onChange={(a) => {
+                    setAreaDraft({ provinceCode: a.provinceCode, wardCode: a.wardCode });
+                    setAreaDraftName(a.wardName ?? "");
+                  }}
+                  layout="inline"
+                  labels={false}
+                  testIdPrefix="demand-area"
+                />
+                <button
+                  type="button"
+                  onClick={addArea}
+                  disabled={areaDraft.wardCode == null}
+                  data-testid="demand-area-add"
+                  style={{
+                    marginTop: 8, padding: "7px 14px",
+                    background: areaDraft.wardCode == null ? C.border : C.primary,
+                    color: areaDraft.wardCode == null ? C.textSecondary : C.white,
+                    border: "none", borderRadius: 999,
+                    fontFamily: font, fontSize: 12.5, fontWeight: 700,
+                    cursor: areaDraft.wardCode == null ? "not-allowed" : "pointer",
+                  }}
+                >
+                  + Thêm khu vực
+                </button>
+
+                {selectedDistricts.length > 0 && (
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 10 }}>
+                    {selectedDistricts.map((name, i) => (
+                      <span
+                        key={`${name}-${i}`}
+                        data-testid="demand-area-chip"
                         style={{
-                          padding: "6px 12px",
-                          borderRadius: 999,
-                          border: `1px solid ${active ? C.primary : C.border}`,
-                          background: active ? C.primary : C.white,
-                          color: active ? "white" : C.textPrimary,
-                          fontFamily: font,
-                          fontSize: 12.5,
-                          fontWeight: active ? 700 : 500,
-                          cursor: "pointer",
+                          display: "inline-flex", alignItems: "center", gap: 6,
+                          padding: "6px 10px", borderRadius: 999,
+                          background: C.caramelSoft, border: `1px solid ${C.border}`,
+                          fontFamily: font, fontSize: 12.5, fontWeight: 600, color: C.textPrimary,
                         }}
                       >
-                        {r}
-                      </button>
-                    );
-                  })}
-                </div>
+                        {name}
+                        <button
+                          type="button"
+                          onClick={() => removeAreaAt(i)}
+                          aria-label={`Bỏ ${name}`}
+                          style={{ background: "none", border: "none", cursor: "pointer", padding: 0, lineHeight: 0, color: C.textSecondary }}
+                        >
+                          <X size={13} />
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                )}
               </div>
 
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>

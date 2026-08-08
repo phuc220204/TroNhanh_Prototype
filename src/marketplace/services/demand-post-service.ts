@@ -9,7 +9,12 @@ export interface DemandPostItem {
   description?: string | null;
   contact_name?: string | null;
   contact_phone?: string | null;
+  /** TÊN các phường/xã mong muốn — để hiển thị. */
   desired_districts?: string[] | null;
+  /** Mã tỉnh/thành mong muốn (mô hình 2 cấp từ 01/07/2025) — để LỌC. */
+  desired_province_code?: number | null;
+  /** Mã các phường/xã mong muốn. Rỗng = cả tỉnh. */
+  desired_ward_codes?: number[] | null;
   price_min?: number | null;
   price_max?: number | null;
   status: "Pending" | "Active" | "Rejected" | "Hidden" | "Expired";
@@ -39,7 +44,10 @@ export interface DemandPostItem {
 
 export interface DemandPostFilter {
   kind?: "RoomWanted" | "RoommateWanted" | "all";
-  district?: string;
+  /** Mã tỉnh/thành. `null`/bỏ trống = tất cả. */
+  provinceCode?: number | null;
+  /** Mã phường/xã — khớp khi tin có chứa mã này trong `desired_ward_codes`. */
+  wardCode?: number | null;
   priceMin?: number;
   priceMax?: number;
 }
@@ -73,6 +81,14 @@ export async function listActiveDemandPosts(filter?: DemandPostFilter): Promise<
 
     if (filter?.kind && filter.kind !== "all") {
       q = q.eq("kind", filter.kind);
+    }
+    if (filter?.provinceCode != null) {
+      q = q.eq("desired_province_code", filter.provinceCode);
+    }
+    if (filter?.wardCode != null) {
+      // `contains` vì `desired_ward_codes` là mảng: người tìm trọ có thể nhắm
+      // nhiều phường cùng lúc, và tin khớp khi CHỨA phường đang lọc.
+      q = q.contains("desired_ward_codes", [filter.wardCode]);
     }
     if (filter?.priceMin !== undefined && filter.priceMin > 0) {
       q = q.gte("price_max", filter.priceMin);
@@ -154,6 +170,8 @@ export async function createDemandPost(payload: Partial<DemandPostItem>): Promis
         contact_name: payload.contact_name || null,
         contact_phone: payload.contact_phone || null,
         desired_districts: payload.desired_districts || [],
+        desired_province_code: payload.desired_province_code ?? null,
+        desired_ward_codes: payload.desired_ward_codes || [],
         price_min: payload.price_min || 0,
         price_max: payload.price_max || 0,
         status: "Active", // Auto approved by default configuration

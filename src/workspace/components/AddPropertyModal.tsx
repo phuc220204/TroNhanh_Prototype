@@ -3,7 +3,7 @@ import { C, font, radius } from "../../shared/theme";
 import { ModalShell } from "../../shared/components/common/ModalShell";
 import { Button } from "../../shared/components/common";
 import { Field } from "../../shared/components/common/FormField";
-import { REGIONS } from "../../shared/constants/catalog";
+import { AreaSelect } from "../../shared/components/common";
 import { toUserMessage } from "../../shared/services/supabase-error";
 import { createProperty } from "../services/property-service";
 
@@ -30,7 +30,11 @@ interface AddPropertyModalProps {
 export function AddPropertyModal({ onClose, onCreated }: AddPropertyModalProps) {
   const [name, setName] = useState("");
   const [address, setAddress] = useState("");
-  const [district, setDistrict] = useState<string>(REGIONS[0] ?? "");
+  const [district, setDistrict] = useState<string>("");
+  const [area, setArea] = useState<{ provinceCode: number | null; wardCode: number | null }>({
+    provinceCode: null,
+    wardCode: null,
+  });
   const [submitting, setSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
 
@@ -45,6 +49,8 @@ export function AddPropertyModal({ onClose, onCreated }: AddPropertyModalProps) 
         name,
         address,
         district,
+        provinceCode: area.provinceCode,
+        wardCode: area.wardCode,
       });
       onCreated(id);
     } catch (err: unknown) {
@@ -105,21 +111,16 @@ export function AddPropertyModal({ onClose, onCreated }: AddPropertyModalProps) 
           placeholder="VD: 123 Hoàng Diệu, Phường 9"
         />
 
-        <label style={{ display: "flex", flexDirection: "column", gap: 5 }}>
-          <span style={{ fontFamily: font, fontSize: 13, fontWeight: 700, color: C.textPrimary }}>
-            Khu vực
-          </span>
-          <select
-            value={district}
-            onChange={(e) => setDistrict(e.target.value)}
-            data-testid="add-property-district"
-            style={{ fontFamily: font, fontSize: 14, color: C.textPrimary, border: `1.5px solid ${C.border}`, borderRadius: radius.sm, padding: "10px 13px", width: "100%", background: C.white, outline: "none" }}
-          >
-            {REGIONS.map((r) => (
-              <option key={r} value={r}>{r}</option>
-            ))}
-          </select>
-        </label>
+        {/* Khu vực dùng để ghép nối khu trọ với tin nhu cầu (`scoreDemandMatch`),
+            nên phải lưu MÃ chứ không chỉ tên. */}
+        <AreaSelect
+          value={area}
+          onChange={(a) => {
+            setArea({ provinceCode: a.provinceCode, wardCode: a.wardCode });
+            setDistrict(a.wardName ?? "");
+          }}
+          testIdPrefix="add-property-area"
+        />
       </div>
     </ModalShell>
   );

@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from "react-router";
 import {
   Heart, MapPin, Wifi, Wind, Car, Bath, Clock, Layers,
   Home, Bell, User, X, Star, ArrowLeft, SlidersHorizontal,
-  Map, List, ChevronDown, Search, Check,
+  Map, List, ChevronDown, Search, Check, PawPrint,
 } from "lucide-react";
 import { C, font } from "../../shared/theme";
 import { useBreakpoint } from "../../shared/components/useBreakpoint";
@@ -60,6 +60,7 @@ const AMENITY_META: Record<string, { Icon: React.ElementType; label: string }> =
   bath:    { Icon: Bath,   label: "WC riêng" },
   clock:   { Icon: Clock,  label: "Giờ tự do" },
   loft:    { Icon: Layers, label: "Gác lửng" },
+  pets:    { Icon: PawPrint, label: "Thú cưng" },
 };
 
 const AMENITY_CODE: Record<string, string> = {
