@@ -1,7 +1,8 @@
 # Tài khoản demo — dùng để test
 
 > Đính file này kèm mọi task cần đăng nhập kiểm thử.
-> Trạng thái xác nhận ngày **2026-07-28** bằng truy vấn trực tiếp trên Supabase.
+> Cập nhật **2026-08-08**: thêm §1b (20 tài khoản demo) và sửa mô tả dữ liệu seed
+> ở §1 cho khớp `dbSeeder.ts` thật.
 
 ---
 
@@ -12,12 +13,50 @@ Email confirmation đã **TẮT** → đăng ký/đăng nhập không cần xác
 
 | Email                    | Mật khẩu        | Vai trò            | Dữ liệu đã seed                                                |
 | ------------------------ | --------------- | ------------------ | -------------------------------------------------------------- |
-| `seller.a@tronhanh.demo` | `TroNhanh@2026` | Renter + Seller    | **3 khu · 12 phòng · 18 hóa đơn · 36 chỉ số điện nước** (3 kỳ) |
-| `seller.b@tronhanh.demo` | `TroNhanh@2026` | Renter + Seller    | 3 khu · 12 phòng · 18 hóa đơn · 36 chỉ số                      |
+| `seller.a@tronhanh.demo` | `TroNhanh@2026` | Renter + Seller    | 3 khu · 12 phòng · hóa đơn · chỉ số điện nước · **4 tin, 2 tin đang boost** |
+| `seller.b@tronhanh.demo` | `TroNhanh@2026` | Renter + Seller    | y hệt `seller.a` — seeder chỉ có MỘT kịch bản                  |
 | `renter.a@tronhanh.demo` | `TroNhanh@2026` | Renter             | không có dữ liệu SaaS (đúng thiết kế)                          |
 | `admin@tronhanh.demo`    | `TroNhanh@2026` | **Admin** + Renter | không có dữ liệu SaaS                                          |
 
 > ⚠️ **Đuôi `@tronhanh.demo` là bắt buộc, không đổi.** RPC `demo_link_me_to_seeded_occupancy()` chỉ tác động lên khu trọ mà chủ có email kết thúc `@tronhanh.demo` — đây là ràng buộc phạm vi cố ý để hàm demo không đụng dữ liệu thật.
+
+> ⚠️ **Con số ở cột "Dữ liệu đã seed" từng ghi sai.** File này và
+> `06_QA_CHECKLIST.md` mô tả `seller.b` khác `seller.a` ("1 khu, 3 phòng, 2 tin"),
+> nhưng `dbSeeder.ts` chỉ có **một** kịch bản duy nhất — ai bấm "Khởi tạo dữ liệu
+> mẫu" cũng ra y như nhau. Đã sửa 2026-08-08.
+
+---
+
+## 1b. Hai mươi tài khoản cho marketplace đông người
+
+Dùng khi cần trang công khai trông như đang có người dùng thật, thay vì 4 tài
+khoản demo với vài tin.
+
+**Tạo bằng:** dán nguyên `supabase/seeds/20_demo_users_and_posts.sql` vào
+Supabase SQL Editor rồi Run. Chạy lại nhiều lần an toàn.
+
+| Nhóm | Email | Vai trò | Nội dung |
+|---|---|---|---|
+| `Nguyễn Văn A` → `J` | `nguyen.van.a@tronhanh.demo` … `nguyen.van.j@` | Renter + **Seller** | tổng **15 tin cho thuê** Active |
+| `Trần Thị A` → `J` | `tran.thi.a@tronhanh.demo` … `tran.thi.j@` | Renter | **10 tin nhu cầu** (7 tìm phòng, 3 ở ghép) |
+
+Mật khẩu vẫn là `TroNhanh@2026` cho cả 20.
+
+15 tin được thiết kế phủ **đủ 6 quận, 5 loại hình, cả 4 khoảng giá và cả 7 tiện
+ích** trong `src/shared/constants/catalog.ts`. Lý do: bấm "Dưới 2 triệu" hay
+"Ký túc xá" mà ra danh sách rỗng thì người xem tưởng bộ lọc hỏng, chứ không nghĩ
+là do dữ liệu.
+
+> ⚠️ Nhóm này **không có dữ liệu SaaS** (khu trọ / phòng / hợp đồng / hóa đơn).
+> Họ tồn tại để làm đầy marketplace công khai. Muốn demo module chủ trọ thì vẫn
+> dùng `seller.a`.
+
+> ⚠️ Script ghi thẳng vào `auth.users` (20 lần `signUp` liên tiếp sẽ đụng rate
+> limit của Supabase Auth). Sau khi chạy, **đăng nhập thử một tài khoản** —
+> đếm đúng số dòng chỉ chứng minh có bản ghi, không chứng minh GoTrue chấp nhận
+> mật khẩu.
+
+**Xóa sạch:** snippet nằm ở cuối chính file SQL đó.
 
 ---
 

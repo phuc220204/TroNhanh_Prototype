@@ -25,7 +25,7 @@ Mật khẩu chung: **`TroNhanh@2026`**
 | Account | Vai trò | Tạo bằng | Có dữ liệu gì |
 |---|---|---|---|
 | `seller.a@tronhanh.demo` | Renter + Seller | `/dang-ky` → bấm "Khởi tạo dữ liệu mẫu" ở `DemoBanner` | 3 khu, ~12 phòng, occupancies, contracts, invoices, 6 tin Active |
-| `seller.b@tronhanh.demo` | Renter + Seller | `/dang-ky` + seed | 1 khu, 3 phòng, 2 tin — **tồn tại CHỈ để chứng minh RLS cô lập** |
+| `seller.b@tronhanh.demo` | Renter + Seller | `/dang-ky` + seed | Y HỆT `seller.a` — seeder chỉ có một kịch bản. **Tồn tại CHỈ để chứng minh RLS cô lập**, và phép thử đó chỉ có nghĩa khi CẢ HAI bên đều đã seed |
 | `renter.a@tronhanh.demo` | Renter | `/dang-ky` | 2 demand post; rồi 1 click "Tôi là người ở demo" |
 | `admin@tronhanh.demo` | Admin | `/dang-ky` + **1 snippet SQL** (dưới) | — |
 
