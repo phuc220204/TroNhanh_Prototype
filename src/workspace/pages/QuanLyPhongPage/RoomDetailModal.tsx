@@ -1,7 +1,8 @@
 import { useEffect } from "react";
-import { X } from "lucide-react";
+import { X, Pencil } from "lucide-react";
 import { C, font, radius } from "../../../shared/theme";
 import { useBreakpoint } from "../../../shared/components/useBreakpoint";
+import { Button } from "../../../shared/components/common";
 import type { Room } from "../../types/room";
 import { RoomDetailTabs } from "../../components/RoomDetailTabs";
 
@@ -14,17 +15,19 @@ import { RoomDetailTabs } from "../../components/RoomDetailTabs";
  * cũng scroll ngang, và người dùng đọc dữ liệu vận hành qua một khe hẹp. Modal
  * rộng cho các bảng đó đủ chỗ nằm ngang.
  *
- * Chỉ HIỂN THỊ, không có nút ghi nào — nên không nhận prop gác quyền. (Bản cũ
- * nhận `isReadOnly` mà không dùng tới; một prop gác không gác gì thì tệ hơn là
- * không có, vì lần audit sau sẽ tưởng chỗ này đã an toàn.)
+ * Nội dung bên trong chỉ HIỂN THỊ. Lối vào duy nhất để GHI là nút "Sửa" ở header,
+ * và nó gác qua `requiresWrite` của `Button` (BR-015) — không nhận `isReadOnly`
+ * riêng, vì hai nguồn quyết định quyền ghi thì sẽ có ngày lệch nhau.
  */
 interface RoomDetailModalProps {
   room: Room | null;
   onClose: () => void;
   onOpenActionModal?: (type: any, room: Room) => void;
+  /** Mở form sửa phòng. Không truyền ⇒ không hiện nút (chỗ chỉ để xem). */
+  onEdit?: (room: Room) => void;
 }
 
-export function RoomDetailModal({ room, onClose }: RoomDetailModalProps) {
+export function RoomDetailModal({ room, onClose, onEdit }: RoomDetailModalProps) {
   const { isMobile } = useBreakpoint();
 
   // Esc để đóng: modal chiếm gần hết màn hình nên tìm nút X mất công hơn drawer.
@@ -91,20 +94,35 @@ export function RoomDetailModal({ room, onClose }: RoomDetailModalProps) {
             </p>
           </div>
 
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="Đóng"
-            data-testid="room-detail-close"
-            style={{
-              background: "none", border: "none", cursor: "pointer", padding: 6,
-              borderRadius: radius.sm, display: "flex", alignItems: "center", flexShrink: 0,
-            }}
-            onMouseEnter={(e) => (e.currentTarget.style.background = C.cream)}
-            onMouseLeave={(e) => (e.currentTarget.style.background = "none")}
-          >
-            <X size={20} color={C.textSecondary} />
-          </button>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
+            {onEdit && (
+              <Button
+                variant="outline"
+                size="sm"
+                requiresWrite
+                icon={<Pencil size={14} />}
+                onClick={() => onEdit(room)}
+                data-testid="room-detail-edit-btn"
+              >
+                {isMobile ? "Sửa" : "Sửa phòng"}
+              </Button>
+            )}
+
+            <button
+              type="button"
+              onClick={onClose}
+              aria-label="Đóng"
+              data-testid="room-detail-close"
+              style={{
+                background: "none", border: "none", cursor: "pointer", padding: 6,
+                borderRadius: radius.sm, display: "flex", alignItems: "center", flexShrink: 0,
+              }}
+              onMouseEnter={(e) => (e.currentTarget.style.background = C.cream)}
+              onMouseLeave={(e) => (e.currentTarget.style.background = "none")}
+            >
+              <X size={20} color={C.textSecondary} />
+            </button>
+          </div>
         </div>
 
         <div style={{ flex: 1, overflowY: "auto", padding: isMobile ? 16 : 26 }}>

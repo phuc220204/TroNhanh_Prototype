@@ -21,7 +21,11 @@ import {
   SegmentedBar, RoomTaskBtn, UtilityCard, ListingRow, Footer,
 } from "./atoms";
 import { UtilityModal } from "./UtilityModal";
-import { AddRoomModal } from "./AddRoomModal";
+// Bản dùng chung ở `workspace/components/`, KHÔNG phải bản sao cũ trong thư mục
+// này. Bản cũ gửi `owner_id` từ client (§6.1), `insert` thẳng vào `rooms` từ
+// component thay vì qua service layer, và không có ô đơn giá riêng của phòng —
+// nên tạo phòng từ dashboard là mất luôn tính năng đó.
+import { AddRoomModal } from "../../components/AddRoomModal";
 
 /**
  * Hộp thư hỗ trợ thật của nhóm. Đặt thành hằng số để không rải địa chỉ khắp nơi
@@ -209,7 +213,13 @@ export function ChuTroDashboardPage() {
   const Modals = (
     <>
       {modal === "utility" && <UtilityModal onClose={() => setModal(null)} properties={properties} onSave={loadDashboardData} />}
-      {modal === "room" && <AddRoomModal onClose={() => setModal(null)} properties={properties} onSave={loadDashboardData} />}
+      {modal === "room" && (
+        <AddRoomModal
+          properties={properties.map((p: any) => ({ id: p.id, name: p.name }))}
+          onClose={() => setModal(null)}
+          onCreated={loadDashboardData}
+        />
+      )}
     </>
   );
 

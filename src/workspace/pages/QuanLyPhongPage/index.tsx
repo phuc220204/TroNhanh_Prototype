@@ -19,6 +19,7 @@ import { UtilityReadingForm } from "./UtilityReadingForm";
 import { InvoicePreview } from "./InvoicePreview";
 import { AddRoomModal } from "../../components/AddRoomModal";
 import { AddPropertyModal } from "../../components/AddPropertyModal";
+import { EditRoomModal } from "../../components/EditRoomModal";
 
 const mapDbRoomToRoom = (dbRoom: any): Room => {
   const activeContract = dbRoom.contracts?.find((c: any) => c.status === "Active" || c.status === "active") || dbRoom.contracts?.[0];
@@ -83,6 +84,9 @@ export function QuanLyPhongPage() {
   const [loading, setLoading] = useState(true);
   const [showAddRoom, setShowAddRoom] = useState(false);
   const [showAddProperty, setShowAddProperty] = useState(false);
+  // Giữ ID chứ không giữ cả `Room`: form sửa cần giá trị THÔ, mà `Room` đã format
+  // để hiển thị. `EditRoomModal` tự đọc lại qua `getRoomById()`.
+  const [editRoomId, setEditRoomId] = useState<string | null>(null);
 
   const loadDbData = async () => {
     if (!user) return;
@@ -274,6 +278,25 @@ export function QuanLyPhongPage() {
           room={detailRoom}
           onClose={() => setDetailRoom(null)}
           onOpenActionModal={(type, room) => setActionModal({ type, room })}
+          onEdit={(room) => {
+            // Đóng modal chi tiết trước: hai modal chồng nhau thì Esc đóng nhầm cái
+            // dưới, và người dùng không biết mình đang ở form nào.
+            setDetailRoom(null);
+            setEditRoomId(room.id);
+          }}
+        />
+      )}
+
+      {editRoomId && (
+        <EditRoomModal
+          roomId={editRoomId}
+          propertyPrices={{
+            electricity: selectedProperty?.electricity_unit_price,
+            water: selectedProperty?.water_unit_price,
+            service: selectedProperty?.service_fee,
+          }}
+          onClose={() => setEditRoomId(null)}
+          onUpdated={loadDbData}
         />
       )}
 

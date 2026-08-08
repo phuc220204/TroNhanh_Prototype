@@ -160,6 +160,126 @@ export async function createRoom(input: CreateRoomInput): Promise<string> {
   }
 }
 
+/** Giá trị THÔ của một phòng — dùng để đổ vào form sửa, không phải để hiển thị. */
+export interface RoomEditable {
+  id: string;
+  propertyId: string;
+  roomCode: string;
+  floor: number | null;
+  area: number;
+  price: number;
+  status: RoomStatusDb;
+  description: string;
+  /** `null` = theo giá khu. `0` = miễn phí. Hai ý khác nhau — xem `CreateRoomInput`. */
+  electricityPrice: number | null;
+  waterPrice: number | null;
+  serviceFee: number | null;
+}
+
+/**
+ * Đọc một phòng ở dạng THÔ để đổ vào form sửa.
+ *
+ * Vì sao không dùng lại `Room` của `workspace/types/room.ts`: kiểu đó đã format
+ * để hiển thị (`price: "3.200.000đ"`, `floor: "Tầng 1"`, `area: "25 m²"`). Parse
+ * ngược chuỗi đã format để lấy lại số là cách chắc chắn có ngày sai — chỉ cần
+ * `toLocaleString` đổi dấu phân cách.
+ *
+ * An toàn khi select trực tiếp: policy `rooms` là `for all using (auth.uid() =
+ * owner_id)`, nên phòng của người khác trả về rỗng chứ không lộ dữ liệu.
+ */
+export async function getRoomById(roomId: string): Promise<RoomEditable | null> {
+  if (!roomId) return null;
+  try {
+    const { data, error } = await supabase
+      .from("rooms")
+      .select("id, property_id, room_code, floor, area, price, status, description, electricity_price, water_price, service_fee")
+      .eq("id", roomId)
+      .is("deleted_at", null)
+      .maybeSingle();
+
+    if (error) throw error;
+    if (!data) return null;
+
+    return {
+      id: data.id,
+      propertyId: data.property_id,
+      roomCode: data.room_code,
+      floor: data.floor,
+      area: Number(data.area),
+      price: Number(data.price),
+      status: data.status as RoomStatusDb,
+      description: data.description ?? "",
+      // `?? null` giữ nguyên `0`: khu không thu phí dịch vụ là mức giá hợp lệ.
+      electricityPrice: data.electricity_price ?? null,
+      waterPrice: data.water_price ?? null,
+      serviceFee: data.service_fee ?? null,
+    };
+  } catch (err) {
+    logError("room-service.getRoomById", err);
+    return null;
+  }
+}
+
+export interface UpdateRoomInput {
+  roomId: string;
+  roomCode: string;
+  area: number;
+  price: number;
+  floor?: number;
+  status: RoomStatusDb;
+  description?: string;
+  /**
+   * BẮT BUỘC truyền, kể cả khi là `null` — khác `CreateRoomInput` nơi chúng
+   * optional. Ở luồng sửa, `null` là một ý định thật ("bỏ giá riêng, quay về giá
+   * khu"); nếu để optional thì quên truyền và cố ý xóa giá trông giống hệt nhau.
+   */
+  electricityPrice: number | null;
+  waterPrice: number | null;
+  serviceFee: number | null;
+}
+
+/**
+ * Sửa thông tin một phòng đã tạo.
+ *
+ * ⚠️ Đi qua RPC `update_room`, KHÔNG `.from("rooms").update()`. Đổi `status` sang
+ * `Rented` phải kéo theo tin đăng liên kết (BR-027) — hai bảng, nên phải atomic
+ * (§6). Update thẳng từ client sẽ để tin vẫn rao một phòng đã có người ở, và
+ * không có lỗi nào báo cho ai biết.
+ *
+ * KHÔNG đổi được `property_id`: chuyển phòng sang khu khác kéo theo hóa đơn, hợp
+ * đồng và tin đăng đang trỏ tới — đó là nghiệp vụ riêng, không phải "sửa phòng".
+ *
+ * Domain error: `ROOM_NOT_FOUND` · `ROOM_NOT_OWNED` · `ROOM_CODE_REQUIRED` ·
+ * `INVALID_ROOM_AREA` · `INVALID_ROOM_PRICE` · `INVALID_ROOM_STATUS` ·
+ * `INVALID_UNIT_PRICE`. Trùng mã phòng trong khu → 23505.
+ */
+export async function updateRoom(input: UpdateRoomInput): Promise<void> {
+  try {
+    // Ba đơn giá + `p_floor` + `p_description` nhận `null` hợp lệ, nhưng generated
+    // types khai chúng non-nullable (Supabase chỉ sinh optional cho param có
+    // DEFAULT trong SQL). Cast ở ĐÚNG một chỗ — cùng cách với `linkListingToRoom`
+    // — thay vì bẻ dữ liệu cho vừa type.
+    const args = {
+      p_room_id: input.roomId,
+      p_room_code: input.roomCode.trim(),
+      p_area: input.area,
+      p_price: input.price,
+      p_floor: input.floor ?? null,
+      p_status: input.status,
+      p_description: input.description?.trim() || null,
+      p_electricity_price: input.electricityPrice,
+      p_water_price: input.waterPrice,
+      p_service_fee: input.serviceFee,
+    } as unknown as Parameters<typeof supabase.rpc<"update_room">>[1];
+
+    const { error } = await supabase.rpc("update_room", args);
+    if (error) throw error;
+  } catch (err) {
+    logError("room-service.updateRoom", err);
+    throw err;
+  }
+}
+
 /**
  * Fetch vacant / available rooms for a landlord.
  */

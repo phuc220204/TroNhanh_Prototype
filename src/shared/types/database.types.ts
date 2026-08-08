@@ -912,42 +912,51 @@ export type Database = {
           created_at: string
           deleted_at: string | null
           description: string | null
+          electricity_price: number | null
           floor: number | null
           id: string
           owner_id: string
           price: number
           property_id: string
           room_code: string
+          service_fee: number | null
           status: string
           updated_at: string
+          water_price: number | null
         }
         Insert: {
           area: number
           created_at?: string
           deleted_at?: string | null
           description?: string | null
+          electricity_price?: number | null
           floor?: number | null
           id?: string
           owner_id?: string
           price: number
           property_id: string
           room_code: string
+          service_fee?: number | null
           status: string
           updated_at?: string
+          water_price?: number | null
         }
         Update: {
           area?: number
           created_at?: string
           deleted_at?: string | null
           description?: string | null
+          electricity_price?: number | null
           floor?: number | null
           id?: string
           owner_id?: string
           price?: number
           property_id?: string
           room_code?: string
+          service_fee?: number | null
           status?: string
           updated_at?: string
+          water_price?: number | null
         }
         Relationships: [
           {
@@ -1338,6 +1347,17 @@ export type Database = {
           start_date: string
         }[]
       }
+      get_room_effective_prices: {
+        Args: { p_room_id: string }
+        Returns: {
+          electricity_is_override: boolean
+          electricity_price: number
+          service_fee: number
+          service_is_override: boolean
+          water_is_override: boolean
+          water_price: number
+        }[]
+      }
       grant_role: {
         Args: { p_role: string; p_user_id: string }
         Returns: undefined
@@ -1433,6 +1453,21 @@ export type Database = {
           p_media?: Json
         }
         Returns: string
+      }
+      update_room: {
+        Args: {
+          p_area: number
+          p_description: string
+          p_electricity_price: number
+          p_floor: number
+          p_price: number
+          p_room_code: string
+          p_room_id: string
+          p_service_fee: number
+          p_status: string
+          p_water_price: number
+        }
+        Returns: undefined
       }
     }
     Enums: {

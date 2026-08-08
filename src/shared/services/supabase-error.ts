@@ -39,6 +39,11 @@ const ERROR_MESSAGES: Record<string, string> = {
   ROOM_NOT_FOUND: "Không tìm thấy phòng.",
   ROOM_ALREADY_LISTED:
     "Phòng này đã được gắn với một tin đăng khác đang hiển thị. Hãy ẩn tin đó trước, hoặc chọn phòng khác.",
+  ROOM_CODE_REQUIRED: "Vui lòng nhập mã phòng.",
+  INVALID_ROOM_AREA: "Diện tích phải là số lớn hơn 0.",
+  INVALID_ROOM_PRICE: "Giá thuê phải là số lớn hơn 0.",
+  INVALID_ROOM_STATUS: "Trạng thái phòng không hợp lệ.",
+  INVALID_UNIT_PRICE: "Đơn giá không được là số âm.",
 
   // Hợp đồng & phòng
   ROOM_HAS_ACTIVE_CONTRACT:
