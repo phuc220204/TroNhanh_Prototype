@@ -988,7 +988,11 @@ export function StyleGuidePage() {
             {/* Table */}
             <div>
               <Tag>Table Primitive</Tag>
-              <Table
+              {/* `Record<string, string>` chứ không để suy ra: `renderCell` nhận
+                  `key: string` (nó phải nhận được mọi cột), nên `row[key]` cần
+                  một kiểu index được. Không khai thì noImplicitAny báo lỗi ở
+                  đúng dòng đó. */}
+              <Table<Record<string, string>>
                 columns={[
                   { key: "room", label: "Phòng", width: "30%" },
                   { key: "price", label: "Giá thuê" },

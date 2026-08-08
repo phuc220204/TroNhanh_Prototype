@@ -71,8 +71,11 @@ export function OccupantsView({
     try {
       setLoading(true);
       const roomIds = property.rooms.map((r) => r.id);
+      // `(): OccupancyItem[] => []` chứ không `() => []`: mảng rỗng không có kiểu
+      // phần tử, nên `allResults` sẽ là `any[][]` và `setOccupancies(flattened)`
+      // hết kiểm kiểu — đúng chỗ mà một field đổi tên sẽ trôi qua im lặng.
       const allResults = await Promise.all(
-        roomIds.map((id) => listOccupancies(id).catch(() => []))
+        roomIds.map((id) => listOccupancies(id).catch((): OccupancyItem[] => []))
       );
       const flattened = allResults.flat();
       setOccupancies(flattened);

@@ -39,7 +39,12 @@
     "paths": { "@/*": ["./src/*"] },
 
     "strict": false,
-    "noImplicitAny": false,
+    // NẤC B — bật 2026-08-08 (T31-2). Chỉ có 7 lỗi thật, không phải 150–400 như
+    // dự kiến: phần lớn code đã đi qua service layer có kiểu, và `strictNullChecks`
+    // còn tắt nên nhiều chỗ chưa lộ ra. 7 lỗi đó sửa bằng kiểu THẬT
+    // (`NearbyCategory`, `SearchFilters`, `OccupancyItem`, `Record<string,string>`),
+    // không thêm `: any` nào.
+    "noImplicitAny": true,
     "strictNullChecks": false,
     "noFallthroughCasesInSwitch": true,
     "noImplicitReturns": false,

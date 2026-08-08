@@ -712,7 +712,9 @@ export function SearchResultsPage() {
     const typeParam = params.get("type") || "Tất cả";
     const priceParam = params.get("price") || "";
 
-    const newFilters = {
+    // Khai kiểu tường minh: không có nó thì `amenities: []` suy ra `any[]` và
+    // `SearchFilters.amenities: string[]` không còn được kiểm ở chỗ nào cả.
+    const newFilters: SearchFilters = {
       region: locParam,
       priceLabel: priceParam,
       type: typeParam,

@@ -364,12 +364,16 @@ function NearbySection({ listing }: { listing: any }) {
   
   // KHÔNG fallback sang danh sách mock (PRD AC#1): tin không nhập gì thì khối này
   // hiện trạng thái rỗng, chứ không bịa ra "Vạn Hạnh Mall".
-  const categories = ((metadata.nearby || []) as any[])
-    .map((cat: any) => {
+  //
+  // Bỏ `as any[]`: `metadata.nearby` đã là `NearbyCategory[]` từ
+  // `parseMetadataFromDescription`. Cast đó chỉ làm mất kiểu của `places`, và
+  // khi bật noImplicitAny thì `{ name, dist }` bên dưới thành `any`.
+  const categories = (metadata.nearby || [])
+    .map((cat) => {
       const meta = nearbyCategoryMeta(cat.key);
       return { key: cat.key, Icon: meta.Icon, label: cat.label || meta.label, places: cat.places || [] };
     })
-    .filter((cat: any) => cat.places.length > 0);
+    .filter((cat) => cat.places.length > 0);
 
   // Ưu tiên cột thật; metadata.coords chỉ để đọc tin cũ (trước khi có cột).
   const coords =
@@ -761,12 +765,12 @@ function MobileNearbySection({ listing }: { listing: any }) {
   const { metadata } = parseMetadataFromDescription(listing.description);
 
   // Không fallback mock (PRD AC#1) — xem ghi chú ở NearbySection bản desktop.
-  const categories = ((metadata.nearby || []) as any[])
-    .map((cat: any) => {
+  const categories = (metadata.nearby || [])
+    .map((cat) => {
       const meta = nearbyCategoryMeta(cat.key);
       return { key: cat.key, Icon: meta.Icon, label: cat.label || meta.label, places: cat.places || [] };
     })
-    .filter((cat: any) => cat.places.length > 0);
+    .filter((cat) => cat.places.length > 0);
 
   const coords =
     listing.latitude != null && listing.longitude != null
