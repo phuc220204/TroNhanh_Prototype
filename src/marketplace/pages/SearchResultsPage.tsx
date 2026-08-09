@@ -108,12 +108,10 @@ function getActiveChips(f: SearchFilters): string[] {
 
 function applyFilters(rooms: Room[], f: SearchFilters): Room[] {
   return rooms.filter(r => {
-    if (f.keyword) {
-      const q = f.keyword.toLowerCase();
-      const matchLoc = r.loc.toLowerCase().includes(q);
-      const matchTitle = r.title.toLowerCase().includes(q);
-      if (!matchLoc && !matchTitle) return false;
-    }
+    // CỐ Ý không lọc lại theo `f.keyword` ở đây. `searchListings` đã khớp tiêu
+    // đề + tên phường/xã ở server, kể cả khi người dùng gõ không dấu. Lọc lại
+    // bằng `includes()` trên chuỗi CÓ DẤU sẽ vứt bỏ đúng những tin server vừa
+    // tìm ra — "phường thủ đức" không chứa "thu duc".
     if (f.priceLabel && !matchPrice(r.priceNum, f.priceLabel)) return false;
     if (f.area && !matchArea(r.area, f.area)) return false;
     if (f.type && f.type !== "Tất cả") {

@@ -1,8 +1,13 @@
 import { supabase } from "../../shared/supabaseClient";
 import { logError } from "../../shared/services/supabase-error";
+import { loadVnWards, normalizeVi, searchWards } from "../../shared/utils/vn-regions";
 import { toListingCard, ListingCardItem } from "./listing-mappers";
 
 export interface ListingQueryParams {
+  /**
+   * Từ khóa tự do của ô tìm kiếm. Khớp TIÊU ĐỀ hoặc TÊN PHƯỜNG/XÃ (`district`),
+   * chấp nhận gõ không dấu. Chi tiết ở `buildKeywordFilter`.
+   */
   keyword?: string;
   /**
    * Lọc theo tỉnh/thành (mã Cục Thống kê, mô hình 2 cấp từ 01/07/2025).
@@ -43,6 +48,104 @@ export interface SearchListingsResult {
   page: number;
   pageSize: number;
   totalPages: number;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   Ô TÌM KIẾM TỪ KHÓA
+══════════════════════════════════════════════════════════════════════════ */
+
+/**
+ * Trần số tên phường được nới thêm khi người dùng gõ KHÔNG DẤU. Vượt trần nghĩa
+ * là từ khóa quá mơ hồ để coi là tên địa danh — "thu" khớp hàng chục phường —
+ * nới tiếp chỉ làm loãng kết quả và phình URL PostgREST.
+ */
+const KEYWORD_WARD_EXPANSION_LIMIT = 8;
+
+/**
+ * Bỏ hai ký tự THOÁT ĐƯỢC ra khỏi cặp nháy kép của PostgREST.
+ *
+ * `or=(a.ilike.x,b.ilike.y)` tách các vế bằng dấu phẩy và lồng nhóm bằng ngoặc
+ * đơn, nên từ khóa chứa `,` `(` `)` sẽ cắt biểu thức thành các vế rác: truy vấn
+ * trả 400 và người dùng thấy "0 phòng phù hợp" chứ không thấy lỗi. Cặp nháy kép
+ * vô hiệu hóa những ký tự đó, nhưng chính `"` và `\` thì phá được cặp nháy —
+ * chỉ hai ký tự này phải bỏ hẳn.
+ */
+function sanitizeKeyword(keyword: string): string {
+  return keyword.replace(/["\\]/g, "").trim();
+}
+
+/** Bọc giá trị vào cặp nháy kép của PostgREST (xem `sanitizeKeyword`). */
+function quoteOrValue(value: string): string {
+  return `"${value}"`;
+}
+
+/**
+ * Tên CÓ DẤU của các phường/xã khớp một từ khóa gõ không dấu.
+ *
+ * Dùng lại đúng danh mục và hàm so khớp mà `AreaSelect` dùng — không dựng bảng
+ * chuyển dấu thứ hai để rồi hai chỗ lệch nhau.
+ */
+async function matchingWardNames(
+  keyword: string,
+  provinceCode: number | null | undefined,
+): Promise<string[]> {
+  try {
+    const wards = await loadVnWards();
+    // Lấy dư 1 để nhận ra "khớp quá nhiều" mà không phải duyệt hết 3.321 phần tử.
+    const matched = searchWards(
+      wards,
+      keyword,
+      provinceCode ?? null,
+      KEYWORD_WARD_EXPANSION_LIMIT + 1,
+    );
+    // Trùng tên giữa các tỉnh là chuyện thường ("Phường 1" có ở rất nhiều nơi);
+    // điều kiện tìm là so chuỗi nên mỗi TÊN chỉ cần một lần.
+    const names = [...new Set(matched.map((w) => w.name))];
+    return names.length > KEYWORD_WARD_EXPANSION_LIMIT ? [] : names;
+  } catch (err) {
+    // Danh mục chỉ là phần NỚI THÊM: tải hỏng thì vẫn tìm theo chuỗi thô, không
+    // để cả ô tìm kiếm chết theo.
+    logError("listing-queries.matchingWardNames", err);
+    return [];
+  }
+}
+
+/**
+ * Điều kiện `or` cho ô từ khóa: khớp TIÊU ĐỀ **hoặc** TÊN PHƯỜNG/XÃ.
+ *
+ * Trước đây chỉ `ilike` trên `title`, nên gõ đúng "Phường Thủ Đức" — chuỗi đang
+ * hiện trên chính cái card — lại ra 0 kết quả, trái với lời hứa "Tìm khu vực,
+ * phường, tên trường..." ngay trên ô tìm kiếm.
+ *
+ * `district` là TÊN HIỂN THỊ của phường/xã tại thời điểm đăng tin (migration
+ * `20260809100000`), tức đúng cột chứa địa danh mà người dùng gõ.
+ *
+ * Gõ KHÔNG DẤU ("thu duc") thì `ilike` bó tay: project này không bật extension
+ * `unaccent` (xem `20260725100200` và `20260731100000`). Thay vì so khớp không
+ * dấu ở DB, tra ngược từ khóa trong danh mục phường/xã rồi nới điều kiện bằng
+ * đúng tên CÓ DẤU của những phường khớp.
+ */
+async function buildKeywordFilter(
+  keyword: string,
+  provinceCode: number | null | undefined,
+): Promise<string | null> {
+  const cleaned = sanitizeKeyword(keyword);
+  if (!cleaned) return null;
+
+  const clauses = new Set<string>();
+  const raw = quoteOrValue(`%${cleaned}%`);
+  clauses.add(`title.ilike.${raw}`);
+  clauses.add(`district.ilike.${raw}`);
+
+  // Chỉ tra danh mục khi từ khóa không có dấu: gõ có dấu thì `ilike` đã khớp
+  // thẳng, tra thêm chỉ tốn một chunk 117KB mà không đổi kết quả.
+  if (normalizeVi(cleaned) === cleaned.toLowerCase()) {
+    for (const name of await matchingWardNames(cleaned, provinceCode)) {
+      clauses.add(`district.ilike.${quoteOrValue(`%${name}%`)}`);
+    }
+  }
+
+  return [...clauses].join(",");
 }
 
 /**
@@ -86,8 +189,9 @@ export async function searchListings(params: ListingQueryParams = {}): Promise<S
     if (params.areaMax != null) {
       q = q.lte("area", params.areaMax);
     }
-    if (params.keyword && params.keyword.trim()) {
-      q = q.ilike("title", `%${params.keyword.trim()}%`);
+    if (params.keyword) {
+      const keywordFilter = await buildKeywordFilter(params.keyword, params.provinceCode);
+      if (keywordFilter) q = q.or(keywordFilter);
     }
     if (params.propertyTypes && params.propertyTypes.length > 0) {
       q = q.in("property_type", params.propertyTypes);

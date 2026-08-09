@@ -22,7 +22,10 @@ export const router = createHashRouter([
       { path: "dang-ky", lazy: async () => ({ Component: (await import("../marketplace/pages/RegisterPage")).RegisterPage }) },
 
       // Redirects for backward compatibility & aliases
-      { path: "search", loader: () => redirect("/tim-phong") },
+      // Giữ nguyên query string: ô tìm kiếm ở Trang chủ điều hướng tới
+      // `/search?loc=…&type=…&price=…`, redirect trơ tới "/tim-phong" làm rơi
+      // sạch từ khóa lẫn bộ lọc người dùng vừa nhập.
+      { path: "search", loader: ({ request }) => redirect(`/tim-phong${new URL(request.url).search}`) },
       { path: "listings", loader: () => redirect("/tat-ca-phong") },
       { path: "room/:id", loader: ({ params }) => redirect(`/phong/${params.id}`) },
       { path: "dang-tin", loader: () => redirect("/dang-tin-cho-thue") },

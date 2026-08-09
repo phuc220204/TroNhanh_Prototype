@@ -224,7 +224,7 @@ export function PublicNavbarDesktop({
               onSearchChange?.(e.target.value);
             }}
             onKeyDown={e => e.key === "Enter" && goSearch()}
-            placeholder="Tìm khu vực, quận, tên trường..."
+            placeholder="Tìm khu vực, phường, tên trường..."
             onClick={e => e.stopPropagation()}
             style={{
               flex: 1, border: "none", outline: "none", background: "transparent",
