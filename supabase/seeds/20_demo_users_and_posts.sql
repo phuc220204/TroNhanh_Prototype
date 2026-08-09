@@ -6,6 +6,14 @@
 --
 -- ⚠️ DEMO-ONLY. Xóa trước production — snippet dọn ở cuối file.
 --
+-- ⚠️ ĐÃ CHẠY FILE NÀY BẢN CŨ RỒI? Chạy lại KHÔNG có tác dụng.
+-- Mọi `insert` dưới đây đều có chốt `where not exists (... title = d.title ...)`,
+-- mà tiêu đề không đổi giữa các bản — nên lần chạy thứ hai bỏ qua hết và các
+-- dòng cũ vẫn giữ `ward_code` NULL. Chạy xong thấy "thành công" mà không có gì
+-- thay đổi.
+-- Muốn cập nhật dữ liệu đã seed: dùng `backfill_area_codes.sql` (vá tại chỗ,
+-- giữ nguyên tài khoản), hoặc xóa bằng snippet cuối file rồi chạy lại file này.
+--
 -- ── VÌ SAO LÀ SQL CHỨ KHÔNG PHẢI `dbSeeder.ts` ─────────────────────────────
 -- `dbSeeder` chạy trong trình duyệt bằng phiên của NGƯỜI ĐANG ĐĂNG NHẬP, nên
 -- nó chỉ tạo được dữ liệu cho chính người đó. Muốn 20 tài khoản KHÁC NHAU thì
