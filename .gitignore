@@ -1,6 +1,11 @@
 node_modules
 .env
 
+# Bản build — Vercel tự chạy `pnpm build` từ source (xem vercel.json), nên thư mục
+# này không cần có trong repo. Trước 2026-08-09 nó bị track và làm bẩn
+# `git status` sau mỗi lần build.
+/dist/
+
 # Playwright — sinh ra mỗi lần chạy test, không commit
 /test-results/
 /playwright-report/
