@@ -19,13 +19,23 @@ function clearDemoAuth() {
   } catch { /* storage unavailable — ignore */ }
 }
 
+// Khu vực chủ trọ giờ CHỈ còn phần vận hành. "Quản lý tin đăng" đã chuyển sang
+// `/tai-khoan/tin-cho-thue`: đăng tin là việc miễn phí ai cũng làm được, để nó
+// ở đây khiến người chỉ muốn đăng một tin phải đi vào khu vực SaaS và nhìn một
+// sidebar toàn mục bị khóa kèm lời mời mua gói.
+// Nhóm 1 KHÔNG còn là "tính năng miễn phí trong khu chủ trọ" nữa — nó là hai
+// LỐI TẮT ra ngoài khu vực này. Cả hai đều nằm ở `/tai-khoan/*` và `/tin-nhan`,
+// dùng được không cần gói.
 const NAV_FREE: { id: LandlordNavId | "messages"; icon: typeof LayoutGrid; label: string; to?: string }[] = [
-  { id: "overview", icon: LayoutGrid, label: "Tổng quan", to: "/chu-tro" },
-  { id: "listings", icon: FileText, label: "Quản lý tin đăng", to: "/chu-tro/tin-dang" },
+  { id: "listings", icon: FileText, label: "Tin đăng của tôi", to: "/tai-khoan/tin-cho-thue" },
   { id: "messages", icon: MessageSquare, label: "Tin nhắn in-app", to: "/tin-nhan" },
 ];
 
+// "Tổng quan" chuyển xuống đây: sau khi quản lý tin đăng dọn sang khu tài
+// khoản, dashboard chỉ còn số liệu vận hành — nó là SaaS, và bị khóa cùng nhóm.
+// Để nó ở nhóm "miễn phí" là nói dối người dùng về thứ họ bấm được.
 const NAV_SAAS: { id: LandlordNavId; icon: typeof LayoutGrid; label: string; to?: string }[] = [
+  { id: "overview", icon: LayoutGrid, label: "Tổng quan", to: "/chu-tro" },
   { id: "rooms", icon: Building2, label: "Khu trọ & Phòng", to: "/chu-tro/quan-ly-phong?tab=rooms" },
   { id: "occupants", icon: Users, label: "Người ở & Hợp đồng", to: "/chu-tro/quan-ly-phong?tab=occupants" },
   { id: "payments", icon: Wallet, label: "Hóa đơn & Thanh toán", to: "/chu-tro/quan-ly-phong?tab=payments" },
@@ -62,8 +72,8 @@ export function Sidebar({ active, onSaaSAccess }: { active: LandlordNavId; onSaa
       </div>
 
       <nav style={{ flex: 1, padding: "14px 12px", display: "flex", flexDirection: "column", gap: 3, overflowY: "auto" }}>
-        {/* Nhóm 1: Miễn phí */}
-        <p style={{ fontFamily: font, fontSize: 11, fontWeight: 700, color: C.textSecondary, textTransform: "uppercase", letterSpacing: "0.05em", margin: "6px 12px 6px" }}>Tin đăng (Miễn phí)</p>
+        {/* Nhóm 1: lối tắt ra khu vực tài khoản (miễn phí) */}
+        <p style={{ fontFamily: font, fontSize: 11, fontWeight: 700, color: C.textSecondary, textTransform: "uppercase", letterSpacing: "0.05em", margin: "6px 12px 6px" }}>Lối tắt (Miễn phí)</p>
         {NAV_FREE.map(({ id, icon: Icon, label, to }) => {
           const isActive = id === active;
           return (
@@ -203,12 +213,15 @@ function AccountSheet({ open, onClose, onNavigate, onLogout }: {
   const { user, profile } = useAuth();
   const displayName = profile?.full_name || user?.email?.split("@")[0] || "Chủ trọ";
   if (!open) return null;
+  // Ba mục "Hồ sơ" / "Tin nhắn" / "Cài đặt" trước đây gán `action: onClose` —
+  // bấm chỉ đóng sheet chứ không đi đâu. Cả ba đều đã có trang thật.
   const items: { Icon: typeof User; label: string; action: () => void }[] = [
-    { Icon: User, label: "Hồ sơ", action: onClose },
-    { Icon: MessageSquare, label: "Tin nhắn", action: onClose },
+    { Icon: User, label: "Hồ sơ", action: () => onNavigate("/tai-khoan") },
+    { Icon: FileText, label: "Tin đăng của tôi", action: () => onNavigate("/tai-khoan/tin-cho-thue") },
+    { Icon: MessageSquare, label: "Tin nhắn", action: () => onNavigate("/tin-nhan") },
     { Icon: LayoutGrid, label: "Dashboard chủ trọ", action: () => onNavigate("/chu-tro") },
     { Icon: Search, label: "Về trang tìm phòng", action: () => onNavigate("/") },
-    { Icon: Settings, label: "Cài đặt", action: onClose },
+    { Icon: Settings, label: "Cài đặt", action: () => onNavigate("/tai-khoan/cai-dat") },
   ];
   return (
     <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(42,26,12,0.5)", zIndex: 300, display: "flex", alignItems: "flex-end" }}>

@@ -92,12 +92,12 @@ Mỗi luồng ghi rõ **điều kiện FAIL**. Nếu gặp điều kiện fail, 
 
 ### Luồng 1 — Đăng tin cho thuê
 
-Login `seller.a` → `/chu-tro/dang-tin`
+Login `seller.a` → `/dang-tin-cho-thue`
 1. **Bước 1:** tiêu đề, Phòng trọ, địa chỉ, Quận 7, 25 m², 3.500.000, SĐT
 2. **Bước 2:** Wifi + Máy lạnh + WC riêng, mô tả, thêm 2 địa điểm gần
 3. **Bước 3:** **upload 4 ảnh thật** → xem progress → xóa 1 → đổi thứ tự
 4. **Bước 4:** điện/nước/dịch vụ/cọc, chọn Boost 7 ngày, thanh toán **(giả lập)**
-5. Submit → màn thành công → `/chu-tro/tin-dang`: row tồn tại, badge trạng thái đúng
+5. Submit → màn thành công → `/tai-khoan/tin-cho-thue`: row tồn tại, badge trạng thái đúng
 6. `/tat-ca-phong`: **ảnh vừa upload (không phải ảnh stock)** hiện trên card, có badge ★ Nổi bật, nằm **trên** các tin không boost
 7. `/phong/:id`: gallery = 3 ảnh còn lại; bảng chi phí khớp **chính xác** Bước 4
 8. Incognito: SĐT che `0901****567`; đăng nhập lại: SĐT đầy đủ (BR-014)
@@ -132,7 +132,7 @@ Rồi login `seller.a` → `/chu-tro/danh-gia` → phản hồi → reply hiện
 *Negative (bắt buộc kiểm):* account mới toanh → nút "Đánh giá khu" **không hiện / disabled** kèm "chưa đủ điều kiện", **không bao giờ** hiện form rồi báo lỗi sau submit · `seller.a` **không** review được khu của mình (BR-030) · sửa review ở ngày thứ 8 bị từ chối (BR-023) · review chỉ hiện công khai khi khu bật `is_public_profile_enabled` (BR-024).
 
 **4b · Kiểm duyệt**
-Login `admin` → `/quan-tri/cai-dat` → chuyển kiểm duyệt sang **Thủ công** → login `seller.a` → đăng 1 tin → tin **không** hiện ở `/tat-ca-phong`, `/chu-tro/tin-dang` hiện "Chờ duyệt" → login `admin` → `/quan-tri/kiem-duyet-tin` → thử **Reject với lý do rỗng → bị chặn** → Reject có lý do → seller thấy "Bị từ chối" + lý do + nút "Sửa & gửi lại" → sửa & gửi lại → Approve → giờ hiện ở `/tat-ca-phong`.
+Login `admin` → `/quan-tri/cai-dat` → chuyển kiểm duyệt sang **Thủ công** → login `seller.a` → đăng 1 tin → tin **không** hiện ở `/tat-ca-phong`, `/tai-khoan/tin-cho-thue` hiện "Chờ duyệt" → login `admin` → `/quan-tri/kiem-duyet-tin` → thử **Reject với lý do rỗng → bị chặn** → Reject có lý do → seller thấy "Bị từ chối" + lý do + nút "Sửa & gửi lại" → sửa & gửi lại → Approve → giờ hiện ở `/tat-ca-phong`.
 Kiểm `moderation_logs` có **2 row**.
 
 *Negative:* login `renter.a`, tự gõ `/quan-tri/kiem-duyet-tin` → màn **403** (không phải redirect về login).
@@ -153,7 +153,7 @@ Login `seller.a` → `/chu-tro/quan-ly-phong`
 8. **"Đã thu"** → trạng thái Paid, KPI dashboard cập nhật
 9. Đổi toggle demo sang **READ_ONLY** → **mọi** nút tạo/sửa disabled, dữ liệu **vẫn xem được** (BR-015)
 10. Dashboard: "Phòng trống" luôn hiện; "Tổng phòng"/"Đang thuê" **mặc định ẩn**, bật được (BR-012)
-11. Login `seller.b` → `/chu-tro/quan-ly-phong` **không thấy khu nào của A**; `/chu-tro/dang-tin/<id tin của A>` → "Không tìm thấy tin" (BR-007)
+11. Login `seller.b` → `/chu-tro/quan-ly-phong` **không thấy khu nào của A**; `/dang-tin-cho-thue/<id tin của A>` → "Không tìm thấy tin" (BR-007)
 
 > **FAIL nếu:** ẩn tin báo lỗi (bug `Inactive`) · đổi trạng thái phòng báo lỗi (bug `Repairing`) · chỉ số kỳ trước là 0 khi đã có kỳ trước · tổng hóa đơn ≠ Σ items · `seller.b` thấy bất cứ gì của `seller.a`.
 

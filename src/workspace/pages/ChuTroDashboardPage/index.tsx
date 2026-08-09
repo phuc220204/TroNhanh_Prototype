@@ -64,8 +64,8 @@ export function ChuTroDashboardPage() {
     }
     navigate("/chu-tro/quan-ly-phong");
   };
-  const toListings = () => navigate("/chu-tro/tin-dang");
-  const toPost = () => navigate("/chu-tro/dang-tin");
+  const toListings = () => navigate("/tai-khoan/tin-cho-thue");
+  const toPost = () => navigate("/dang-tin-cho-thue");
 
   const [dbKpis, setDbKpis] = useState<DashboardKPIs | null>(null);
 

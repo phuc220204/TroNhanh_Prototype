@@ -17,7 +17,7 @@ import type { PhotoFileItem } from "./Step3Photos";
  * Gói đẩy tin mặc định khi người dùng bật boost ngay lúc đăng tin.
  * Phải là một giá trị có trong `platform_settings.boost_config.days`
  * (hiện là 7 / 15 / 30), nếu không RPC raise `INVALID_BOOST_PACKAGE`.
- * Muốn chọn gói khác thì dùng nút "Đẩy tin" ở `/chu-tro/tin-dang`.
+ * Muốn chọn gói khác thì dùng nút "Đẩy tin" ở `/tai-khoan/tin-cho-thue`.
  */
 const DEFAULT_BOOST_DAYS = 7;
 

@@ -422,7 +422,7 @@ Dùng **bảng Assumptions chuẩn duy nhất AS-001 → AS-020 ở file 02 Mụ
 
 #### UC-009 — Đăng tin cho thuê (kích hoạt Seller lần đầu)
 - **Actor:** Renter hoặc Seller. **Pre:** **đã đăng nhập** (không yêu cầu sẵn role Seller).
-- **Main:** 1. Bấm "Đăng tin → Tin cho thuê" → `/chu-tro/dang-tin` (zone Tin đăng, miễn phí). 2. Điền form nhiều bước; nếu Seller có Property → bước tùy chọn chọn khu (gắn `propertyId`). 3. Lưu bản ghi đầu tiên (kể cả Draft) → **hệ thống gán role Seller cùng transaction (FR-006)** → FE gọi `POST /auth/refresh` (FR-004). 4. Gửi duyệt → lọc từ khóa cấm → PendingApproval → Moderator xử lý → Active (expireAt = approvedAt + 60 ngày, BR-026) / Rejected (lý do) → Notification.
+- **Main:** 1. Bấm "Đăng tin → Tin cho thuê" → `/dang-tin-cho-thue` (zone Tin đăng, miễn phí). 2. Điền form nhiều bước; nếu Seller có Property → bước tùy chọn chọn khu (gắn `propertyId`). 3. Lưu bản ghi đầu tiên (kể cả Draft) → **hệ thống gán role Seller cùng transaction (FR-006)** → FE gọi `POST /auth/refresh` (FR-004). 4. Gửi duyệt → lọc từ khóa cấm → PendingApproval → Moderator xử lý → Active (expireAt = approvedAt + 60 ngày, BR-026) / Rejected (lý do) → Notification.
 - **Alt:** 4a. Rejected → sửa, gửi lại. 5a. Boost → UC-024. **Exc:** 2a. `propertyId` không thuộc seller → 422.
 
 #### UC-010 — Quản lý khu trọ + thông tin nhận tiền

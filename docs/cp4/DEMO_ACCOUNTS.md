@@ -102,7 +102,7 @@ là do dữ liệu.
 | --------------------------------------------------------------------------------- | --------------------------------------------------- |
 | `/` · `/tat-ca-phong` · `/tim-phong` · `/phong/:id`                               | không                                               |
 | `/dang-nhap` · `/dang-ky`                                                         | không                                               |
-| `/chu-tro` · `/chu-tro/quan-ly-phong` · `/chu-tro/tin-dang` · `/chu-tro/dang-tin` | có                                                  |
+| `/chu-tro` · `/chu-tro/quan-ly-phong` · `/tai-khoan/tin-cho-thue` · `/dang-tin-cho-thue` | có                                                  |
 | `/quan-tri/*`                                                                     | **Admin/Moderator** — user thường phải thấy màn 403 |
 | `/styleguide`                                                                     | không                                               |
 

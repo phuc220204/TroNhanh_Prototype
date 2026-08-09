@@ -140,7 +140,7 @@ export function DangTinPage() {
             </p>
             <button
               type="button"
-              onClick={() => navigate("/chu-tro/tin-dang")}
+              onClick={() => navigate("/tai-khoan/tin-cho-thue")}
               style={{ padding: "12px 24px", background: C.primary, color: "white", border: "none", borderRadius: 12, fontFamily: font, fontSize: 14, fontWeight: 700, cursor: "pointer" }}
             >
               Quản lý tin đăng
@@ -184,7 +184,7 @@ export function DangTinPage() {
             <div style={{ display: "flex", gap: 12, justifyContent: "center" }}>
               <button
                 type="button"
-                onClick={() => navigate("/chu-tro/tin-dang")}
+                onClick={() => navigate("/tai-khoan/tin-cho-thue")}
                 style={{ padding: "12px 24px", background: C.primary, color: "white", border: "none", borderRadius: 12, fontFamily: font, fontSize: 14, fontWeight: 700, cursor: "pointer" }}
               >
                 Quản lý tin đăng

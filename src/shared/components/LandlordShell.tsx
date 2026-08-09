@@ -88,7 +88,12 @@ export function LandlordShell({
     return child;
   });
 
-  const isSaaSTab = ["rooms", "occupants", "payments", "settings"].includes(activeTab);
+  // "overview" nằm trong danh sách từ 2026-08-09: sau khi "Quản lý tin đăng"
+  // chuyển sang `/tai-khoan/tin-cho-thue`, khu vực `/chu-tro/*` KHÔNG còn tính
+  // năng miễn phí nào — nó thuần là module SaaS. Để dashboard mở tự do thì
+  // người chưa có gói vào chỉ thấy một trang số liệu rỗng, không hiểu vì sao;
+  // màn khóa dưới đây giải thích và mời dùng thử.
+  const isSaaSTab = ["overview", "rooms", "occupants", "payments", "settings"].includes(activeTab);
   const isSaaSBlocked = subStatus === "NONE" && isSaaSTab;
 
   const renderContent = () => {

@@ -7,7 +7,10 @@ import {
 } from "lucide-react";
 import { C, font } from "../../../shared/theme";
 import { useBreakpoint } from "../../../shared/components/useBreakpoint";
-import { LandlordShell, LandlordBreadcrumb } from "../../../shared/components/LandlordShell";
+// Trang này thuộc marketplace (§2.4 — nó chạy 100% trên `rental_listings`) và
+// từ 2026-08-09 nằm trong khu vực TÀI KHOẢN, không phải "Dashboard chủ trọ".
+// Đăng tin là việc miễn phí ai cũng làm được; `/chu-tro/*` là module SaaS trả phí.
+import { RenterShell } from "../../../shared/components/RenterShell";
 import { useAuth } from "../../../shared/contexts/AuthContext";
 import { supabase } from "../../../shared/supabaseClient";
 import { DemoFAB } from "../../../shared/components/PublicNavbar";
@@ -213,7 +216,7 @@ export function QuanLyPage() {
     }
   };
 
-  const toPost = () => navigate("/chu-tro/dang-tin");
+  const toPost = () => navigate("/dang-tin-cho-thue");
   
   const resetFilters = () => {
     setSearch("");
@@ -308,9 +311,8 @@ export function QuanLyPage() {
   }, [search, filter, selDistrict, priceMin, priceMax, areaMin, areaMax, pageSize]);
 
   return (
-    <LandlordShell active="listings" mobileTitle="Tin đăng">
-      <div style={{ padding: isMobile ? "16px 16px 100px" : "28px 32px 60px", maxWidth: 1550, margin: "0 auto", width: "100%", boxSizing: "border-box" }}>
-        <LandlordBreadcrumb trail={isMobile ? ["Dashboard", "Tin đăng"] : ["Dashboard chủ trọ", "Tin đăng"]} />
+    <RenterShell active="listings">
+      <div style={{ boxSizing: "border-box" }}>
 
         <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 16, marginBottom: 24, flexWrap: "wrap" }}>
           <div>
@@ -593,7 +595,7 @@ export function QuanLyPage() {
       />
       <Toast show={toast} message={toastMsg} />
       <DemoFAB />
-    </LandlordShell>
+    </RenterShell>
   );
 }
 

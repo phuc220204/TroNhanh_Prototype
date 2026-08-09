@@ -951,7 +951,7 @@ export function HomePage() {
   const onSearch = () => navigate("/tim-phong");
   const onRoomClick = (id: string) => navigate(`/phong/${id}`);
   const onViewAll = () => navigate("/tat-ca-phong");
-  const onLandlordPost = () => navigate("/chu-tro/dang-tin");
+  const onLandlordPost = () => navigate("/dang-tin-cho-thue");
   const { isMobile, isTablet } = useBreakpoint();
   const [infoModal, setInfoModal] = useState<HomeModalContent>(null);
   const [postTypeModal, setPostTypeModal] = useState(false);

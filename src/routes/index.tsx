@@ -25,7 +25,7 @@ export const router = createHashRouter([
       { path: "search", loader: () => redirect("/tim-phong") },
       { path: "listings", loader: () => redirect("/tat-ca-phong") },
       { path: "room/:id", loader: ({ params }) => redirect(`/phong/${params.id}`) },
-      { path: "dang-tin", loader: () => redirect("/chu-tro/dang-tin") },
+      { path: "dang-tin", loader: () => redirect("/dang-tin-cho-thue") },
       { path: "danh-gia", loader: () => redirect("/tai-khoan/danh-gia") },
       { path: "admin", loader: () => redirect("/quan-tri") },
 
@@ -37,24 +37,42 @@ export const router = createHashRouter([
           { path: "tin-nhan", lazy: async () => ({ Component: (await import("../shared/pages/InboxPage")).InboxPage }) },
           { path: "tin-nhan/:conversationId", lazy: async () => ({ Component: (await import("../shared/pages/InboxPage")).InboxPage }) },
 
-          // Renter Account Routes
+          // ── KHU VỰC TÀI KHOẢN (miễn phí, mọi người đăng nhập) ──────────────
+          //
+          // Đăng tin và quản lý tin nằm ở ĐÂY, không phải trong `/chu-tro/*`.
+          // Đăng tin là việc ai cũng làm được; `/chu-tro/*` là module SaaS trả
+          // phí. Trước đây gộp chung nên URL nói "chủ trọ" mà quyền truy cập
+          // lại mở cho tất cả — xem ghi chú ở `RenterShell`.
           { path: "tai-khoan", lazy: async () => ({ Component: (await import("../shared/pages/AccountPage")).AccountPage }) },
+          { path: "tai-khoan/cai-dat", lazy: async () => ({ Component: (await import("../shared/pages/AccountPage")).AccountSettingsPage }) },
+          { path: "tai-khoan/tin-cho-thue", lazy: async () => ({ Component: (await import("../marketplace/pages/QuanLyPage")).QuanLyPage }) },
+          { path: "tai-khoan/tin-nhu-cau", lazy: async () => ({ Component: (await import("../marketplace/pages/MyDemandPostsPage")).MyDemandPostsPage }) },
           { path: "tai-khoan/phong-cua-toi", lazy: async () => ({ Component: (await import("../marketplace/pages/MyStaysPage")).MyStaysPage }) },
           { path: "tai-khoan/danh-gia", lazy: async () => ({ Component: (await import("../marketplace/pages/MyReviewsPage")).MyReviewsPage }) },
-          { path: "tai-khoan/hop-dong", lazy: async () => ({ Component: (await import("../shared/pages/AccountPage")).AccountContractsPage }) },
-          { path: "tai-khoan/cai-dat", lazy: async () => ({ Component: (await import("../shared/pages/AccountPage")).AccountSettingsPage }) },
-          { path: "tai-khoan/tin-nhu-cau", lazy: async () => ({ Component: (await import("../marketplace/pages/MyDemandPostsPage")).MyDemandPostsPage }) },
 
           // Tin đã lưu / yêu thích — MỘT trang cho cả hai nhãn.
           { path: "yeu-thich", lazy: async () => ({ Component: (await import("../marketplace/pages/SavedListingsPage")).SavedListingsPage }) },
           { path: "tai-khoan/tin-da-luu", loader: () => redirect("/yeu-thich") },
 
-          // Landlord SaaS Workspace Routes
+          // Đăng tin cho thuê — công khai với mọi tài khoản, không nằm dưới
+          // tiền tố `/chu-tro`.
+          { path: "dang-tin-cho-thue", lazy: async () => ({ Component: (await import("../marketplace/pages/DangTinPage")).DangTinPage }) },
+          { path: "dang-tin-cho-thue/:id", lazy: async () => ({ Component: (await import("../marketplace/pages/DangTinPage")).DangTinPage }) },
+
+          // ── URL CŨ → MỚI ───────────────────────────────────────────────────
+          // Giữ redirect vì người dùng đã bookmark, và tài liệu CP4 còn trỏ vào
+          // đường cũ. Xóa được sau khi docs cập nhật hết.
+          { path: "chu-tro/tin-dang", loader: () => redirect("/tai-khoan/tin-cho-thue") },
+          { path: "chu-tro/quan-ly", loader: () => redirect("/tai-khoan/tin-cho-thue") },
+          { path: "chu-tro/dang-tin", loader: () => redirect("/dang-tin-cho-thue") },
+          { path: "chu-tro/dang-tin/:id", loader: ({ params }) => redirect(`/dang-tin-cho-thue/${params.id}`) },
+          { path: "tai-khoan/hop-dong", loader: () => redirect("/tai-khoan/phong-cua-toi") },
+
+          // ── KHU VỰC CHỦ TRỌ (SaaS vận hành) ────────────────────────────────
+          // Gác bằng TRẠNG THÁI GÓI, không phải role: role `Seller` được RPC tự
+          // cấp ngay lần đăng tin đầu tiên nên nó chỉ có nghĩa "đã từng đăng
+          // tin", không phải "là chủ trọ vận hành".
           { path: "chu-tro", lazy: async () => ({ Component: (await import("../workspace/pages/ChuTroDashboardPage")).ChuTroDashboardPage }) },
-          { path: "chu-tro/tin-dang", lazy: async () => ({ Component: (await import("../marketplace/pages/QuanLyPage")).QuanLyPage }) },
-          { path: "chu-tro/quan-ly", loader: () => redirect("/chu-tro/tin-dang") },
-          { path: "chu-tro/dang-tin", lazy: async () => ({ Component: (await import("../marketplace/pages/DangTinPage")).DangTinPage }) },
-          { path: "chu-tro/dang-tin/:id", lazy: async () => ({ Component: (await import("../marketplace/pages/DangTinPage")).DangTinPage }) },
           { path: "chu-tro/quan-ly-phong", lazy: async () => ({ Component: (await import("../workspace/pages/QuanLyPhongPage")).QuanLyPhongPage }) },
           { path: "chu-tro/tim-nguoi-thue", lazy: async () => ({ Component: (await import("../marketplace/pages/FindRenterPage")).FindRenterPage }) },
           { path: "chu-tro/danh-gia", lazy: async () => ({ Component: (await import("../marketplace/pages/LandlordReviewsPage")).LandlordReviewsPage }) },

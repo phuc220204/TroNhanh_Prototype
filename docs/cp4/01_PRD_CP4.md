@@ -80,7 +80,7 @@ Hiện `listingMetadata.ts` **JSON-serialize chi phí / giờ giấc / địa đ
 → Promote thành cột thật: `electricity_price`, `water_price`, `water_unit`, `service_price`, `deposit`, `access_policy`, `access_open_time`, `access_close_time`, `latitude`, `longitude`. `metadata jsonb` **chỉ giữ `nearby`** (thật sự phi cấu trúc, không bao giờ filter).
 
 ### 2.3 Sửa tin đăng (T20)
-Route `/chu-tro/dang-tin/:id`, dùng lại stepper ở edit mode. Thay 2 `alert("[Demo]")` ở `QuanLyPage.tsx:745,826`.
+Route `/dang-tin-cho-thue/:id`, dùng lại stepper ở edit mode. Thay 2 `alert("[Demo]")` ở `QuanLyPage.tsx:745,826`.
 **BR-003:** sửa field quan trọng (title/price/address/district/area/property_type/description) của tin đang `Active` **khi kiểm duyệt thủ công đang bật** → về `PendingApproval`, UI phải giải thích rõ "tin của bạn cần duyệt lại".
 
 ### 2.4 Boost — giữ nguyên, chỉ sửa nhãn
@@ -159,7 +159,7 @@ Ràng buộc khác: `unique(contract_id)` = **1 review / 1 đợt ở** (BR-023)
 - **Reject bắt buộc có lý do** (FR-064). Reject không lý do → chặn ở RPC.
 - Approve → `approved_at = now()`, `expire_at = now() + 60 ngày` (BR-026).
 - **Mọi transition ghi 1 row `moderation_logs`.** Cơ chế cưỡng chế: moderator **không có policy UPDATE** trên `rental_listings` — mọi thay đổi phải qua RPC `moderate_listing()`, nên audit trail không thể bị bỏ sót.
-- Seller thấy badge `Chờ duyệt` / `Bị từ chối` + lý do + nút **"Sửa & gửi lại"** ở `/chu-tro/tin-dang`.
+- Seller thấy badge `Chờ duyệt` / `Bị từ chối` + lý do + nút **"Sửa & gửi lại"** ở `/tai-khoan/tin-cho-thue`.
 
 **Chế độ kiểm duyệt — quyết định quan trọng:** `platform_settings.auto_approve_listings`, **mặc định `true`**.
 - `true` → tin vào `Active` ngay, **nhưng vẫn ghi `moderation_logs`** với `moderator_id = null, reason = 'auto (demo)'` để audit trail đầy đủ và queue UI có data hiển thị.

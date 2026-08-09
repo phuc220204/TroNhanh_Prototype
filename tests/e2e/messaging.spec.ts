@@ -74,7 +74,7 @@ test.describe("Nhắn tin", () => {
   test("NEGATIVE: BR-030 — không nhắn tin được cho tin đăng của chính mình", async ({ browser }) => {
     const seller = await newSession(browser, ACCOUNTS.sellerA);
 
-    await go(seller, "/chu-tro/tin-dang");
+    await go(seller, "/tai-khoan/tin-cho-thue");
     const row = seller.getByTestId("my-listing-row").first();
     await expect(row).toBeVisible();
     const listingId = await row.getAttribute("data-listing-id");

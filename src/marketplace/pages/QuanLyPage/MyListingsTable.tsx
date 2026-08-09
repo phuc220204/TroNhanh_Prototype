@@ -142,7 +142,7 @@ export function MyListingsTable({
                   isBlocked={isBlocked}
                   isVIP={isVIP}
                   onView={() => navigate(`/phong/${l.id}`)}
-                  onEdit={() => navigate(`/chu-tro/dang-tin/${l.id}`)}
+                  onEdit={() => navigate(`/dang-tin-cho-thue/${l.id}`)}
                   onToggleStatus={() => handleToggleStatus(l.id, l.status)}
                   onBoost={() => setBoostTarget(l)}
                   onDelete={() => handleDeleteListing(l.id)}
@@ -150,7 +150,7 @@ export function MyListingsTable({
               </div>
               <RejectionNotice
                 reason={l.status === "Rejected" ? l.rejection_reason ?? null : null}
-                onEdit={() => navigate(`/chu-tro/dang-tin/${l.id}`)}
+                onEdit={() => navigate(`/dang-tin-cho-thue/${l.id}`)}
               />
             </div>
           );
@@ -224,7 +224,7 @@ export function MyListingsTable({
                     <StatusChip status={l.status} boostExpire={l.boost_expire_at} />
                     <RejectionNotice
                       reason={l.status === "Rejected" ? l.rejection_reason ?? null : null}
-                      onEdit={() => navigate(`/chu-tro/dang-tin/${l.id}`)}
+                      onEdit={() => navigate(`/dang-tin-cho-thue/${l.id}`)}
                     />
                   </td>
 
@@ -249,7 +249,7 @@ export function MyListingsTable({
                       isBlocked={isBlocked}
                       isVIP={isVIP}
                       onView={() => navigate(`/phong/${l.id}`)}
-                      onEdit={() => navigate(`/chu-tro/dang-tin/${l.id}`)}
+                      onEdit={() => navigate(`/dang-tin-cho-thue/${l.id}`)}
                       onToggleStatus={() => handleToggleStatus(l.id, l.status)}
                       onBoost={() => setBoostTarget(l)}
                       onDelete={() => handleDeleteListing(l.id)}

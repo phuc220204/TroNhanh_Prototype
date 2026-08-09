@@ -3,7 +3,8 @@ import { useQuery } from "@tanstack/react-query";
 import { Heart, MapPin, Maximize2 } from "lucide-react";
 import { C, font, radius } from "../../shared/theme";
 import { useBreakpoint } from "../../shared/components/useBreakpoint";
-import { PublicNavbarDesktop, PublicNavbarMobile } from "../../shared/components/PublicNavbar";
+// Thuộc khu vực TÀI KHOẢN nên dùng chung shell, giữ sidebar khi điều hướng.
+import { RenterShell } from "../../shared/components/RenterShell";
 import { EmptyState, Skeleton, Button } from "../../shared/components/common";
 import { useAuth } from "../../shared/contexts/AuthContext";
 import { qk } from "../../shared/query/keys";
@@ -63,10 +64,8 @@ export function SavedListingsPage() {
   });
 
   return (
-    <div style={{ minHeight: "100vh", background: C.bg, display: "flex", flexDirection: "column" }}>
-      {isMobile ? <PublicNavbarMobile /> : <PublicNavbarDesktop />}
-
-      <div style={{ flex: 1, maxWidth: 1200, width: "100%", margin: "0 auto", padding: isMobile ? "20px 16px 80px" : "32px 32px 80px", boxSizing: "border-box" }}>
+    <RenterShell active="saved">
+      <div style={{ boxSizing: "border-box" }}>
         <div style={{ marginBottom: 24 }}>
           <h1 style={{ fontFamily: font, fontSize: isMobile ? 22 : 28, fontWeight: 900, color: C.textPrimary, margin: "0 0 6px", letterSpacing: "-0.02em" }}>
             Tin đã lưu
@@ -106,7 +105,7 @@ export function SavedListingsPage() {
           </div>
         )}
       </div>
-    </div>
+    </RenterShell>
   );
 }
 

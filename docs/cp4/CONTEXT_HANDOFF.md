@@ -149,7 +149,7 @@ nhưng chưa có bằng chứng nào là hoạt động:
 
 | Việc | Cách kiểm |
 |---|---|
-| **Trigger canh boost** | Mở Console ở `/chu-tro/tin-dang`, chạy `window.__sb.from("rental_listings").update({boost_expire_at:"2030-01-01"}).eq("id","<id>")`. Phải ra `BOOST_REQUIRES_PAYMENT`. **Nếu thành công thì lỗ boost vẫn mở** |
+| **Trigger canh boost** | Mở Console ở `/tai-khoan/tin-cho-thue`, chạy `window.__sb.from("rental_listings").update({boost_expire_at:"2030-01-01"}).eq("id","<id>")`. Phải ra `BOOST_REQUIRES_PAYMENT`. **Nếu thành công thì lỗ boost vẫn mở** |
 | `soft_delete_property` | Xóa khu còn phòng `Rented` → phải bị chặn |
 | `extend_contract` | Gia hạn lấn sang hợp đồng Active khác → `ROOM_HAS_ACTIVE_CONTRACT` |
 | `boost_listing` | Chọn gói → tin có badge nổi bật, `payments` có dòng purpose `Boost` |

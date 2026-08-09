@@ -48,7 +48,7 @@ T13–T16 song song được sau T07.
 | # | Task | Luồng | Phụ thuộc |
 |---|---|---|---|
 | **T19** | **Upload ảnh thật** — `media-service.ts` (compress→upload→`listing_media`), split `DangTinPage` thành `steps/*`, render `listing_media` ở Home/All/Search/Detail, bỏ `URL.createObjectURL` | extra 1 + luồng 1 | T13 |
-| **T20** | **Sửa tin đăng** `/chu-tro/dang-tin/:id` — stepper edit mode, media add/remove/reorder, BR-003 re-duyệt, thay 2 `[Demo]` alert | extra 3 | T19 |
+| **T20** | **Sửa tin đăng** `/dang-tin-cho-thue/:id` — stepper edit mode, media add/remove/reorder, BR-003 re-duyệt, thay 2 `[Demo]` alert | extra 3 | T19 |
 | **T21** ⇄ | **Kiểm duyệt** — `AdminShell` + `/quan-tri/kiem-duyet-tin` + badge Rejected + lý do + "Sửa & gửi lại" + toggle auto-approve | luồng 4b | T17, T12 |
 | **T22** ⇄ | **Demand post thật** — `/dang-tin-nhu-cau` (2 lựa chọn), `/tin-nhu-cau` + `:id`, `/tai-khoan/tin-nhu-cau`, **xóa mọi field hardcode** trong `DemandPostCard` | luồng 2+3 | T14 |
 | **T23** | **Chủ trọ ↔ demand matching** — `/chu-tro/tim-nguoi-thue`, dùng `vacancy-service` + `scoreDemandMatch` | luồng 4c | T22, T25 |

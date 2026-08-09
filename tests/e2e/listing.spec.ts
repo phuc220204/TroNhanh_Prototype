@@ -16,7 +16,7 @@ import { ACCOUNTS, go, login, runTag, tinyPng } from "./helpers";
 
 /** Điền hết bước 1 → bước 4 và bấm đăng. Trả về tiêu đề tin vừa tạo. */
 async function postListing(page: Page, title: string): Promise<string> {
-  await go(page, "/chu-tro/dang-tin");
+  await go(page, "/dang-tin-cho-thue");
 
   // ── Bước 1: thông tin cơ bản ──
   // Field của Formik chọn theo `[name]` — hợp đồng của form, không phải style.
@@ -62,7 +62,7 @@ test.describe("Đăng tin", () => {
     await postListing(page, title);
 
     // Tin phải nằm trong danh sách tin của chính seller, bất kể chế độ kiểm duyệt.
-    await go(page, "/chu-tro/tin-dang");
+    await go(page, "/tai-khoan/tin-cho-thue");
     const row = page.getByTestId("my-listing-row").filter({ hasText: title });
     await expect(row).toHaveCount(1);
 
@@ -84,7 +84,7 @@ test.describe("Đăng tin", () => {
   });
 
   test("NEGATIVE: thiếu ảnh thì không qua được bước 3", async ({ page }) => {
-    await go(page, "/chu-tro/dang-tin");
+    await go(page, "/dang-tin-cho-thue");
     await page.locator('[name="title"]').fill("Tin thiếu ảnh dùng cho kiểm thử");
     await page.locator('[name="address"]').fill("Số 2 Đường Thử Nghiệm");
     await page.locator('[name="area"]').fill("20");

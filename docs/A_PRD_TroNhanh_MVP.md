@@ -134,12 +134,12 @@ Hero + search box (vị trí, loại phòng, khoảng giá) + "Phòng mới đă
 ### 5.3 Chi tiết tin (`/phong/{id}`)
 Gallery + bảng chi phí (thuê/điện/nước/dịch vụ/cọc) + tiện ích + khối liên hệ (Nhắn tin / Gọi). Guest thấy SĐT che một phần; đăng nhập mới thấy đủ (BR-014).
 
-### 5.4 Đăng tin cho thuê (`/chu-tro/dang-tin`) — SỬA
+### 5.4 Đăng tin cho thuê (`/dang-tin-cho-thue`) — SỬA
 Stepper 4 bước: (1) cơ bản → (2) tiện ích & mô tả → (3) ảnh ≥ 3 → (4) chi phí.
 - **BỎ trường "Trạng thái phòng" (Còn trống/Sắp trống/Đang sửa) khỏi form đăng tin độc lập** — đó là thuộc tính của Room (SaaS), không phải RentalListing. Chỉ khi "Tạo tin từ phòng" mới có liên kết Room.
 - **THÊM Boost:** ở bước 4 (hoặc màn sau submit) có block *"Đẩy tin nổi bật"* với 2–3 gói theo thời hạn (7/15/30 ngày) + giá + nút thanh toán (giả lập).
 
-### 5.5 Quản lý tin đăng (`/chu-tro/tin-dang`)
+### 5.5 Quản lý tin đăng (`/tai-khoan/tin-cho-thue`)
 Bảng tin: cột "Phòng liên kết" (mã Room nếu tạo từ phòng, "—" nếu độc lập), trạng thái (Đang hiển thị/Chờ duyệt/Đã ẩn/Hết hạn), lượt xem, thao tác. **THÊM nút "Đẩy tin"** ở cột thao tác.
 
 ### 5.6 Demand Posts (đã chốt — 1 khối, 2 lựa chọn)

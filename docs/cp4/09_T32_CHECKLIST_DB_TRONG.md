@@ -134,7 +134,7 @@ Dùng email thật của bạn (không phải `@tronhanh.demo`) để test cả 
 | 25 | **Gia hạn chồng thời gian:** kết thúc HĐ phòng đó, tạo HĐ mới bắt đầu ngay sau, rồi thử gia hạn HĐ cũ lấn sang | Bị chặn: "Phòng này đã có hợp đồng còn hiệu lực trong khoảng thời gian đó" | |
 | 26 | **Xóa khu còn phòng đang thuê:** Cài đặt → Vùng nguy hiểm → "Xóa khu trọ này" | Modal nói *"còn N phòng đang cho thuê"*, nút xóa **bị vô hiệu** | |
 | 27 | **Xóa khu trống:** tạo khu mới không phòng → xóa | Xóa được, biến khỏi danh sách | |
-| 28 | **Boost hợp lệ:** đăng 1 tin → `/chu-tro/tin-dang` → "Đẩy tin VIP" | Modal hiện **3 gói giá thật** (20k/35k/60k), có chữ "(giả lập)". Chọn gói → tin có badge nổi bật | |
+| 28 | **Boost hợp lệ:** đăng 1 tin → `/tai-khoan/tin-cho-thue` → "Đẩy tin VIP" | Modal hiện **3 gói giá thật** (20k/35k/60k), có chữ "(giả lập)". Chọn gói → tin có badge nổi bật | |
 | 29 | **🔴 Thử tấn công boost** — xem ô riêng bên dưới | Phải bị chặn | |
 
 #### Ô riêng: thử tấn công boost (mục 29)
@@ -142,7 +142,7 @@ Dùng email thật của bạn (không phải `@tronhanh.demo`) để test cả 
 Đây là thứ tôi muốn biết nhất. Trigger `trg_guard_boost_expire_at` chưa được
 chứng minh là hoạt động, và nó là lớp duy nhất chặn được lỗ boost.
 
-Mở DevTools → Console, ở trang `/chu-tro/tin-dang` khi **đã đăng nhập**, dán:
+Mở DevTools → Console, ở trang `/tai-khoan/tin-cho-thue` khi **đã đăng nhập**, dán:
 
 ```js
 const { data, error } = await window.__sb

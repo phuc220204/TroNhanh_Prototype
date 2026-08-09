@@ -83,6 +83,9 @@ function AccountDropdown({ onLandlord, onSignOut, onClose }: { onLandlord: () =>
    */
   const items = [
     { label: "Hồ sơ", testId: "account-menu-profile", action: () => navigate("/tai-khoan") },
+    // Tin đăng của tôi nằm trong khu vực TÀI KHOẢN, không phải "Dashboard chủ
+    // trọ" — đăng tin miễn phí, vận hành khu trọ mới là gói trả phí.
+    { label: "Tin đăng của tôi", testId: "account-menu-listings", action: () => navigate("/tai-khoan/tin-cho-thue") },
     { label: "Tin nhắn", testId: "account-menu-messages", action: () => navigate("/tin-nhan") },
     // Cùng đích với nút trái tim trên navbar: "Tin đã lưu" và "Yêu thích" là một.
     { label: "Tin đã lưu", testId: "account-menu-saved", action: () => navigate("/yeu-thich") },
@@ -396,9 +399,10 @@ export function PublicNavbarMobile({ onSearch }: { onSearch?: () => void }) {
   const menuItems = [
     { label: "Tìm phòng", action: go("/tim-phong") },
     { label: "Tin nhu cầu", action: go("/tin-nhu-cau") },
+    ...(user ? [{ label: "Tin đăng của tôi", action: go("/tai-khoan/tin-cho-thue") }] : []),
     ...(user ? [{ label: "Yêu thích", action: go("/yeu-thich") }] : []),
     { label: "Đăng tin tìm phòng", action: go("/dang-tin-nhu-cau"), sub: true },
-    { label: "Đăng tin cho thuê", action: go("/chu-tro/dang-tin"), sub: true },
+    { label: "Đăng tin cho thuê", action: go("/dang-tin-cho-thue"), sub: true },
     ...(user ? [{ label: "Tin nhắn", action: go("/tin-nhan") }] : []),
     ...(isStaff ? [{ label: "Quản trị hệ thống", action: go("/quan-tri") }] : []),
     user
@@ -544,7 +548,7 @@ export function DemoFAB() {
   const shortcuts = [
     { Icon: LayoutDashboard, label: "Dashboard chủ trọ",        testId: "demo-fab-dashboard",   action: () => navigate("/chu-tro") },
     { Icon: Building2,       label: "Quản lý khu trọ & phòng",  testId: "demo-fab-rooms",       action: () => navigate("/chu-tro/quan-ly-phong") },
-    { Icon: FileText,        label: "Quản lý tin đăng",          testId: "demo-fab-listings",    action: () => navigate("/chu-tro/tin-dang") },
+    { Icon: FileText,        label: "Quản lý tin đăng",          testId: "demo-fab-listings",    action: () => navigate("/tai-khoan/tin-cho-thue") },
     { Icon: BookOpen,        label: "Design System",              testId: "demo-fab-styleguide",  action: () => navigate("/styleguide") },
     { Icon: Database,        label: "Seed Dữ liệu mẫu",           testId: "demo-fab-seed",        action: handleSeed },
     { Icon: UserCheck,       label: "Tôi là người ở demo",        testId: "demo-fab-link-occupancy", action: handleLinkDemoOccupancy },

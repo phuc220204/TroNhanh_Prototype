@@ -1,6 +1,9 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router";
-import { PublicNavbar } from "../../shared/components/PublicNavbar";
+// Nằm trong khu vực TÀI KHOẢN nên dùng chung shell — trước đây trang này tự
+// dựng layout riêng, nên bấm "Tin nhu cầu của tôi" từ sidebar là sidebar biến
+// mất và người dùng mất luôn đường quay lại các mục khác.
+import { RenterShell } from "../../shared/components/RenterShell";
 import { EmptyState } from "../../shared/components/common/EmptyState";
 import { FileText, Plus, Edit, Eye, EyeOff, Trash2, CheckCircle, Clock } from "lucide-react";
 import { C, font } from "../../shared/theme";
@@ -61,10 +64,8 @@ export function MyDemandPostsPage() {
   };
 
   return (
-    <div style={{ minHeight: "100vh", background: C.bg, fontFamily: font }}>
-      <PublicNavbar />
-
-      <div style={{ maxWidth: 1000, margin: "0 auto", padding: isMobile ? 16 : "32px 24px 60px" }}>
+    <RenterShell active="demands">
+      <div style={{ boxSizing: "border-box" }}>
         {toastMsg && (
           <div style={{ background: C.cream, border: `1px solid ${C.success}`, color: C.success, padding: "10px 16px", borderRadius: 10, fontFamily: font, fontSize: 13, fontWeight: 600, marginBottom: 16 }}>
             {toastMsg}
@@ -198,7 +199,7 @@ export function MyDemandPostsPage() {
           </div>
         )}
       </div>
-    </div>
+    </RenterShell>
   );
 }
 

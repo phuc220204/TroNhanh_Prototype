@@ -28,8 +28,8 @@ khi đã có dữ liệu.
 | Spec | Tạo ra | Dọn ở đâu |
 |---|---|---|
 | `auth` | 1 tài khoản `e2e.<stamp>@tronhanh.test` | Supabase → Auth → Users (lọc `@tronhanh.test`) |
-| `listing` | 2 tin đăng + 5 ảnh trong Storage | `/chu-tro/tin-dang` → xóa tin (ảnh xóa theo) |
-| `moderation` | 1 tin đăng | `/chu-tro/tin-dang` |
+| `listing` | 2 tin đăng + 5 ảnh trong Storage | `/tai-khoan/tin-cho-thue` → xóa tin (ảnh xóa theo) |
+| `moderation` | 1 tin đăng | `/tai-khoan/tin-cho-thue` |
 | `demand` | 3 tin nhu cầu | `/tai-khoan/tin-nhu-cau` |
 | `workspace` | 1 khu + 1 phòng + 1 người ở + chỉ số + 1 hóa đơn | `/chu-tro/quan-ly-phong` → tab Cài đặt → xóa khu |
 | `review` | 1 đánh giá + 1 phản hồi | `/tai-khoan/danh-gia` |

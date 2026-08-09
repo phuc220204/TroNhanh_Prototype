@@ -28,7 +28,7 @@ async function setModeration(page: Page, mode: "auto" | "manual"): Promise<void>
 
 /** Đăng nhanh một tin hợp lệ, trả về tiêu đề. */
 async function postListing(page: Page, title: string): Promise<void> {
-  await go(page, "/chu-tro/dang-tin");
+  await go(page, "/dang-tin-cho-thue");
   await page.locator('[name="title"]').fill(title);
   await page.locator('[name="address"]').fill("Số 9 Đường Kiểm Duyệt");
   await page.locator('[name="area"]').fill("22");
@@ -72,7 +72,7 @@ test.describe("Kiểm duyệt tin đăng", () => {
     await login(page, ACCOUNTS.sellerA);
     await postListing(page, title);
 
-    await go(page, "/chu-tro/tin-dang");
+    await go(page, "/tai-khoan/tin-cho-thue");
     const row = page.getByTestId("my-listing-row").filter({ hasText: title });
     await expect(row).toHaveAttribute("data-listing-status", "PendingApproval");
 
@@ -105,7 +105,7 @@ test.describe("Kiểm duyệt tin đăng", () => {
 
   test("seller thấy lý do, gửi lại; moderator duyệt thì tin lên public", async ({ page }) => {
     await login(page, ACCOUNTS.sellerA);
-    await go(page, "/chu-tro/tin-dang");
+    await go(page, "/tai-khoan/tin-cho-thue");
 
     const row = page.getByTestId("my-listing-row").filter({ hasText: title });
     await expect(row).toHaveAttribute("data-listing-status", "Rejected");
@@ -124,7 +124,7 @@ test.describe("Kiểm duyệt tin đăng", () => {
     await page.getByTestId("listing-submit-btn").click();
     await expect(page.getByTestId("listing-success")).toBeVisible({ timeout: 60_000 });
 
-    await go(page, "/chu-tro/tin-dang");
+    await go(page, "/tai-khoan/tin-cho-thue");
     const resubmitted = page.getByTestId("my-listing-row").filter({ hasText: title });
     await expect(resubmitted).toHaveAttribute("data-listing-status", "PendingApproval");
     await logout(page);

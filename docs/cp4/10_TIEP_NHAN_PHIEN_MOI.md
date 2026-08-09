@@ -98,7 +98,7 @@ Sáu RPC + hai trigger đã lên remote nhưng **chưa từng được gọi th�
 
 | Việc | Cách kiểm |
 |---|---|
-| **🔴 Trigger canh boost** | Console ở `/chu-tro/tin-dang`: `window.__sb.from("rental_listings").update({boost_expire_at:"2030-01-01"}).eq("id","<id>")`. Phải ra `BOOST_REQUIRES_PAYMENT`. **Thành công = lỗ boost vẫn mở** |
+| **🔴 Trigger canh boost** | Console ở `/tai-khoan/tin-cho-thue`: `window.__sb.from("rental_listings").update({boost_expire_at:"2030-01-01"}).eq("id","<id>")`. Phải ra `BOOST_REQUIRES_PAYMENT`. **Thành công = lỗ boost vẫn mở** |
 | `soft_delete_property` | Xóa khu còn phòng `Rented` → phải bị chặn |
 | `extend_contract` | Gia hạn lấn sang hợp đồng Active khác → `ROOM_HAS_ACTIVE_CONTRACT` |
 | `boost_listing` | Chọn gói → tin có badge nổi bật, `payments` có dòng purpose `Boost` |
@@ -176,7 +176,7 @@ Sáu RPC + hai trigger đã lên remote nhưng **chưa từng được gọi th�
 - **Gắn tin từ phía PHÒNG chưa làm, và có lý do.** Chủ dự án yêu cầu, nhưng
   `RoomDetailTabs` nằm ở `workspace/` còn `rental_listings` thuộc marketplace —
   thêm UI đó là **cross-import vi phạm §2.1**. Hiện chỉ có một lối vào từ tin đăng
-  (`/chu-tro/tin-dang` → cột "Phòng liên kết"). Muốn làm chiều ngược thì phải qua
+  (`/tai-khoan/tin-cho-thue` → cột "Phòng liên kết"). Muốn làm chiều ngược thì phải qua
   một RPC đọc tin của chính mình, không phải import thẳng.
 - `secondaryHover: #B08D63` / `secondaryPress: #9A784F` do Antigravity tự đặt ở
   `theme.ts` — chưa ai xác nhận.

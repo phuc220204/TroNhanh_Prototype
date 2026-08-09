@@ -160,7 +160,7 @@ Hiện mọi page danh sách `select("*")` toàn bộ row Active rồi filter tr
 Label khoảng giá / diện tích từ `catalog.ts` được parse thành số bằng **`src/shared/utils/catalog-bounds.ts`** để cả 3 trang danh sách đồng ý với nhau thay vì mỗi trang tự parse.
 
 ### Một quyết định ranh giới phải làm tường minh
-`/chu-tro/tin-dang` (`QuanLyPage.tsx`) đang ở `src/workspace/pages/` nhưng chạy **100% trên `rental_listings`** — bảng marketplace. A_PRD §3.1 và spec §1.7 đều xếp "Zone Tin đăng" là **Marketplace** (miễn phí, không gating), chỉ *render bên trong* `LandlordShell`.
+`/tai-khoan/tin-cho-thue` (`QuanLyPage.tsx`) đang ở `src/workspace/pages/` nhưng chạy **100% trên `rental_listings`** — bảng marketplace. A_PRD §3.1 và spec §1.7 đều xếp "Zone Tin đăng" là **Marketplace** (miễn phí, không gating), chỉ *render bên trong* `LandlordShell`.
 
 > **Chuyển `QuanLyPage.tsx` → `src/marketplace/pages/`.** Shell đi theo dữ liệu, không đi theo khung giao diện.
 
@@ -248,7 +248,7 @@ Nhưng **tách `ListingCard` và `DemandPostCard`** (hiện ở `HomePage.tsx:25
 | `/tai-khoan/tin-nhu-cau` | `marketplace/pages/MyDemandPostsPage.tsx` | marketplace | RequireAuth |
 | `/tai-khoan/phong-cua-toi` | `marketplace/pages/MyStaysPage.tsx` | marketplace | RequireAuth |
 | `/tai-khoan/danh-gia` | `marketplace/pages/MyReviewsPage.tsx` | marketplace | RequireAuth |
-| `/chu-tro/dang-tin/:id` | `DangTinPage` edit mode | marketplace | RequireAuth |
+| `/dang-tin-cho-thue/:id` | `DangTinPage` edit mode | marketplace | RequireAuth |
 | `/chu-tro/tim-nguoi-thue` | `marketplace/pages/DemandMatchPage.tsx` | marketplace (dùng `vacancy-service`) | RequireAuth |
 | `/chu-tro/danh-gia` | `workspace/pages/PropertyReviewsPage.tsx` | workspace | RequireAuth |
 | `/chu-tro/hoa-don` | `workspace/pages/HoaDonPage.tsx` | workspace | RequireAuth + canWrite |

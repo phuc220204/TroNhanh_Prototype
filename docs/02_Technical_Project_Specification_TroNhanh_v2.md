@@ -296,7 +296,7 @@ Một tài khoản có thể đồng thời là **Renter** và **Seller** (BR-01
 3. Chặn/báo cáo tin nhắn (BR-020).
 
 ### 4.3 Seller đăng tin cho thuê (gồm kích hoạt Seller lần đầu)
-1. Từ header public "Đăng tin → Tin cho thuê" → `/chu-tro/dang-tin` (zone Tin đăng, miễn phí). User chưa có role Seller vẫn vào được — chính hành động tạo listing đầu tiên sẽ kích hoạt Seller.
+1. Từ header public "Đăng tin → Tin cho thuê" → `/dang-tin-cho-thue` (zone Tin đăng, miễn phí). User chưa có role Seller vẫn vào được — chính hành động tạo listing đầu tiên sẽ kích hoạt Seller.
 2. Form nhiều bước: (1) cơ bản → (2) tiện ích & mô tả → (3) ảnh ≥ 3 → (4) chi phí → (5) giờ giấc → (6) *[chỉ hiện khi Seller có Property]* chọn khu trọ (tùy chọn, gắn `propertyId`).
 3. Lưu bản ghi đầu tiên (kể cả Draft) → backend gán role Seller **cùng transaction** → FE gọi `POST /auth/refresh` → tiếp tục.
 4. Gửi → validate + lọc `BannedKeyword` → `PendingApproval` → Moderator duyệt → `Active` (đặt `expireAt = approvedAt + 60 ngày`, BR-026) / `Rejected` (kèm lý do) → Notification.
@@ -620,8 +620,8 @@ GET  /admin/dashboard
 | B1 | Entry / Onboarding | `/chu-tro` | — | **2 lối:** "Đăng tin (miễn phí)" → B5; "Dùng thử bộ quản lý" → TRIAL → B2 | V1 |
 | B2 | Onboarding wizard 3 bước | `/chu-tro/bat-dau` | SaaS | Property + nhận tiền (VietQR) → Room → (tùy chọn) Occupancy/Contract | V1 |
 | B3 | Dashboard Seller | `/chu-tro/tong-quan` | SaaS | Phòng trống (luôn hiện); lấp đầy, doanh thu/tổng phòng/số khách (toggle, mặc định TẮT — BR-012); sắp hết hạn HĐ; chưa thu | MVP (mock) → V1 |
-| B4 | Quản lý tin cho thuê | `/chu-tro/tin-dang` | **Tin đăng** | Tin của tôi; tạo/sửa/boost/gia hạn/xóa | MVP |
-| B5 | Đăng tin cho thuê | `/chu-tro/dang-tin` | **Tin đăng** | Form nhiều bước + bước chọn khu (nếu có Property) | MVP |
+| B4 | Quản lý tin cho thuê | `/tai-khoan/tin-cho-thue` | **Tin đăng** | Tin của tôi; tạo/sửa/boost/gia hạn/xóa | MVP |
+| B5 | Đăng tin cho thuê | `/dang-tin-cho-thue` | **Tin đăng** | Form nhiều bước + bước chọn khu (nếu có Property) | MVP |
 | B6 | Danh sách khu trọ | `/chu-tro/khu-tro` | SaaS | Danh sách khu + tổng phòng/trống; thêm khu | MVP (mock) → V1 |
 | B7 | Chi tiết khu + nhận tiền + public | `/chu-tro/khu-tro/{id}` | SaaS | Sửa khu; STK/VietQR; bật hồ sơ public | V1 |
 | B8 | Quản lý phòng | `/chu-tro/khu-tro/{id}/phong` | SaaS | Lưới phòng theo trạng thái; badge "Có tin đang chạy"; "Tạo tin từ phòng" | MVP (mock) → V1 |
