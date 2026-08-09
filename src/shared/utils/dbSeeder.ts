@@ -5,17 +5,50 @@ import { supabase } from "../supabaseClient";
  * into Supabase for the current authenticated user.
  */
 export async function seedMockDataForUser(user: { id: string }, profile: any) {
+  // ── Chống chạy trùng ────────────────────────────────────────────────────
+  // Seeder KHÔNG idempotent: bấm lần 2 sẽ nhân đôi toàn bộ dữ liệu. Và nếu một
+  // bước giữa chừng fail, các bước trước đã kịp ghi — nên lần bấm sau phải bị
+  // chặn thay vì chồng thêm.
+  const { count: existingListings } = await supabase
+    .from("rental_listings")
+    .select("id", { count: "exact", head: true })
+    .eq("seller_id", user.id)
+    .is("deleted_at", null);
+
+  const { count: existingProperties } = await supabase
+    .from("properties")
+    .select("id", { count: "exact", head: true })
+    .eq("owner_id", user.id)
+    .is("deleted_at", null);
+
+  if ((existingListings ?? 0) > 0 || (existingProperties ?? 0) > 0) {
+    throw new Error(
+      "Tài khoản này đã có dữ liệu. Xóa dữ liệu cũ trước khi khởi tạo lại " +
+      "(xem docs/cp4/06_QA_CHECKLIST.md — mục dọn dữ liệu demo).",
+    );
+  }
+
   // 1. Seed Listings
+  //
+  // ⚠️ KHÔNG có `boost_expire_at` ở đây, và đó là bắt buộc chứ không phải quên.
+  // Trigger `trg_guard_boost_expire_at` (migration 20260806150000) ném
+  // `BOOST_REQUIRES_PAYMENT` với mọi INSERT/UPDATE tự đặt cột này ngoài RPC
+  // `boost_listing()`. Vì 4 tin được insert trong MỘT câu lệnh, chỉ cần một tin
+  // mang `boost_expire_at` là cả 4 fail và seeder không tạo được gì.
+  // Boost được đặt sau, qua RPC — xem bước 1b.
   const listingsToSeed = [
     {
       seller_id: user.id,
       title: "Studio Full Nội Thất gần ĐH RMIT",
       property_type: "Căn hộ dịch vụ",
       price: 5500000,
-      district: "Quận 7",
+      // Mô hình hành chính 2 cấp (từ 01/07/2025): `district` giờ là TÊN
+      // phường/xã để hiển thị, còn LỌC thì dùng `ward_code`.
+      district: "Phường Tân Hưng",
+      province_code: 79,
+      ward_code: 27475,
       area: 30,
       status: "Active",
-      boost_expire_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
       contact_phone: profile?.contact_phone || "0901234567",
       contact_name: profile?.full_name || "Nguyễn Minh Anh",
       address: "123 Đường số 7, Tân Phong, Quận 7",
@@ -26,10 +59,11 @@ export async function seedMockDataForUser(user: { id: string }, profile: any) {
       title: "Duplex Ban Công View Đẹp, Full Nội Thất",
       property_type: "Căn hộ mini",
       price: 7200000,
-      district: "Bình Thạnh",
+      district: "Phường Thạnh Mỹ Tây",
+      province_code: 79,
+      ward_code: 26956,
       area: 45,
       status: "Active",
-      boost_expire_at: new Date(Date.now() + 6 * 24 * 60 * 60 * 1000).toISOString(),
       contact_phone: profile?.contact_phone || "0901234567",
       contact_name: profile?.full_name || "Lê Thảo Nhi",
       address: "456 Điện Biên Phủ, Phường 25, Bình Thạnh",
@@ -40,7 +74,9 @@ export async function seedMockDataForUser(user: { id: string }, profile: any) {
       title: "Căn Hộ Mini Full Nội Thất Thủ Đức",
       property_type: "Căn hộ mini",
       price: 4800000,
-      district: "Thủ Đức",
+      district: "Phường Thủ Đức",
+      province_code: 79,
+      ward_code: 26824,
       area: 28,
       status: "Active",
       contact_phone: profile?.contact_phone || "0901234567",
@@ -53,10 +89,11 @@ export async function seedMockDataForUser(user: { id: string }, profile: any) {
       title: "Phòng Master Rộng, Có Ban Công Riêng",
       property_type: "Phòng trọ",
       price: 8000000,
-      district: "Gò Vấp",
+      district: "Phường Hạnh Thông",
+      province_code: 79,
+      ward_code: 26890,
       area: 38,
       status: "Active",
-      boost_expire_at: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toISOString(),
       contact_phone: profile?.contact_phone || "0901234567",
       contact_name: profile?.full_name || "Phạm Gia Huy",
       address: "101 Quang Trung, Phường 10, Gò Vấp",
@@ -95,64 +132,173 @@ export async function seedMockDataForUser(user: { id: string }, profile: any) {
       .insert(amenitiesToSeed);
 
     if (amenitiesError) throw amenitiesError;
+
+    // ── 1b. Đẩy tin qua ĐÚNG đường có thanh toán ──────────────────────────
+    // BR-005 cần vài tin còn hạn boost để chứng minh "tin nổi bật xếp trước".
+    // `boost_listing()` là đường DUY NHẤT đặt được `boost_expire_at`: nó tra giá
+    // từ `platform_settings.boost_config`, ghi một dòng `payments` purpose
+    // 'Boost', rồi mới mở cờ cho trigger. Nhờ vậy dữ liệu seed phản ánh đúng
+    // trạng thái thật của một tin đã trả tiền, thay vì một cột được nhét tay.
+    //
+    // `days` PHẢI là gói có thật trong `boost_config` (đã seed: 7 / 15 / 30),
+    // nếu không RPC ném `INVALID_BOOST_PACKAGE`.
+    const boostPlan: Array<{ index: number; days: number }> = [
+      { index: 0, days: 30 },
+      { index: 1, days: 7 },
+    ];
+
+    for (const { index, days } of boostPlan) {
+      const target = createdListings[index];
+      if (!target) continue;
+      const { error: boostError } = await supabase.rpc("boost_listing", {
+        p_listing_id: target.id,
+        p_days: days,
+      });
+      if (boostError) throw boostError;
+    }
   }
 
   // 2. Seed Demand Posts
+  //
+  // ⚠️ MỌI OBJECT PHẢI CÓ ĐỦ CÙNG BỘ KEY — kể cả khi giá trị là mảng rỗng.
+  // Khi bulk insert, PostgREST lấy HỢP của tất cả key trong mảng và điền NULL
+  // cho object thiếu key, thay vì bỏ qua để DEFAULT của cột áp dụng. Nên một
+  // object RoommateWanted không khai `desired_amenities` sẽ ghi NULL vào cột
+  // `text[] not null default '{}'` → lỗi not-null.
+  // (Insert từng dòng một thì không dính, vì key vắng mặt mới dùng DEFAULT.)
+  const emptyDemandFields = {
+    description: null as string | null,
+    contact_name: null as string | null,
+    contact_phone: null as string | null,
+    property_type: null as string | null,
+    min_area: null as number | null,
+    desired_amenities: [] as string[],
+    move_in_date: null as string | null,
+    occupant_count: null as number | null,
+    current_address: null as string | null,
+    district: null as string | null,
+    desired_province_code: null as number | null,
+    desired_ward_codes: [] as number[],
+    share_price: null as number | null,
+    needed_count: null as number | null,
+    gender_requirement: null as string | null,
+    requirements: [] as string[],
+  };
+
   const demandPostsToSeed = [
     {
+      ...emptyDemandFields,
       renter_id: user.id,
       kind: "RoomWanted",
-      desired_districts: ["Bình Thạnh", "Gò Vấp"],
+      title: "Tìm phòng trọ khu Bình Thạnh / Gò Vấp, ưu tiên gần trường",
+      desired_districts: ["Phường Thạnh Mỹ Tây", "Phường Hạnh Thông"],
+      desired_province_code: 79,
+      desired_ward_codes: [26956, 26890],
       price_min: 2500000,
       price_max: 3500000,
+      property_type: "Phòng trọ",
+      min_area: 18,
+      desired_amenities: ["Wifi", "WC riêng"],
+      occupant_count: 1,
       status: "Active",
     },
     {
+      ...emptyDemandFields,
       renter_id: user.id,
       kind: "RoomWanted",
-      desired_districts: ["Quận 7", "Nhà Bè"],
+      title: "Cần thuê căn hộ mini Quận 7, có chỗ để xe",
+      desired_districts: ["Phường Tân Hưng", "Xã Nhà Bè"],
+      desired_province_code: 79,
+      desired_ward_codes: [27475, 27655],
       price_min: 4000000,
       price_max: 6000000,
+      property_type: "Căn hộ mini",
+      min_area: 25,
+      desired_amenities: ["Máy lạnh", "Chỗ để xe", "WC riêng"],
+      occupant_count: 2,
       status: "Active",
     },
     {
+      ...emptyDemandFields,
       renter_id: user.id,
       kind: "RoomWanted",
-      desired_districts: ["Tân Bình", "Quận 10"],
+      title: "Tìm phòng trọ Tân Bình / Quận 10 cho sinh viên",
+      desired_districts: ["Phường Tân Bình", "Phường Hòa Hưng"],
+      desired_province_code: 79,
+      desired_ward_codes: [27004, 27163],
       price_min: 2000000,
       price_max: 3000000,
+      property_type: "Phòng trọ",
+      min_area: 18,
+      desired_amenities: ["Wifi", "Giờ giấc tự do"],
+      occupant_count: 1,
       status: "Active",
     },
     {
+      ...emptyDemandFields,
       renter_id: user.id,
       kind: "RoomWanted",
-      desired_districts: ["Gò Vấp"],
+      title: "Tìm phòng Gò Vấp, cần gác lửng",
+      desired_districts: ["Phường Hạnh Thông"],
+      desired_province_code: 79,
+      desired_ward_codes: [26890],
       price_min: 3000000,
       price_max: 4000000,
+      property_type: "Phòng trọ",
+      min_area: 20,
+      desired_amenities: ["Gác lửng", "Wifi"],
+      occupant_count: 1,
       status: "Active",
     },
     {
+      ...emptyDemandFields,
       renter_id: user.id,
       kind: "RoommateWanted",
-      desired_districts: ["Quận 10"],
+      title: "Tìm 1 bạn nữ ở ghép Quận 10, phòng đã có sẵn",
+      desired_districts: ["Phường Hòa Hưng"],
+      desired_province_code: 79,
+      desired_ward_codes: [27163],
       price_min: 1800000,
       price_max: 1800000,
+      district: "Phường Hòa Hưng",
+      share_price: 1800000,
+      needed_count: 1,
+      gender_requirement: "Female",
+      requirements: ["Sạch sẽ", "Không hút thuốc"],
       status: "Active",
     },
     {
+      ...emptyDemandFields,
       renter_id: user.id,
       kind: "RoommateWanted",
-      desired_districts: ["Bình Thạnh"],
+      title: "Cần 2 bạn ở ghép Bình Thạnh, gần Hàng Xanh",
+      desired_districts: ["Phường Thạnh Mỹ Tây"],
+      desired_province_code: 79,
+      desired_ward_codes: [26956],
       price_min: 2200000,
       price_max: 2200000,
+      district: "Phường Thạnh Mỹ Tây",
+      share_price: 2200000,
+      needed_count: 2,
+      gender_requirement: "Any",
+      requirements: ["Đi làm giờ hành chính"],
       status: "Active",
     },
     {
+      ...emptyDemandFields,
       renter_id: user.id,
       kind: "RoommateWanted",
-      desired_districts: ["Bình Thạnh"],
+      title: "Tìm bạn ở ghép Bình Thạnh, phòng rộng có ban công",
+      desired_districts: ["Phường Thạnh Mỹ Tây"],
+      desired_province_code: 79,
+      desired_ward_codes: [26956],
       price_min: 2500000,
       price_max: 2500000,
+      district: "Phường Thạnh Mỹ Tây",
+      share_price: 2500000,
+      needed_count: 1,
+      gender_requirement: "Male",
+      requirements: ["Gọn gàng", "Không nuôi thú cưng"],
       status: "Active",
     }
   ];
@@ -169,7 +315,9 @@ export async function seedMockDataForUser(user: { id: string }, profile: any) {
       owner_id: user.id,
       name: "Khu trọ Phan Văn Trị",
       address: "123 Phan Văn Trị, Bình Thạnh, TP.HCM",
-      district: "Bình Thạnh",
+      district: "Phường Thạnh Mỹ Tây",
+      province_code: 79,
+      ward_code: 26956,
       floor_count: 3,
       electricity_unit_price: 3500,
       water_unit_price: 15000,
@@ -182,7 +330,9 @@ export async function seedMockDataForUser(user: { id: string }, profile: any) {
       owner_id: user.id,
       name: "Căn hộ Quận 7",
       address: "45 Nguyễn Thị Thập, Quận 7, TP.HCM",
-      district: "Quận 7",
+      district: "Phường Tân Hưng",
+      province_code: 79,
+      ward_code: 27475,
       floor_count: 2,
       electricity_unit_price: 4000,
       water_unit_price: 18000,
@@ -195,7 +345,9 @@ export async function seedMockDataForUser(user: { id: string }, profile: any) {
       owner_id: user.id,
       name: "Nhà trọ Thủ Đức",
       address: "78 Võ Văn Ngân, Thủ Đức, TP.HCM",
-      district: "Thủ Đức",
+      district: "Phường Thủ Đức",
+      province_code: 79,
+      ward_code: 26824,
       floor_count: 1,
       electricity_unit_price: 3000,
       water_unit_price: 12000,
@@ -301,51 +453,124 @@ export async function seedMockDataForUser(user: { id: string }, profile: any) {
         const contract_td_p01 = createdContracts?.find(c => c.room_id === td_p01.id);
 
         if (contract_pvt_p102 && contract_pvt_p202 && contract_pvt_p203 && contract_pvt_p301 && contract_q7_a01 && contract_td_p01) {
-          // 7. Seed Invoices for June (Kỳ 2026-06)
-          const invoicesToInsert = [
-            { room_id: pvt_p102.id, contract_id: contract_pvt_p102.id, owner_id: user.id, period: "2026-06", due_date: "2026-06-10", total_amount: 3170000, status: "Paid" },
-            { room_id: pvt_p202.id, contract_id: contract_pvt_p202.id, owner_id: user.id, period: "2026-06", due_date: "2026-06-10", total_amount: 3405000, status: "Unpaid" },
-            { room_id: pvt_p203.id, contract_id: contract_pvt_p203.id, owner_id: user.id, period: "2026-06", due_date: "2026-06-10", total_amount: 3230000, status: "Paid" },
-            { room_id: pvt_p301.id, contract_id: contract_pvt_p301.id, owner_id: user.id, period: "2026-06", due_date: "2026-06-10", total_amount: 4070000, status: "Paid" },
-            { room_id: q7_a01.id, contract_id: contract_q7_a01.id, owner_id: user.id, period: "2026-06", due_date: "2026-06-10", total_amount: 5770000, status: "Paid" },
-            { room_id: td_p01.id, contract_id: contract_td_p01.id, owner_id: user.id, period: "2026-06", due_date: "2026-06-10", total_amount: 2430000, status: "Paid" }
+          // ── 7. Seed 3 KỲ điện nước + hóa đơn + thanh toán ──────────────────
+          //
+          // Trước đây chỉ seed ĐÚNG MỘT kỳ hóa đơn và KHÔNG seed utility_readings
+          // nào — nên drawer "Chi tiết phòng" không có gì để hiển thị ở tab lịch
+          // sử, và chủ trọ không thấy được xu hướng tiêu thụ giữa các tháng.
+          //
+          // Sinh 3 kỳ gần nhất tính từ hôm nay để dữ liệu luôn còn thời sự.
+          const ELECTRIC_UNIT = 3500;
+          const WATER_UNIT = 15000;
+
+          /** 3 kỳ gần nhất dạng YYYY-MM, cũ → mới. */
+          const periods: string[] = [];
+          for (let back = 2; back >= 0; back--) {
+            const d = new Date();
+            d.setDate(1);
+            d.setMonth(d.getMonth() - back);
+            periods.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`);
+          }
+
+          // rent · chỉ số điện đầu · tiêu thụ điện/kỳ · chỉ số nước đầu · tiêu thụ nước/kỳ · phí dịch vụ
+          const billingPlan = [
+            { room: pvt_p102, contract: contract_pvt_p102, rent: 2800000, elecStart: 1180, elecUse: 52, waterStart: 240, waterUse: 6, svc: 100000 },
+            { room: pvt_p202, contract: contract_pvt_p202, rent: 3000000, elecStart: 940,  elecUse: 60, waterStart: 180, waterUse: 6, svc: 100000 },
+            { room: pvt_p203, contract: contract_pvt_p203, rent: 2900000, elecStart: 1520, elecUse: 43, waterStart: 310, waterUse: 5, svc: 100000 },
+            { room: pvt_p301, contract: contract_pvt_p301, rent: 3600000, elecStart: 2010, elecUse: 69, waterStart: 420, waterUse: 7, svc: 120000 },
+            { room: q7_a01,   contract: contract_q7_a01,   rent: 5200000, elecStart: 3300, elecUse: 86, waterStart: 610, waterUse: 8, svc: 150000 },
+            { room: td_p01,   contract: contract_td_p01,   rent: 2200000, elecStart: 760,  elecUse: 34, waterStart: 150, waterUse: 4, svc: 50000 },
           ];
 
+          const readingsToInsert: any[] = [];
+          const invoicesToInsert: any[] = [];
+
+          billingPlan.forEach(plan => {
+            periods.forEach((period, index) => {
+              // Tiêu thụ dao động nhẹ giữa các kỳ để biểu đồ so sánh có ý nghĩa
+              const drift = [0, 1.12, 0.93][index] ?? 1;
+              const elecUse = Math.round(plan.elecUse * (index === 0 ? 1 : drift));
+              const waterUse = Math.round(plan.waterUse * (index === 0 ? 1 : drift));
+
+              const elecPrev = plan.elecStart + plan.elecUse * index;
+              const waterPrev = plan.waterStart + plan.waterUse * index;
+
+              readingsToInsert.push(
+                { room_id: plan.room.id, owner_id: user.id, type: "Electricity", period,
+                  previous_reading: elecPrev, current_reading: elecPrev + elecUse, unit_price: ELECTRIC_UNIT },
+                { room_id: plan.room.id, owner_id: user.id, type: "Water", period,
+                  previous_reading: waterPrev, current_reading: waterPrev + waterUse, unit_price: WATER_UNIT },
+              );
+
+              const elecAmount = elecUse * ELECTRIC_UNIT;
+              const waterAmount = waterUse * WATER_UNIT;
+              const total = plan.rent + elecAmount + waterAmount + plan.svc;
+
+              // Kỳ cũ đã thu xong; riêng phòng P202 để nợ kỳ mới nhất → có công nợ để demo
+              const isLatest = index === periods.length - 1;
+              const leaveUnpaid = isLatest && plan.room.id === pvt_p202.id;
+
+              invoicesToInsert.push({
+                room_id: plan.room.id,
+                contract_id: plan.contract.id,
+                owner_id: user.id,
+                period,
+                due_date: `${period}-10`,
+                total_amount: total,
+                status: leaveUnpaid ? "Unpaid" : "Paid",
+                _rent: plan.rent, _elec: elecAmount, _water: waterAmount, _svc: plan.svc,
+                _elecUse: elecUse, _waterUse: waterUse, _paid: !leaveUnpaid,
+              });
+            });
+          });
+
+          const { error: readingsError } = await supabase
+            .from("utility_readings")
+            .insert(readingsToInsert);
+          if (readingsError) throw readingsError;
+
+          // Tách field nội bộ (_*) ra trước khi ghi — chúng chỉ để dựng items/payments
           const { data: createdInvoices, error: invoicesError } = await supabase
             .from("invoices")
-            .insert(invoicesToInsert)
+            .insert(invoicesToInsert.map(({ _rent, _elec, _water, _svc, _elecUse, _waterUse, _paid, ...row }) => row))
             .select();
 
           if (invoicesError) throw invoicesError;
 
-          // 8. Seed Invoice Items
+          // ── 8. Invoice items + payments ────────────────────────────────────
           const invoiceItemsToInsert: any[] = [];
+          const paymentsToInsert: any[] = [];
+
           createdInvoices.forEach((inv: any) => {
-            let rent = 0;
-            let elec = 0;
-            let water = 0;
-            let svc = 0;
-            
-            if (inv.room_id === pvt_p102.id) { rent = 2800000; elec = 180000; water = 90000; svc = 100000; }
-            else if (inv.room_id === pvt_p202.id) { rent = 3000000; elec = 210000; water = 95000; svc = 100000; }
-            else if (inv.room_id === pvt_p203.id) { rent = 2900000; elec = 150000; water = 80000; svc = 100000; }
-            else if (inv.room_id === pvt_p301.id) { rent = 3600000; elec = 240000; water = 110000; svc = 120000; }
-            else if (inv.room_id === q7_a01.id) { rent = 5200000; elec = 300000; water = 120000; svc = 150000; }
-            else if (inv.room_id === td_p01.id) { rent = 2200000; elec = 120000; water = 60000; svc = 50000; }
+            const plan = invoicesToInsert.find(
+              i => i.room_id === inv.room_id && i.period === inv.period,
+            );
+            if (!plan) return;
 
             invoiceItemsToInsert.push(
-              { invoice_id: inv.id, type: "Rent", description: "Tiền thuê phòng", quantity: 1, unit_price: rent, amount: rent },
-              { invoice_id: inv.id, type: "Electricity", description: "Tiền điện", quantity: elec / 3500, unit_price: 3500, amount: elec },
-              { invoice_id: inv.id, type: "Water", description: "Tiền nước", quantity: water / 15000, unit_price: 15000, amount: water },
-              { invoice_id: inv.id, type: "Service", description: "Phí dịch vụ cố định", quantity: 1, unit_price: svc, amount: svc }
+              { invoice_id: inv.id, type: "Rent", description: "Tiền thuê phòng", quantity: 1, unit_price: plan._rent, amount: plan._rent },
+              { invoice_id: inv.id, type: "Electricity", description: `Tiền điện (${plan._elecUse} kWh)`, quantity: plan._elecUse, unit_price: ELECTRIC_UNIT, amount: plan._elec },
+              { invoice_id: inv.id, type: "Water", description: `Tiền nước (${plan._waterUse} m³)`, quantity: plan._waterUse, unit_price: WATER_UNIT, amount: plan._water },
+              { invoice_id: inv.id, type: "Service", description: "Phí dịch vụ cố định", quantity: 1, unit_price: plan._svc, amount: plan._svc },
             );
+
+            if (plan._paid) {
+              paymentsToInsert.push({
+                invoice_id: inv.id, owner_id: user.id, amount: inv.total_amount,
+                method: "BankTransfer", paid_at: `${inv.period}-08T09:00:00Z`, purpose: "RentInvoice",
+              });
+            }
           });
 
           const { error: itemsError } = await supabase
             .from("invoice_items")
             .insert(invoiceItemsToInsert);
-
           if (itemsError) throw itemsError;
+
+          const { error: paymentsError } = await supabase
+            .from("payments")
+            .insert(paymentsToInsert);
+          if (paymentsError) throw paymentsError;
         }
       }
     }

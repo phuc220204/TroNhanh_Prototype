@@ -3,7 +3,7 @@ import { useNavigate } from "react-router";
 import {
   Search, Heart, MapPin,
   Wifi, Wind, Car, Bath, Clock, Layers,
-  Home, Star, Bell, User, Users, Calendar,
+  Home, Star, Bell, User, Users,
   SlidersHorizontal, ArrowRight,
   Shield, ShieldCheck, UserCheck, CreditCard, MessageSquare, Headphones,
   Mail, TrendingUp, Building2, Banknote, Phone,
@@ -15,95 +15,21 @@ import { PublicNavbarDesktop, PublicNavbarMobile, DemoFAB } from "../../shared/c
 import { DemoBanner } from "../../shared/components/common/DemoBanner";
 import { AppSelect } from "../../shared/components/common/AppSelect";
 import { ModalShell } from "../../shared/components/common/ModalShell";
-import { supabase } from "../../shared/supabaseClient";
-import { getListingImage } from "./AllListingsPage";
+import { EmptyState, Skeleton, Button } from "../../shared/components/common";
+import { logError } from "../../shared/services/supabase-error";
+import { getFeaturedListings, getListingById, incrementViewCount } from "../services/listing-queries";
+import { listActiveDemandPosts } from "../services/demand-post-service";
+import { DemandPostCard } from "../components/DemandPostCard";
+import { SaveListingButton } from "../components/SaveListingButton";
 import { PROPERTY_TYPES, PRICE_RANGES, TAGLINE } from "../../shared/constants/catalog";
+import { useAuth } from "../../shared/contexts/AuthContext";
+import { startConversation } from "../../shared/services/messaging-service";
 
 /* Hero Search — option lists */
 const LOAI_PHONG = [...PROPERTY_TYPES];
 const GIA_THUE = [...PRICE_RANGES];
 
-/* ══════════════════════════════════════════
-   MOCK DATA
-   ══════════════════════════════════════════ */
-const FEATURED_ROOMS = [
-  {
-    id: 1, title: "Căn Hộ Mini Full Nội Thất Thủ Đức",
-    price: "4.800.000", area: 28, loc: "Thủ Đức",
-    amenities: ["furniture", "ac", "wifi"], badge: "Nổi bật",
-    img: "https://images.unsplash.com/photo-1493809842364-78817add7ffb?w=600&q=80",
-  },
-  {
-    id: 2, title: "Studio Full Nội Thất gần ĐH RMIT",
-    price: "5.500.000", area: 30, loc: "Quận 7",
-    amenities: ["furniture", "ac", "wifi"], badge: "Nổi bật",
-    img: "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=600&q=80",
-  },
-  {
-    id: 3, title: "Duplex Ban Công View Đẹp, Full Nội Thất",
-    price: "7.200.000", area: 45, loc: "Bình Thạnh",
-    amenities: ["washer", "balcony", "wifi"], badge: "Nổi bật",
-    img: "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=600&q=80",
-  },
-  {
-    id: 4, title: "Phòng Master Rộng, Có Ban Công Riêng",
-    price: "8.000.000", area: 38, loc: "Gò Vấp",
-    amenities: ["ac", "balcony", "wifi"], badge: "Nổi bật",
-    img: "https://images.unsplash.com/photo-1512918728675-ed5a9ecdebfd?w=600&q=80",
-  },
-];
 
-const ROOM_WANTED_POSTS = [
-  {
-    id: 1, initials: "MA", name: "Nguyễn Minh Anh",
-    title: "Tìm phòng gần ĐH Hutech, Bình Thạnh",
-    locations: "Bình Thạnh, Gò Vấp", budget: "2.5 – 3.5 triệu/tháng",
-    roomType: "Phòng trọ / Căn hộ mini", moveIn: "Dọn vào trong tháng này",
-    amenities: ["Wifi", "WC riêng", "Giờ giấc tự do"],
-  },
-  {
-    id: 2, initials: "QB", name: "Trần Quốc Bảo",
-    title: "Cần căn hộ mini khu Quận 7",
-    locations: "Quận 7, Nhà Bè", budget: "4 – 6 triệu/tháng",
-    roomType: "Căn hộ mini", moveIn: "Dọn vào đầu tháng tới",
-    amenities: ["Máy lạnh", "Có bếp", "Chỗ để xe"],
-  },
-  {
-    id: 3, initials: "TN", name: "Lê Thảo Nhi",
-    title: "Tìm phòng có WC riêng gần Tân Bình",
-    locations: "Tân Bình, Quận 10", budget: "Dưới 3 triệu/tháng",
-    roomType: "Phòng trọ", moveIn: "Có thể dọn vào ngay",
-    amenities: ["WC riêng", "An ninh", "Không chung chủ"],
-  },
-  {
-    id: 4, initials: "GH", name: "Phạm Gia Huy",
-    title: "Tìm phòng ở Gò Vấp, cho người đi làm",
-    locations: "Gò Vấp", budget: "3 – 4 triệu/tháng",
-    roomType: "Phòng trọ / Studio", moveIn: "Trong 2 tuần tới",
-    amenities: ["Giờ tự do", "Wifi", "Yên tĩnh"],
-  },
-];
-
-const ROOMMATE_WANTED_POSTS = [
-  {
-    id: 1, initials: "TH", name: "Trần Thu Hà",
-    title: "Cần 1 bạn nữ ở ghép tại Quận 10",
-    location: "Quận 10, TP.HCM", price: "1.8 – 2.5 triệu/người",
-    needed: "Cần 1 người", requirements: ["Nữ", "Sinh viên", "Gọn gàng"],
-  },
-  {
-    id: 2, initials: "DA", name: "Hoàng Đức Anh",
-    title: "Tìm 1 bạn nam ở ghép gần ĐH Văn Lang",
-    location: "Bình Thạnh, TP.HCM", price: "2.2 – 3.0 triệu/người",
-    needed: "Cần 1 người", requirements: ["Nam", "Không hút thuốc", "Giờ tự do"],
-  },
-  {
-    id: 3, initials: "HN", name: "Lê Hoài Nam",
-    title: "Cần người ở ghép căn hộ mini Bình Thạnh",
-    location: "Bình Thạnh, TP.HCM", price: "2.5 – 3.5 triệu/người",
-    needed: "Cần 2 người", requirements: ["Người đi làm", "Sạch sẽ", "Ở lâu dài"],
-  },
-];
 
 const AMENITY_META: Record<string, { Icon: React.ElementType; label: string }> = {
   wifi:      { Icon: Wifi,          label: "WiFi" },
@@ -124,15 +50,15 @@ const FEATURES = [
   },
   {
     Icon: CreditCard, title: "Thanh toán an toàn",
-    desc: "Hỗ trợ đặt cọc và thanh toán tiền điện nước trực tuyến minh bạch, có biên lai điện tử.",
+    desc: "Chuyển khoản trực tiếp qua VietQR trên hóa đơn — không qua trung gian, không phí ẩn.",
   },
   {
     Icon: MessageSquare, title: "Kết nối trực tiếp",
     desc: "Hệ thống chat tích hợp giúp bạn liên hệ trực tiếp với chủ nhà không qua trung gian.",
   },
   {
-    Icon: Headphones, title: "Hỗ trợ 24/7",
-    desc: "Đội ngũ CSKH luôn sẵn sàng giải đáp mọi thắc mắc và hỗ trợ trong suốt quá trình thuê.",
+    Icon: Headphones, title: "Hỗ trợ qua Email",
+    desc: "Giải đáp thắc mắc và hỗ trợ chủ trọ cùng người ở qua email chính thức của Trọ Nhanh.",
   },
 ];
 
@@ -181,12 +107,13 @@ function Btn({
 }
 
 function RoomCard({ room, mobile, onClick }: {
-  room: typeof FEATURED_ROOMS[0]; mobile?: boolean; onClick?: () => void;
+  room: { id: any; title: string; price: string; area: number | string; loc: string; amenities: string[]; badge?: string | null; img: string }; mobile?: boolean; onClick?: () => void;
 }) {
-  const [saved, setSaved] = useState(false);
   const [hov, setHov] = useState(false);
   return (
     <div onClick={onClick}
+      data-testid="listing-card"
+      data-listing-id={room.id}
       onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
       style={{
         background: C.white, border: `1.5px solid ${hov ? C.secondary : C.border}`,
@@ -200,12 +127,7 @@ function RoomCard({ room, mobile, onClick }: {
       <div style={{ position: "relative", flexShrink: 0, width: mobile ? 140 : "100%", overflow: "hidden" }}>
         <img src={room.img} alt={room.title}
           style={{ width: "100%", height: mobile ? 140 : 190, objectFit: "cover", display: "block", transition: "transform 0.4s ease-in-out", transform: hov ? "scale(1.06)" : "none" }} />
-        <button onClick={e => { e.stopPropagation(); setSaved(v => !v); }}
-          style={{ position: "absolute", top: 12, right: 12, background: "rgba(255,255,255,0.92)", border: "none", borderRadius: "50%", width: 34, height: 34, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", boxShadow: "0 2px 8px rgba(0,0,0,0.08)", transition: "all 0.15s ease" }}
-          onMouseEnter={e => { e.currentTarget.style.transform = "scale(1.05)"; }}
-          onMouseLeave={e => { e.currentTarget.style.transform = "none"; }}>
-          <Heart size={15} color={saved ? "#E74C3C" : C.textSecondary} fill={saved ? "#E74C3C" : "none"} strokeWidth={saved ? 0 : 2} />
-        </button>
+        <SaveListingButton listingId={room.id} overlay size={15} />
         <span style={{ position: "absolute", top: 12, left: 12, background: C.available, color: "#fff", fontFamily: font, fontSize: 10.5, fontWeight: 700, borderRadius: 999, padding: "4px 10px", boxShadow: "0 2px 6px rgba(79,122,74,0.2)" }}>Còn trống</span>
         {room.badge && (
           <span style={{ position: "absolute", bottom: 12, left: 12, background: C.primary, color: "#fff", fontFamily: font, fontSize: 10, fontWeight: 700, borderRadius: 6, padding: "3px 8px", display: "inline-flex", alignItems: "center", gap: 3, boxShadow: "0 2px 6px rgba(138,74,32,0.2)" }}>
@@ -219,7 +141,7 @@ function RoomCard({ room, mobile, onClick }: {
           {room.title}
         </p>
         <p style={{ fontFamily: font, fontSize: 19, fontWeight: 800, color: C.primary, margin: "0 0 6px", letterSpacing: "-0.01em" }}>
-          {room.price} đ<span style={{ fontSize: 12, fontWeight: 400, color: C.textSecondary }}>/tháng</span>
+          {room.price}<span style={{ fontSize: 12, fontWeight: 400, color: C.textSecondary }}>/tháng</span>
         </p>
         <div style={{ display: "flex", alignItems: "center", gap: 4, marginBottom: 14 }}>
           <MapPin size={12} color={C.textSecondary} />
@@ -244,121 +166,6 @@ function RoomCard({ room, mobile, onClick }: {
 
 type HomeModalContent = { title: string; description: string } | null;
 
-/* ══════════════════════════════════════════
-   DEMAND POST CARD
-   ══════════════════════════════════════════ */
-function DemandPostCard({
-  post, kind, onMessage, onView,
-}: {
-  post: any; kind: "RoomWanted" | "RoommateWanted";
-  onMessage?: () => void; onView?: () => void;
-}) {
-  const isWanted = kind === "RoomWanted";
-  return (
-    <article
-      style={{
-        background: `linear-gradient(160deg, ${C.white} 0%, #FBF8F1 100%)`,
-        border: `1px solid ${C.border}`, borderRadius: 16, padding: 18,
-        boxShadow: "0 3px 14px rgba(92,70,50,0.05)",
-        display: "flex", flexDirection: "column", minWidth: 0,
-        transition: "transform 0.2s, box-shadow 0.2s",
-      }}
-      onMouseEnter={e => {
-        e.currentTarget.style.transform = "translateY(-2px)";
-        e.currentTarget.style.boxShadow = "0 6px 20px rgba(92,70,50,0.09)";
-      }}
-      onMouseLeave={e => {
-        e.currentTarget.style.transform = "none";
-        e.currentTarget.style.boxShadow = "0 3px 14px rgba(92,70,50,0.05)";
-      }}
-    >
-      {/* User Header */}
-      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
-        <div style={{ width: 38, height: 38, borderRadius: "50%", background: `linear-gradient(135deg, ${C.primary}, ${C.sand})`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-          <span style={{ fontFamily: font, fontSize: 12, fontWeight: 800, color: C.white }}>
-            {post.initials || "ND"}
-          </span>
-        </div>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <p style={{ fontFamily: font, fontSize: 13, fontWeight: 700, color: C.textPrimary, margin: 0, lineHeight: 1.35 }}>
-            {post.name || "Khách thuê"}
-          </p>
-          <p style={{ fontFamily: font, fontSize: 11, color: C.textSecondary, margin: "2px 0 0" }}>
-            Người thuê
-          </p>
-        </div>
-        <span style={{
-          fontFamily: font, fontSize: 10.5, fontWeight: 700,
-          color: isWanted ? C.primaryDark : C.secondary,
-          background: isWanted ? C.caramelSoft : "#F0E7D6",
-          borderRadius: 999, padding: "4px 9px", whiteSpace: "nowrap",
-          border: `1px solid ${isWanted ? "rgba(138,106,69,0.2)" : "rgba(210,199,183,0.3)"}`,
-        }}>
-          {isWanted ? "Tìm phòng" : "Ở ghép"}
-        </span>
-      </div>
-
-      {/* Post Title */}
-      <h3 style={{ fontFamily: font, fontSize: 14.5, fontWeight: 800, color: C.textPrimary, margin: "0 0 12px", lineHeight: 1.45, minHeight: 44 }}>
-        {post.title}
-      </h3>
-
-      {/* Structured Details */}
-      <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 14 }}>
-        <div style={{ display: "flex", alignItems: "flex-start", gap: 7 }}>
-          <MapPin size={13} color={C.secondary} strokeWidth={1.9} style={{ flexShrink: 0, marginTop: 2 }} />
-          <span style={{ fontFamily: font, fontSize: 12, color: C.textSecondary, lineHeight: 1.45 }}>
-            {isWanted ? post.locations : post.location}
-          </span>
-        </div>
-        <div style={{ display: "flex", alignItems: "flex-start", gap: 7 }}>
-          <Banknote size={13} color={C.secondary} strokeWidth={1.9} style={{ flexShrink: 0, marginTop: 2 }} />
-          <span style={{ fontFamily: font, fontSize: 12, fontWeight: 700, color: C.primary, lineHeight: 1.45 }}>
-            {isWanted ? post.budget : post.price}
-          </span>
-        </div>
-        <div style={{ display: "flex", alignItems: "flex-start", gap: 7 }}>
-          {isWanted ? (
-            <>
-              <Building2 size={13} color={C.secondary} strokeWidth={1.9} style={{ flexShrink: 0, marginTop: 2 }} />
-              <span style={{ fontFamily: font, fontSize: 12, color: C.textSecondary, lineHeight: 1.45 }}>{post.roomType}</span>
-            </>
-          ) : (
-            <>
-              <Users size={13} color={C.secondary} strokeWidth={1.9} style={{ flexShrink: 0, marginTop: 2 }} />
-              <span style={{ fontFamily: font, fontSize: 12, color: C.textSecondary, lineHeight: 1.45 }}>{post.needed}</span>
-            </>
-          )}
-        </div>
-      </div>
-
-      {/* Chips/Tags */}
-      <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 16, marginTop: "auto" }}>
-        {(isWanted ? post.amenities : post.requirements).slice(0, 3).map((item: string) => (
-          <span key={item} style={{ fontFamily: font, fontSize: 10, fontWeight: 600, color: C.textSecondary, background: C.bg, border: `1px solid ${C.border}`, borderRadius: 8, padding: "4px 8px" }}>
-            {item}
-          </span>
-        ))}
-      </div>
-
-      {/* Actions */}
-      <div style={{ display: "flex", gap: 8 }}>
-        <button type="button" onClick={onMessage}
-          style={{ flex: 1, minWidth: 0, minHeight: 38, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, padding: "8px", background: C.primary, color: C.white, border: "none", borderRadius: 10, fontFamily: font, fontSize: 12, fontWeight: 700, cursor: "pointer", transition: "background 0.12s" }}
-          onMouseEnter={e => (e.currentTarget.style.background = C.primaryHover)}
-          onMouseLeave={e => (e.currentTarget.style.background = C.primary)}>
-          <MessageSquare size={13} /> Nhắn tin
-        </button>
-        <button type="button" onClick={onView}
-          style={{ flex: 1, minWidth: 0, minHeight: 38, padding: "8px", background: "transparent", color: C.primary, border: `1.5px solid ${C.primary}`, borderRadius: 10, fontFamily: font, fontSize: 12, fontWeight: 700, cursor: "pointer", transition: "background 0.12s" }}
-          onMouseEnter={e => (e.currentTarget.style.background = C.caramelSoft)}
-          onMouseLeave={e => (e.currentTarget.style.background = "transparent")}>
-          Xem chi tiết
-        </button>
-      </div>
-    </article>
-  );
-}
 
 /* ══════════════════════════════════════════
    MARKETPLACE SECTIONS
@@ -368,10 +175,31 @@ function MarketplaceSections({
 }: { roomWants: any[]; roommateWants: any[]; mobile?: boolean; tablet?: boolean; onInfo: (content: HomeModalContent) => void }) {
   const [activeTab, setActiveTab] = useState<"RoomWanted" | "RoommateWanted">("RoomWanted");
 
-  const roomWantedCols = mobile ? 1 : tablet ? 2 : 4;
-  const roommateCols = mobile ? 1 : tablet ? 2 : 3;
-  const cols = activeTab === "RoomWanted" ? roomWantedCols : roommateCols;
-  const list = activeTab === "RoomWanted" ? roomWants : roommateWants;
+  // Landing chỉ là khối GIỚI THIỆU: hiển thị đúng 1 hàng, xem đầy đủ thì bấm
+  // "Xem tất cả nhu cầu". Trước đây render toàn bộ danh sách (24 + 16 card) làm
+  // trang chủ dài lê thê và lấn át các khối bên dưới.
+  const PREVIEW_LIMIT = 4;
+
+  const cols = mobile ? 1 : tablet ? 2 : PREVIEW_LIMIT;
+  const fullList = activeTab === "RoomWanted" ? roomWants : roommateWants;
+  const list = fullList.slice(0, PREVIEW_LIMIT);
+
+  const navigate = useNavigate();
+  const { user } = useAuth();
+
+  const handleMessage = async (post: any) => {
+    if (!user) {
+      navigate("/dang-nhap");
+      return;
+    }
+    if (post.renter_id === user.id) return;
+    try {
+      const convId = await startConversation("DemandPost", post.id);
+      navigate(`/tin-nhan/${convId}`);
+    } catch (err: any) {
+      logError("HomePage.handleMessage", err);
+    }
+  };
 
   return (
     <section style={{ background: C.caramelSoft, borderTop: `1px solid ${C.border}`, borderBottom: `1px solid ${C.border}` }}>
@@ -383,14 +211,14 @@ function MarketplaceSections({
             <Home size={28} color={C.primary} style={{ flexShrink: 0, marginTop: 4 }} />
             <div>
               <h2 style={{ fontFamily: font, fontSize: mobile ? 22 : 30, fontWeight: 900, color: C.textPrimary, margin: 0 }}>
-                Nhu cầu khách thuê & Ở ghép
+                Nhu cầu khách thuê &amp; Ở ghép
               </h2>
               <p style={{ fontFamily: font, fontSize: mobile ? 13 : 15, color: C.textSecondary, margin: "4px 0 0", lineHeight: 1.5 }}>
                 Tìm kiếm khách thuê đang tìm phòng hoặc các tin tìm người ở ghép cùng chia sẻ chi phí.
               </p>
             </div>
           </div>
-          <button type="button" onClick={() => onInfo({ title: "Danh sách nhu cầu", description: "Danh sách đầy đủ nhu cầu tìm phòng và ở ghép đang được hoàn thiện cho phiên bản V1." })}
+          <button type="button" onClick={() => navigate("/tin-nhu-cau")}
             style={{ display: "inline-flex", alignItems: "center", gap: 5, minHeight: 44, padding: "0 4px", fontFamily: font, fontSize: 13, fontWeight: 700, color: C.primary, background: "none", border: "none", cursor: "pointer", whiteSpace: "nowrap", flexShrink: 0 }}>
             Xem tất cả nhu cầu →
           </button>
@@ -429,22 +257,24 @@ function MarketplaceSections({
         </div>
 
         {/* Grid */}
-        <div style={{ display: "grid", gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))`, gap: mobile ? 14 : 16 }}>
-          {list.map(post => (
-            <DemandPostCard
-              key={post.id}
-              post={post}
-              kind={activeTab}
-              onMessage={() => onInfo({ title: `[Nhắn tin — UI only, V1]`, description: `Bạn đang kết nối với ${post.name}. Tính năng nhắn tin thời gian thực giữa chủ trọ và khách thuê đang được tích hợp.` })}
-              onView={() => onInfo({
-                title: post.title,
-                description: activeTab === "RoomWanted"
-                  ? `${post.name} đang tìm ${post.roomType.toLowerCase()} tại ${post.locations}, ngân sách ${post.budget}.`
-                  : `${post.name} tìm bạn ở ghép tại ${post.location}, giá ${post.price}. Yêu cầu: ${post.requirements.join(", ")}.`
-              })}
-            />
-          ))}
-        </div>
+        {list.length === 0 ? (
+          <EmptyState
+            title={activeTab === "RoomWanted" ? "Chưa có nhu cầu tìm phòng nào" : "Chưa có nhu cầu tìm bạn ở ghép nào"}
+            description="Hiện chưa có tin đăng nhu cầu nào thuộc danh mục này."
+          />
+        ) : (
+          <div style={{ display: "grid", gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))`, gap: mobile ? 14 : 16 }}>
+            {list.map(post => (
+              <DemandPostCard
+                key={post.id}
+                post={post}
+                kind={activeTab}
+                onMessage={() => handleMessage(post)}
+                onView={() => navigate(`/tin-nhu-cau/${post.id}`)}
+              />
+            ))}
+          </div>
+        )}
       </div>
     </section>
   );
@@ -527,10 +357,6 @@ function InfoModal({ content, onClose }: { content: HomeModalContent; onClose: (
       footer={<Btn label="Đã hiểu" onClick={onClose} />}
     >
       <p style={{ fontFamily: font, fontSize: 14, color: C.textSecondary, lineHeight: 1.7, margin: 0 }}>{content.description}</p>
-      <div style={{ padding: "12px 14px", background: C.caramelSoft, border: `1px solid ${C.border}`, borderRadius: 10, display: "flex", alignItems: "flex-start", gap: 8 }}>
-        <MessageSquare size={15} color={C.primary} style={{ flexShrink: 0, marginTop: 2 }} />
-        <span style={{ fontFamily: font, fontSize: 12, color: C.textSecondary, lineHeight: 1.6 }}>Đây là tương tác placeholder của bản Demo Prototype.</span>
-      </div>
     </ModalShell>
   );
 }
@@ -694,11 +520,23 @@ function HeroSearchBox({ onSearch, isMobile }: { onSearch?: () => void; isMobile
    HERO SECTION
    ══════════════════════════════════════════ */
 function HeroSection({ onSearch, isMobile }: { onSearch?: () => void; isMobile?: boolean }) {
+  /**
+   * Bốn ô này trước đây là "50.000+ phòng đang đăng", "10.000+ chủ nhà uy tín",
+   * "< 5 phút phản hồi", "100% tin đăng xác thực" — bốn con số bịa, đặt ngay dòng
+   * đầu trang chủ. Trên hệ thống mới triển khai (0 tin đăng) thì đó là nói dối
+   * trắng trợn, và không có cách nào đo được ba con số sau kể cả khi có dữ liệu.
+   *
+   * Thay bằng bốn điều ĐÚNG SỰ THẬT và không cần con số nào:
+   *   • Đăng tin cho thuê miễn phí — PRD: "Tin đăng (Miễn phí) · luôn mở"
+   *   • Chuyển khoản qua VietQR ngay trên hóa đơn
+   *   • Nền tảng không giữ tiền thuê, không thu phí trung gian (AS-002)
+   *   • Nhắn tin trực tiếp với chủ nhà, không qua trung gian
+   */
   const STATS = [
-    { value: "50.000+", label: "Phòng đang đăng", Icon: Building2 },
-    { value: "10.000+", label: "Chủ nhà uy tín", Icon: UserCheck },
-    { value: "< 5 phút", label: "Phản hồi trung bình", Icon: Clock },
-    { value: "100%",     label: "Tin đăng xác thực", Icon: ShieldCheck },
+    { value: "Miễn phí", label: "Đăng tin cho thuê", Icon: Building2 },
+    { value: "VietQR", label: "Thanh toán trên hóa đơn", Icon: ShieldCheck },
+    { value: "0đ", label: "Phí trung gian", Icon: UserCheck },
+    { value: "Trực tiếp", label: "Nhắn tin với chủ nhà", Icon: Clock },
   ];
 
   if (isMobile) {
@@ -720,7 +558,7 @@ function HeroSection({ onSearch, isMobile }: { onSearch?: () => void; isMobile?:
         </h1>
 
         <p style={{ fontFamily: font, fontSize: 13.5, color: C.textSecondary, margin: "0 0 28px", lineHeight: 1.6 }}>
-          Kết nối hàng chục nghìn chủ nhà và người thuê mỗi ngày. Trọ Nhanh giúp bạn tìm phòng phù hợp chỉ trong vài phút.
+          Nơi chủ nhà và người thuê gặp nhau trực tiếp. Xem giá, chi phí điện nước và liên hệ chủ nhà ngay trên tin đăng — không qua trung gian.
         </p>
 
         <div style={{ marginBottom: 28 }}>
@@ -765,7 +603,7 @@ function HeroSection({ onSearch, isMobile }: { onSearch?: () => void; isMobile?:
           </h1>
 
           <p style={{ fontFamily: font, fontSize: 15.5, color: C.textSecondary, margin: "0 0 36px", lineHeight: 1.7, maxWidth: 540 }}>
-            Kết nối hàng chục nghìn chủ nhà và người thuê mỗi ngày. Trọ Nhanh giúp bạn tìm phòng phù hợp chỉ trong vài phút.
+            Nơi chủ nhà và người thuê gặp nhau trực tiếp. Xem giá, chi phí điện nước và liên hệ chủ nhà ngay trên tin đăng — không qua trung gian.
           </p>
 
           <div style={{ marginBottom: 40, width: "100%", maxWidth: 680 }}>
@@ -901,9 +739,16 @@ function FeaturedRoomsSection({
       <QuickFilterChips onSearch={onSearch} mobile={isMobile} />
 
       {/* Cards grid */}
-      <div style={{ display: "grid", gridTemplateColumns: `repeat(${cols}, 1fr)`, gap: 20 }}>
-        {rooms.map(r => <RoomCard key={r.id} room={r} onClick={() => onRoomClick?.(r.id)} />)}
-      </div>
+      {rooms.length === 0 ? (
+        <EmptyState
+          title="Chưa có tin đăng phòng trọ nào"
+          description="Hiện chưa có tin đăng phòng trọ công khai nào trên hệ thống."
+        />
+      ) : (
+        <div style={{ display: "grid", gridTemplateColumns: `repeat(${cols}, 1fr)`, gap: 20 }}>
+          {rooms.map(r => <RoomCard key={r.id} room={r} onClick={() => onRoomClick?.(r.id)} />)}
+        </div>
+      )}
     </section>
   );
 }
@@ -1145,87 +990,41 @@ export function HomePage() {
   useEffect(() => {
     const loadHomeData = async () => {
       try {
-        // Fetch active listings
-        const { data: listingsData } = await supabase
-          .from("rental_listings")
-          .select("*")
-          .eq("status", "Active")
-          .is("deleted_at", null)
-          .order("boost_expire_at", { ascending: false, nullsFirst: false })
-          .order("created_at", { ascending: false })
-          .limit(4);
-
-        if (listingsData && listingsData.length > 0) {
-          const formatted = listingsData.map(l => {
-            const isVIP = l.boost_expire_at && new Date(l.boost_expire_at) > new Date();
-            return {
-              id: l.id,
-              title: l.title,
-              price: l.price.toLocaleString("vi-VN"),
-              area: parseFloat(l.area),
-              loc: l.district,
-              amenities: ["wifi", "ac"],
-              badge: isVIP ? "Nổi bật" : "Mới đăng",
-              img: getListingImage(l.id),
-            };
-          });
+        // Fetch active listings via service layer
+        const featuredCards = await getFeaturedListings(4);
+        if (featuredCards && featuredCards.length > 0) {
+          const formatted = featuredCards.map(l => ({
+            id: l.id,
+            title: l.title,
+            price: l.priceNum.toLocaleString("vi-VN"),
+            area: l.area,
+            loc: l.loc,
+            amenities: ["wifi", "ac"],
+            badge: l.badge || "Mới đăng",
+            img: l.img,
+          }));
           setDbRooms(formatted);
         }
 
-        // Fetch demand posts
-        const { data: demandData } = await supabase
-          .from("demand_posts")
-          .select("*")
-          .eq("status", "Active")
-          .is("deleted_at", null)
-          .order("created_at", { ascending: false });
-
-        if (demandData && demandData.length > 0) {
-          const roomWants = demandData
-            .filter(d => d.kind === "RoomWanted")
-            .map(d => ({
-              id: d.id,
-              initials: "ND",
-              name: "Khách tìm trọ",
-              title: `Tìm phòng tại ${(d.desired_districts || []).join(", ")}`,
-              locations: (d.desired_districts || []).join(", "),
-              budget: `${(d.price_min / 1000000).toFixed(1)} – ${(d.price_max / 1000000).toFixed(1)} triệu/tháng`,
-              roomType: "Phòng trọ / Căn hộ",
-              moveIn: "Dọn vào trong tháng",
-              amenities: ["Wifi", "WC riêng", "Tự do"],
-            }));
-
-          const roommateWants = demandData
-            .filter(d => d.kind === "RoommateWanted")
-            .map(d => ({
-              id: d.id,
-              title: `Tìm bạn ở ghép tại ${(d.desired_districts || []).join(", ")}`,
-              location: `${(d.desired_districts || []).join(", ")}, TP.HCM`,
-              price: `${(d.price_min / 1000000).toFixed(1)} – ${(d.price_max / 1000000).toFixed(1)} triệu/người`,
-              needed: "Cần 1 người",
-              requirements: ["Sạch sẽ", "Gọn gàng", "Vui vẻ"],
-            }));
-
-          setDbRoomWants(roomWants);
-          setDbRoommateWants(roommateWants);
-        }
+        // Fetch demand posts via service layer
+        const demandData = await listActiveDemandPosts();
+        setDbRoomWants(demandData.filter(d => d.kind === "RoomWanted"));
+        setDbRoommateWants(demandData.filter(d => d.kind === "RoommateWanted"));
       } catch (err) {
-        console.error("Error loading home page database data:", err);
+        logError("HomePage.loadHomeData", err);
       }
     };
     loadHomeData();
   }, []);
 
-  const rooms = dbRooms.length > 0 ? dbRooms : FEATURED_ROOMS;
-  const roomWants = dbRoomWants.length > 0 ? dbRoomWants : ROOM_WANTED_POSTS;
-  const roommateWants = dbRoommateWants.length > 0 ? dbRoommateWants : ROOMMATE_WANTED_POSTS;
+  const rooms = dbRooms;
+  const roomWants = dbRoomWants;
+  const roommateWants = dbRoommateWants;
 
   const selectRenterPostType = (type: string) => {
     setPostTypeModal(false);
-    setInfoModal({
-      title: "[Demand Posts — đang phát triển]",
-      description: `Biểu mẫu cho "${type}" đang được thiết kế và phát triển. Tính năng này sẽ ra mắt trong phiên bản V1.`,
-    });
+    const kindParam = type.toLowerCase().includes("ở ghép") ? "o-ghep" : "tim-phong";
+    navigate(`/dang-tin-nhu-cau?kind=${kindParam}`);
   };
 
   /* ── MOBILE ─────────────────────────────────────── */
@@ -1249,9 +1048,17 @@ export function HomePage() {
               </button>
             </div>
             <QuickFilterChips onSearch={onSearch} mobile />
-            <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-              {rooms.map(r => <RoomCard key={r.id} room={r} mobile onClick={() => onRoomClick(r.id)} />)}
-            </div>
+            {rooms.length === 0 ? (
+              <EmptyState
+                title="Chưa có tin đăng phòng trọ nào"
+                description="Hiện chưa có tin đăng phòng trọ công khai nào trên hệ thống."
+                action={<Button variant="primary" onClick={onLandlordPost}>Đăng tin ngay</Button>}
+              />
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+                {rooms.map(r => <RoomCard key={r.id} room={r} mobile onClick={() => onRoomClick(r.id)} />)}
+              </div>
+            )}
           </div>
 
           <MarketplaceSections roomWants={roomWants} roommateWants={roommateWants} mobile onInfo={setInfoModal} />

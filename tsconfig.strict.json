@@ -1,0 +1,28 @@
+{
+  // ══════════════════════════════════════════════════════════════════════════
+  // NẤC D — full strict CHỈ cho code MỚI.
+  //
+  // Đây là cơ chế giữ code mới sạch mà không phải chờ dọn xong legacy pages.
+  // `include` chỉ chứa các thư mục do CP4 tạo ra. Khi một page legacy đã được
+  // chuyển hoàn toàn sang service layer, thêm nó vào đây.
+  //
+  // Chạy: pnpm typecheck:strict   (phải luôn 0 lỗi)
+  // ══════════════════════════════════════════════════════════════════════════
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "strict": true,
+    "noImplicitAny": true,
+    "strictNullChecks": true,
+    "noUncheckedIndexedAccess": true,
+    "noImplicitReturns": true,
+    "exactOptionalPropertyTypes": false
+  },
+  "include": [
+    "src/shared/services",
+    "src/shared/query",
+    "src/shared/types",
+    "src/marketplace/services",
+    "src/workspace/services",
+    "src/admin/services"
+  ]
+}

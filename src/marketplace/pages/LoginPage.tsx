@@ -1,11 +1,31 @@
 import { useState } from "react";
-import { useNavigate, Link } from "react-router";
+import { useNavigate, Link, useSearchParams } from "react-router";
 import { supabase } from "../../shared/supabaseClient";
 import { C, font } from "../../shared/theme";
 import { Eye, EyeOff, Mail, Lock, ArrowLeft } from "lucide-react";
+import { GoogleSignInButton, AuthDivider } from "../../shared/components/common";
+
+/**
+ * Chỉ chấp nhận đường dẫn nội bộ cho `?redirect=`.
+ * Loại "https://…" và "//host" — nếu không, một link đăng nhập giả mạo có thể
+ * đẩy user sang site khác ngay sau khi họ vừa nhập mật khẩu.
+ */
+function toSafeRedirect(raw: string | null): string | null {
+  if (!raw) return null;
+  let decoded: string;
+  try {
+    decoded = decodeURIComponent(raw);
+  } catch {
+    return null;
+  }
+  if (!decoded.startsWith("/") || decoded.startsWith("//")) return null;
+  return decoded;
+}
 
 export function LoginPage() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const redirectUrl = toSafeRedirect(searchParams.get("redirect"));
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -38,8 +58,8 @@ export function LoginPage() {
       }
 
       if (data.session) {
-        // Redirect to homepage or dashboard
-        navigate("/");
+        // Redirect to target URL or default homepage
+        navigate(redirectUrl ?? "/");
       }
     } catch (err: any) {
       setErrorMessage(err.message || "Không thể kết nối đến máy chủ.");
@@ -111,6 +131,7 @@ export function LoginPage() {
 
         {errorMessage && (
           <div
+            data-testid="login-error"
             style={{
               background: "#FDF2F0",
               border: "1px solid #F5C2B9",
@@ -146,6 +167,7 @@ export function LoginPage() {
               />
               <input
                 type="email"
+                data-testid="login-email"
                 placeholder="ten@example.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
@@ -184,6 +206,7 @@ export function LoginPage() {
               />
               <input
                 type={showPassword ? "text" : "password"}
+                data-testid="login-password"
                 placeholder="••••••••"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
@@ -229,6 +252,7 @@ export function LoginPage() {
           {/* Submit button */}
           <button
             type="submit"
+            data-testid="login-submit"
             disabled={isLoading}
             style={{
               background: isLoading ? "#D8C9B2" : C.primary,
@@ -251,6 +275,10 @@ export function LoginPage() {
             {isLoading ? "Đang xử lý..." : "Đăng Nhập"}
           </button>
         </form>
+
+        <AuthDivider />
+
+        <GoogleSignInButton disabled={isLoading} onError={setErrorMessage} />
 
         <div style={{ marginTop: 24, textAlign: "center", fontSize: 13, color: C.textSecondary }}>
           Chưa có tài khoản?{" "}

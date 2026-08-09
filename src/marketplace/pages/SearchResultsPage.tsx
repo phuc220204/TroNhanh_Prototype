@@ -3,21 +3,38 @@ import { useNavigate, useLocation } from "react-router";
 import {
   Heart, MapPin, Wifi, Wind, Car, Bath, Clock, Layers,
   Home, Bell, User, X, Star, ArrowLeft, SlidersHorizontal,
-  Map, List, ChevronDown, Search, Check,
+  Map, List, ChevronDown, Search, Check, PawPrint,
 } from "lucide-react";
 import { C, font } from "../../shared/theme";
 import { useBreakpoint } from "../../shared/components/useBreakpoint";
 import { PublicNavbarDesktop, PublicNavbarMobile, DemoFAB } from "../../shared/components/PublicNavbar";
 import { DemoBanner } from "../../shared/components/common/DemoBanner";
-import { supabase } from "../../shared/supabaseClient";
-import { PROPERTY_TYPES, PRICE_RANGES, AMENITIES as CATALOG_AMENITIES, REGIONS, AREA_RANGES } from "../../shared/constants/catalog";
-import { getListingImage, mapAmenityToKey, mapTypeToKey } from "./AllListingsPage";
+import { PROPERTY_TYPES, PRICE_RANGES, AMENITIES as CATALOG_AMENITIES, AREA_RANGES } from "../../shared/constants/catalog";
+import { AreaSelect } from "../../shared/components/common";
+import { provinceName } from "../../shared/utils/vn-regions";
+import { getListingImage, mapAmenityToKey, mapTypeToKey } from "../services/listing-mappers";
+import { SaveListingButton } from "../components/SaveListingButton";
+import { searchListings } from "../services/listing-queries";
+import { parsePriceRangeLabel, parseAreaRangeLabel } from "../../shared/utils/catalog-bounds";
+import { logError } from "../../shared/services/supabase-error";
 
 /* ══════════════════════════════════════════
    TYPES & CONSTANTS
 ══════════════════════════════════════════ */
 interface SearchFilters {
-  region: string;
+  /**
+   * Chữ người dùng gõ ở ô tìm kiếm (`?loc=`). Đây là TỪ KHÓA tự do, không phải
+   * tên đơn vị hành chính.
+   *
+   * Bản cũ đặt tên `region` rồi gửi thẳng vào `districts` của `searchListings`,
+   * mà tham số đó khớp CHÍNH XÁC — nên gõ "gần Bách Khoa" ra 0 kết quả, còn gõ
+   * đúng "Quận 7" thì mới có. Giờ nó đi vào `keyword`.
+   */
+  keyword: string;
+  /** Mã tỉnh/thành. `null` = tất cả. */
+  provinceCode: number | null;
+  /** Mã phường/xã. `null` = cả tỉnh. */
+  wardCode: number | null;
   priceLabel: string;
   type: string;
   area: string;
@@ -25,7 +42,8 @@ interface SearchFilters {
 }
 
 const EMPTY_FILTERS: SearchFilters = {
-  region: "", priceLabel: "", type: "Tất cả", area: "", amenities: [],
+  keyword: "", provinceCode: null, wardCode: null,
+  priceLabel: "", type: "Tất cả", area: "", amenities: [],
 };
 
 type Room = {
@@ -42,6 +60,7 @@ const AMENITY_META: Record<string, { Icon: React.ElementType; label: string }> =
   bath:    { Icon: Bath,   label: "WC riêng" },
   clock:   { Icon: Clock,  label: "Giờ tự do" },
   loft:    { Icon: Layers, label: "Gác lửng" },
+  pets:    { Icon: PawPrint, label: "Thú cưng" },
 };
 
 const AMENITY_CODE: Record<string, string> = {
@@ -50,7 +69,6 @@ const AMENITY_CODE: Record<string, string> = {
   "Giờ giấc tự do": "clock", "Cho nuôi thú cưng": "pets",
 };
 
-const REGION_OPTIONS = [...REGIONS];
 const PRICE_OPTIONS  = [...PRICE_RANGES];
 const TYPE_OPTIONS   = ["Tất cả", ...PROPERTY_TYPES];
 const AREA_OPTIONS   = [...AREA_RANGES];
@@ -81,7 +99,8 @@ function matchArea(area: number, label: string): boolean {
 
 function getActiveChips(f: SearchFilters): string[] {
   const chips: string[] = [];
-  if (f.region) chips.push(f.region);
+  if (f.keyword) chips.push(f.keyword);
+  if (f.wardCode == null && f.provinceCode != null) chips.push(provinceName(f.provinceCode) ?? "");
   if (f.priceLabel) chips.push(f.priceLabel);
   if (f.area) chips.push(f.area);
   if (f.type && f.type !== "Tất cả") chips.push(f.type);
@@ -91,8 +110,8 @@ function getActiveChips(f: SearchFilters): string[] {
 
 function applyFilters(rooms: Room[], f: SearchFilters): Room[] {
   return rooms.filter(r => {
-    if (f.region) {
-      const q = f.region.toLowerCase();
+    if (f.keyword) {
+      const q = f.keyword.toLowerCase();
       const matchLoc = r.loc.toLowerCase().includes(q);
       const matchTitle = r.title.toLowerCase().includes(q);
       if (!matchLoc && !matchTitle) return false;
@@ -162,11 +181,12 @@ function Btn({
 }
 
 function RoomCard({ room, mobile, onClick }: { room: Room; mobile?: boolean; onClick?: () => void }) {
-  const [saved, setSaved] = useState(false);
   const [hov, setHov] = useState(false);
   return (
     <div
       onClick={onClick}
+      data-testid="listing-card"
+      data-listing-id={room.id}
       onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
       style={{
         background: C.white, border: `1px solid ${hov ? C.sand : C.border}`,
@@ -180,10 +200,7 @@ function RoomCard({ room, mobile, onClick }: { room: Room; mobile?: boolean; onC
       <div style={{ position: "relative", flexShrink: 0, width: mobile ? 140 : "100%" }}>
         <img src={room.img} alt={room.title}
           style={{ width: "100%", height: mobile ? 140 : 172, objectFit: "cover", display: "block" }} />
-        <button onClick={e => { e.stopPropagation(); setSaved(v => !v); }}
-          style={{ position: "absolute", top: 10, right: 10, background: "rgba(255,255,255,0.92)", border: "none", borderRadius: 999, width: 34, height: 34, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", boxShadow: "0 1px 6px rgba(0,0,0,0.12)" }}>
-          <Heart size={16} color={saved ? C.repairing : C.secondary} fill={saved ? C.repairing : "none"} strokeWidth={2} />
-        </button>
+        <SaveListingButton listingId={room.id} overlay size={16} />
         <span style={{ position: "absolute", top: 10, left: 10, background: C.available, color: "#fff", fontFamily: font, fontSize: 11, fontWeight: 700, borderRadius: 999, padding: "3px 10px" }}>
           Trống
         </span>
@@ -199,7 +216,7 @@ function RoomCard({ room, mobile, onClick }: { room: Room; mobile?: boolean; onC
           {room.title}
         </p>
         <p style={{ fontFamily: font, fontSize: 18, fontWeight: 700, color: C.primary, margin: "0 0 4px" }}>
-          {room.price} đ<span style={{ fontSize: 12, fontWeight: 400, color: C.textSecondary }}>/tháng</span>
+          {room.price}<span style={{ fontSize: 12, fontWeight: 400, color: C.textSecondary }}>/tháng</span>
         </p>
         <div style={{ display: "flex", alignItems: "center", gap: 4, marginBottom: 10 }}>
           <MapPin size={12} color={C.textSecondary} />
@@ -299,18 +316,14 @@ function FilterSidebar({
 
       {/* 1. Khu vực */}
       <SidebarSection title="Khu vực">
-        <div style={{ position: "relative" }}>
-          <select value={filters.region}
-            onChange={e => onChange({ ...filters, region: e.target.value })}
-            style={{ width: "100%", padding: "9px 36px 9px 12px", border: `1.5px solid ${filters.region ? C.primary : C.border}`, borderRadius: 10, background: C.white, fontFamily: font, fontSize: 14, color: filters.region ? C.textPrimary : C.textSecondary, cursor: "pointer", appearance: "none", outline: "none" }}>
-            <option value="">Tất cả khu vực</option>
-            {REGION_OPTIONS.map(r => <option key={r} value={r}>{r}</option>)}
-          </select>
-          <ChevronDown size={14} color={C.textSecondary} style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", pointerEvents: "none" }} />
-        </div>
-        <p style={{ fontFamily: font, fontSize: 11, color: C.textSecondary, margin: "6px 0 0" }}>
-          Gần trường học, khu làm việc...
-        </p>
+        <AreaSelect
+          value={{ provinceCode: filters.provinceCode, wardCode: filters.wardCode }}
+          onChange={(a) => onChange({ ...filters, provinceCode: a.provinceCode, wardCode: a.wardCode })}
+          allowAllProvinces
+          allowAllWards
+          labels={false}
+          testIdPrefix="search-area"
+        />
       </SidebarSection>
 
       {/* 2. Khoảng giá */}
@@ -587,14 +600,14 @@ function MobileFilterSheet({
           {/* 1. Khu vực */}
           <div style={{ padding: "18px 0", borderBottom: `1px solid ${C.border}` }}>
             <p style={{ fontFamily: font, fontSize: 12, fontWeight: 700, color: C.textSecondary, margin: "0 0 12px", textTransform: "uppercase", letterSpacing: "0.07em" }}>Khu vực</p>
-            <div style={{ position: "relative" }}>
-              <select value={filters.region} onChange={e => onChange({ ...filters, region: e.target.value })}
-                style={{ width: "100%", padding: "12px 36px 12px 14px", border: `1.5px solid ${filters.region ? C.primary : C.border}`, borderRadius: 12, background: C.white, fontFamily: font, fontSize: 15, color: filters.region ? C.textPrimary : C.textSecondary, cursor: "pointer", appearance: "none", outline: "none", minHeight: 44 }}>
-                <option value="">Tất cả khu vực</option>
-                {REGION_OPTIONS.map(r => <option key={r} value={r}>{r}</option>)}
-              </select>
-              <ChevronDown size={16} color={C.textSecondary} style={{ position: "absolute", right: 14, top: "50%", transform: "translateY(-50%)", pointerEvents: "none" }} />
-            </div>
+            <AreaSelect
+              value={{ provinceCode: filters.provinceCode, wardCode: filters.wardCode }}
+              onChange={(a) => onChange({ ...filters, provinceCode: a.provinceCode, wardCode: a.wardCode })}
+              allowAllProvinces
+              allowAllWards
+              labels={false}
+              testIdPrefix="search-area-mobile"
+            />
           </div>
 
           {/* 2. Khoảng giá */}
@@ -660,57 +673,53 @@ export function SearchResultsPage() {
   const [viewMode, setViewMode]        = useState<"list" | "map">("list");
   const [isLoading, setIsLoading]      = useState(true);
 
-  // 1. Fetch data from Supabase
+  // 1. Fetch data from Supabase via service layer
   useEffect(() => {
     const fetchRooms = async () => {
       setIsLoading(true);
       try {
-        const { data, error } = await supabase
-          .from("rental_listings")
-          .select(`
-            *,
-            listing_amenities (
-              amenity
-            )
-          `)
-          .eq("status", "Active")
-          .is("deleted_at", null)
-          .order("created_at", { ascending: false });
+        const { priceMin, priceMax } = parsePriceRangeLabel(filters.priceLabel);
+        const { areaMin, areaMax } = parseAreaRangeLabel(filters.area);
 
-        if (error) throw error;
+        const result = await searchListings({
+          keyword: filters.keyword || undefined,
+          provinceCode: filters.provinceCode,
+          wardCodes: filters.wardCode != null ? [filters.wardCode] : undefined,
+          priceMin,
+          priceMax,
+          areaMin,
+          areaMax,
+          propertyTypes: filters.type && filters.type !== "Tất cả" ? [filters.type] : undefined,
+          amenities: filters.amenities.length > 0 ? filters.amenities : undefined,
+          sort: sortBy as any,
+          page: 1,
+          pageSize: 50,
+        });
 
-        if (data) {
-          const mapped: Room[] = data.map((item: any) => {
-            const priceVal = Number(item.price);
-            const formattedPrice = priceVal.toLocaleString("vi-VN");
-            const ams = (item.listing_amenities || []).map((la: any) => mapAmenityToKey(la.amenity));
-            const isBoosted = item.boost_expire_at && new Date(item.boost_expire_at) > new Date();
+        const mapped: Room[] = result.data.map((item) => ({
+          id: item.id,
+          title: item.title,
+          price: item.price,
+          priceNum: item.priceNum,
+          area: item.area,
+          loc: item.loc,
+          amenities: item.amenities.map(mapAmenityToKey),
+          type: mapTypeToKey(item.type),
+          badge: item.badge,
+          img: item.img,
+          contact_phone: item.contact_phone,
+          boost_expire_at: item.boost_expire_at,
+        }));
 
-            return {
-              id: item.id,
-              title: item.title,
-              price: formattedPrice,
-              priceNum: priceVal,
-              area: Number(item.area),
-              loc: item.district,
-              amenities: ams,
-              type: mapTypeToKey(item.property_type),
-              badge: isBoosted ? "Nổi bật" : null,
-              img: getListingImage(item.id),
-              contact_phone: item.contact_phone || "",
-              boost_expire_at: item.boost_expire_at,
-            };
-          });
-          setDbRooms(mapped);
-        }
+        setDbRooms(mapped);
       } catch (err) {
-        console.error("Error loading listings:", err);
+        logError("SearchResultsPage.fetchRooms", err);
       } finally {
         setIsLoading(false);
       }
     };
     fetchRooms();
-  }, []);
+  }, [filters, sortBy]);
 
   // 2. Parse URL search parameters on load
   useEffect(() => {
@@ -719,8 +728,12 @@ export function SearchResultsPage() {
     const typeParam = params.get("type") || "Tất cả";
     const priceParam = params.get("price") || "";
 
-    const newFilters = {
-      region: locParam,
+    // Khai kiểu tường minh: không có nó thì `amenities: []` suy ra `any[]` và
+    // `SearchFilters.amenities: string[]` không còn được kiểm ở chỗ nào cả.
+    const newFilters: SearchFilters = {
+      keyword: locParam,
+      provinceCode: null,
+      wardCode: null,
       priceLabel: priceParam,
       type: typeParam,
       area: "",
@@ -734,7 +747,9 @@ export function SearchResultsPage() {
 
   const removeChip = (chip: string) => {
     setFilters(f => {
-      if (f.region === chip)             return { ...f, region: "" };
+      if (f.keyword === chip)            return { ...f, keyword: "" };
+      if (f.provinceCode != null && chip === provinceName(f.provinceCode))
+        return { ...f, provinceCode: null, wardCode: null };
       if (f.priceLabel === chip)         return { ...f, priceLabel: "" };
       if (f.area === chip)               return { ...f, area: "" };
       if (f.type === chip)               return { ...f, type: "Tất cả" };

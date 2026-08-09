@@ -4,20 +4,29 @@ import {
   Search, Heart, MapPin, Wifi, Wind, Car, Bath, Clock, Layers,
   Home, Bell, User, X, Star, ArrowLeft, SlidersHorizontal,
   Map, LayoutGrid, List, ChevronDown, ChevronLeft, ChevronRight,
-  Check, ArrowUpDown,
+  Check, ArrowUpDown, PawPrint,
 } from "lucide-react";
 import { C, font } from "../../shared/theme";
 import { useBreakpoint } from "../../shared/components/useBreakpoint";
 import { PublicNavbarDesktop, PublicNavbarMobile, DemoFAB } from "../../shared/components/PublicNavbar";
 import { DemoBanner } from "../../shared/components/common/DemoBanner";
-import { supabase } from "../../shared/supabaseClient";
-import { PROPERTY_TYPES, PRICE_RANGES, AMENITIES as CATALOG_AMENITIES, REGIONS, AREA_RANGES } from "../../shared/constants/catalog";
+import { logError } from "../../shared/services/supabase-error";
+import { PROPERTY_TYPES, PRICE_RANGES, AMENITIES as CATALOG_AMENITIES, AREA_RANGES } from "../../shared/constants/catalog";
+import { AreaSelect } from "../../shared/components/common";
+import { provinceName, loadVnWards, type VnWard } from "../../shared/utils/vn-regions";
+import { parsePriceRangeLabel, parseAreaRangeLabel } from "../../shared/utils/catalog-bounds";
+import { searchListings } from "../services/listing-queries";
+import { getListingImage, mapAmenityToKey, mapTypeToKey } from "../services/listing-mappers";
+import { SaveListingButton } from "../components/SaveListingButton";
 
 /* ══════════════════════════════════════════
    TYPES & CONSTANTS
 ══════════════════════════════════════════ */
 interface AllFilters {
-  region: string;
+  /** Mã tỉnh/thành. `null` = tất cả. Cấp quận/huyện đã bỏ từ 01/07/2025. */
+  provinceCode: number | null;
+  /** Mã phường/xã. `null` = cả tỉnh. */
+  wardCode: number | null;
   priceLabel: string;
   roomTypes: string[];
   area: string;
@@ -26,7 +35,7 @@ interface AllFilters {
 }
 
 const EMPTY_FILTERS: AllFilters = {
-  region: "", priceLabel: "", roomTypes: [], area: "", amenities: [], status: [],
+  provinceCode: null, wardCode: null, priceLabel: "", roomTypes: [], area: "", amenities: [], status: [],
 };
 
 type Room = {
@@ -34,9 +43,10 @@ type Room = {
   loc: string; amenities: string[]; type: string;
   badge: "Nổi bật" | "Mới đăng" | null; img: string;
   contact_phone: string; boost_expire_at: string | null;
+  /** BR-024 — chỉ có khi khu bật trang công khai. */
+  rating?: number | null; reviewCount?: number; propertySlug?: string | null;
 };
 
-const REGION_OPTIONS = [...REGIONS];
 const PRICE_OPTIONS  = [...PRICE_RANGES];
 const AREA_OPTIONS   = [...AREA_RANGES];
 const AMENITY_OPTS   = [...CATALOG_AMENITIES];
@@ -69,123 +79,27 @@ const AMENITY_META: Record<string, { Icon: React.ElementType; label: string }> =
   bath:    { Icon: Bath,   label: "WC riêng" },
   clock:   { Icon: Clock,  label: "Giờ tự do" },
   loft:    { Icon: Layers, label: "Gác lửng" },
+  pets:    { Icon: PawPrint, label: "Thú cưng" },
 };
 
-const DEFAULT_IMAGES = [
-  "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=600&q=80",
-  "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=600&q=80",
-  "https://images.unsplash.com/photo-1493809842364-78817add7ffb?w=600&q=80",
-  "https://images.unsplash.com/photo-1512918728675-ed5a9ecdebfd?w=600&q=80",
-  "https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=600&q=80",
-  "https://images.unsplash.com/photo-1555854877-bab0e564b8d5?w=600&q=80",
-  "https://images.unsplash.com/photo-1484154218962-a197022b5858?w=600&q=80",
-  "https://images.unsplash.com/photo-1489171078254-c3365d6e359f?w=600&q=80",
-  "https://images.unsplash.com/photo-1598928506311-c55ded91a20c?w=600&q=80",
-];
-
-export const getListingImage = (idStr: string) => {
-  let hash = 0;
-  for (let i = 0; i < idStr.length; i++) {
-    hash = idStr.charCodeAt(i) + ((hash << 5) - hash);
-  }
-  const idx = Math.abs(hash) % DEFAULT_IMAGES.length;
-  return DEFAULT_IMAGES[idx];
-};
-
-export const mapAmenityToKey = (amenity: string): string => {
-  const norm = amenity.toLowerCase().trim();
-  if (norm.includes("wifi")) return "wifi";
-  if (norm.includes("máy lạnh") || norm.includes("ac") || norm.includes("điều hòa")) return "ac";
-  if (norm.includes("gác")) return "loft";
-  if (norm.includes("xe")) return "parking";
-  if (norm.includes("wc") || norm.includes("phòng tắm") || norm.includes("toilet") || norm.includes("khép kín")) return "bath";
-  if (norm.includes("tự do") || norm.includes("giờ giấc")) return "clock";
-  return "wifi";
-};
-
-export const mapTypeToKey = (type: string): string => {
-  const norm = type.toLowerCase().trim();
-  if (norm.includes("trọ")) return "room";
-  if (norm.includes("mini")) return "mini";
-  if (norm.includes("dịch vụ")) return "apartment";
-  if (norm.includes("ký túc xá") || norm.includes("ktx")) return "ktx";
-  if (norm.includes("nguyên căn")) return "house";
-  return "room";
-};
+export { getListingImage, mapAmenityToKey, mapTypeToKey } from "../services/listing-mappers";
 
 /* ══════════════════════════════════════════
-   FILTER & SORT HELPERS
+   FILTER HELPERS
+   Lọc và sắp xếp CHẠY Ở SERVER (marketplace/services/listing-queries.ts).
+   Khối runFilters / runSort / matchPrice / matchArea client-side đã bị xóa ở
+   T11a — chúng đã thành dead code sau khi chuyển sang service layer, và để lại
+   thì agent sau dễ tưởng còn dùng rồi lọc hai lần.
 ══════════════════════════════════════════ */
-function matchPrice(priceNum: number, label: string): boolean {
-  switch (label) {
-    case "Dưới 2 triệu": return priceNum < 2_000_000;
-    case "2 – 4 triệu":  return priceNum >= 2_000_000 && priceNum <= 4_000_000;
-    case "4 – 6 triệu":  return priceNum > 4_000_000 && priceNum <= 6_000_000;
-    case "Trên 6 triệu": return priceNum > 6_000_000;
-    default:             return true;
-  }
-}
-
-function matchArea(a: number, label: string): boolean {
-  switch (label) {
-    case "Dưới 20 m²":  return a < 20;
-    case "20 – 30 m²":  return a >= 20 && a <= 30;
-    case "30 – 45 m²":  return a > 30 && a <= 45;
-    case "Trên 45 m²":  return a > 45;
-    default:            return true;
-  }
-}
-
-function runFilters(rooms: Room[], f: AllFilters): Room[] {
-  return rooms.filter(r => {
-    if (f.region) {
-      const q = f.region.toLowerCase();
-      const matchLoc = r.loc.toLowerCase().includes(q);
-      const matchTitle = r.title.toLowerCase().includes(q);
-      if (!matchLoc && !matchTitle) return false;
-    }
-    if (f.priceLabel && !matchPrice(r.priceNum, f.priceLabel)) return false;
-    if (f.area && !matchArea(r.area, f.area)) return false;
-    if (f.roomTypes.length > 0 && !f.roomTypes.includes(r.type)) return false;
-    const known = f.amenities.filter(a => AMENITY_CODE[a]);
-    if (known.some(a => !r.amenities.includes(AMENITY_CODE[a]))) return false;
-    if (f.status.length > 0) {
-      const ok = f.status.some(s =>
-        (s === "Còn trống") ||
-        (s === "Mới đăng" && r.badge === "Mới đăng") ||
-        (s === "Nổi bật" && r.badge === "Nổi bật")
-      );
-      if (!ok) return false;
-    }
-    return true;
-  });
-}
-
-function runSort(rooms: Room[], sort: string): Room[] {
-  const s = [...rooms];
-  const isBoosted = (r: Room) => r.boost_expire_at && new Date(r.boost_expire_at) > new Date();
-  
-  const compareBase = (a: Room, b: Room) => {
-    switch (sort) {
-      case "price-asc":  return a.priceNum - b.priceNum;
-      case "price-desc": return b.priceNum - a.priceNum;
-      case "area-desc":  return b.area - a.area;
-      default:           return 0; // standard fallback
-    }
-  };
-
-  return s.sort((a, b) => {
-    const aB = isBoosted(a);
-    const bB = isBoosted(b);
-    if (aB && !bB) return -1;
-    if (!aB && bB) return 1;
-    return compareBase(a, b);
-  });
-}
-
-function getChips(f: AllFilters): string[] {
+/**
+ * Chip khu vực cần TÊN, mà bộ lọc chỉ giữ MÃ. Tên tỉnh tra được ngay (danh sách
+ * 34 mục nạp sẵn); tên phường phải chờ chunk phường/xã tải xong nên truyền vào
+ * từ ngoài — chưa có thì tạm hiện tên tỉnh, không hiện mã trần.
+ */
+function getChips(f: AllFilters, wardLabel: string | null): string[] {
   const c: string[] = [];
-  if (f.region) c.push(f.region);
+  if (f.wardCode != null && wardLabel) c.push(wardLabel);
+  else if (f.provinceCode != null) c.push(provinceName(f.provinceCode) ?? "");
   if (f.priceLabel) c.push(f.priceLabel);
   if (f.area) c.push(f.area);
   ROOM_TYPE_OPTS.filter(o => f.roomTypes.includes(o.value)).forEach(o => c.push(o.label));
@@ -219,17 +133,14 @@ function Btn({ variant = "primary", label, icon, fullWidth, size = "md", onClick
 }
 
 function RoomCard({ room, onClick, listView }: { room: Room; onClick?: () => void; listView?: boolean }) {
-  const [saved, setSaved] = useState(false);
   const [hov, setHov] = useState(false);
   return (
-    <div onClick={onClick} onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
+    <div onClick={onClick} data-testid="listing-card" data-listing-id={room.id}
+      onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
       style={{ background: C.white, border: `1px solid ${hov ? C.sand : C.border}`, borderRadius: 14, overflow: "hidden", boxShadow: hov ? "0 8px 24px rgba(92,70,50,0.14)" : "0 2px 10px rgba(92,70,50,0.07)", transform: hov ? "translateY(-2px)" : "none", transition: "all 0.18s", cursor: "pointer", display: "flex", flexDirection: listView ? "row" : "column" }}>
       <div style={{ position: "relative", flexShrink: 0, width: listView ? 220 : "100%" }}>
         <img src={room.img} alt={room.title} style={{ width: "100%", height: listView ? "100%" : 172, objectFit: "cover", display: "block", minHeight: listView ? 140 : 0 }} />
-        <button onClick={e => { e.stopPropagation(); setSaved(v => !v); }}
-          style={{ position: "absolute", top: 10, right: 10, background: "rgba(255,255,255,0.92)", border: "none", borderRadius: "50%", width: 34, height: 34, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", boxShadow: "0 1px 6px rgba(0,0,0,0.12)" }}>
-          <Heart size={16} color={saved ? C.repairing : C.secondary} fill={saved ? C.repairing : "none"} strokeWidth={2} />
-        </button>
+        <SaveListingButton listingId={room.id} overlay size={16} />
         <span style={{ position: "absolute", top: 10, left: 10, background: C.available, color: "#fff", fontFamily: font, fontSize: 11, fontWeight: 700, borderRadius: 999, padding: "3px 10px" }}>Còn trống</span>
         {room.badge && (
           <span style={{ position: "absolute", bottom: 10, left: 10, background: room.badge === "Nổi bật" ? C.primary : C.repairing, color: "#fff", fontFamily: font, fontSize: 10, fontWeight: 700, borderRadius: 6, padding: "2px 8px", display: "inline-flex", alignItems: "center", gap: 3 }}>
@@ -240,10 +151,17 @@ function RoomCard({ room, onClick, listView }: { room: Room; onClick?: () => voi
       </div>
       <div style={{ padding: "12px 14px 14px", display: "flex", flexDirection: "column", flex: 1, minWidth: 0 }}>
         <p style={{ fontFamily: font, fontSize: 14, fontWeight: 600, color: C.textPrimary, margin: "0 0 5px", lineHeight: 1.45, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>{room.title}</p>
-        <p style={{ fontFamily: font, fontSize: 18, fontWeight: 700, color: C.primary, margin: "0 0 4px" }}>{room.price} đ<span style={{ fontSize: 12, fontWeight: 400, color: C.textSecondary }}>/tháng</span></p>
-        <div style={{ display: "flex", alignItems: "center", gap: 4, marginBottom: 10 }}>
+        <p style={{ fontFamily: font, fontSize: 18, fontWeight: 700, color: C.primary, margin: "0 0 4px" }}>{room.price}<span style={{ fontSize: 12, fontWeight: 400, color: C.textSecondary }}>/tháng</span></p>
+        <div style={{ display: "flex", alignItems: "center", gap: 4, marginBottom: 10, flexWrap: "wrap" }}>
           <MapPin size={12} color={C.textSecondary} />
           <span style={{ fontFamily: font, fontSize: 12, color: C.textSecondary }}>{room.area} m² · {room.loc}</span>
+          {room.rating != null && (
+            <span data-testid="rating-badge" style={{ display: "inline-flex", alignItems: "center", gap: 3, marginLeft: 4, background: C.cream, borderRadius: 999, padding: "1px 7px" }}>
+              <Star size={10} color={C.warning} fill={C.warning} strokeWidth={0} />
+              <span style={{ fontFamily: font, fontSize: 11, fontWeight: 700, color: C.textPrimary }}>{room.rating.toFixed(1)}</span>
+              <span style={{ fontFamily: font, fontSize: 10.5, color: C.textSecondary }}>({room.reviewCount ?? 0})</span>
+            </span>
+          )}
         </div>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: "auto" }}>
           {room.amenities.slice(0, 3).map(a => {
@@ -306,10 +224,16 @@ function PageHeader({ count, onHome }: { count: number; onHome?: () => void }) {
             <h1 style={{ fontFamily: font, fontSize: 28, fontWeight: 900, color: C.textPrimary, margin: "0 0 5px", letterSpacing: "-0.02em" }}>Tất cả phòng đang đăng</h1>
             <p style={{ fontFamily: font, fontSize: 14, color: C.textSecondary, margin: 0 }}>Khám phá các phòng trọ, căn hộ dịch vụ và chỗ ở phù hợp với nhu cầu của bạn.</p>
           </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-            <span style={{ fontFamily: font, fontSize: 28, fontWeight: 900, color: C.primary, letterSpacing: "-0.02em" }}>1.200+</span>
-            <span style={{ fontFamily: font, fontSize: 14, color: C.textSecondary }}>phòng đang đăng</span>
-          </div>
+          {/* Số THẬT từ `searchListings().totalCount`. Trước đây là "1.200+"
+              hardcode — trên hệ thống mới triển khai thì đó là con số bịa, và
+              ngay dưới nó là dòng "Hiển thị 0 trong 1.200+ phòng", tự mâu thuẫn
+              trong cùng một khung nhìn. */}
+          {count > 0 && (
+            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              <span style={{ fontFamily: font, fontSize: 28, fontWeight: 900, color: C.primary, letterSpacing: "-0.02em" }}>{count.toLocaleString("vi-VN")}</span>
+              <span style={{ fontFamily: font, fontSize: 14, color: C.textSecondary }}>phòng đang đăng</span>
+            </div>
+          )}
         </div>
       </div>
     </div>
@@ -367,14 +291,14 @@ function FilterSidebar({ filters, onChange, onApply, onClear }: {
 
       {/* 1. Khu vực */}
       <SidebarSection title="Khu vực">
-        <div style={{ position: "relative" }}>
-          <select value={filters.region} onChange={e => onChange({ ...filters, region: e.target.value })}
-            style={{ width: "100%", padding: "9px 36px 9px 12px", border: `1.5px solid ${filters.region ? C.primary : C.border}`, borderRadius: 10, background: C.white, fontFamily: font, fontSize: 14, color: filters.region ? C.textPrimary : C.textSecondary, cursor: "pointer", appearance: "none", outline: "none" }}>
-            <option value="">Tất cả khu vực</option>
-            {REGION_OPTIONS.map(r => <option key={r} value={r}>{r}</option>)}
-          </select>
-          <ChevronDown size={14} color={C.textSecondary} style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", pointerEvents: "none" }} />
-        </div>
+        <AreaSelect
+          value={{ provinceCode: filters.provinceCode, wardCode: filters.wardCode }}
+          onChange={(a) => onChange({ ...filters, provinceCode: a.provinceCode, wardCode: a.wardCode })}
+          allowAllProvinces
+          allowAllWards
+          labels={false}
+          testIdPrefix="all-listings-area"
+        />
       </SidebarSection>
 
       {/* 2. Khoảng giá */}
@@ -454,7 +378,9 @@ function ListingToolbar({ count, sortBy, onSort, viewMode, onView, onMap }: {
   return (
     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16, flexWrap: "wrap", gap: 10 }}>
       <p style={{ fontFamily: font, fontSize: 14, color: C.textSecondary, margin: 0 }}>
-        Hiển thị <strong style={{ color: C.textPrimary }}>{count}</strong> trong <strong style={{ color: C.textPrimary }}>1.200+</strong> phòng
+        {count > 0
+          ? <>Tìm thấy <strong style={{ color: C.textPrimary }}>{count.toLocaleString("vi-VN")}</strong> phòng</>
+          : <>Chưa có phòng nào phù hợp</>}
       </p>
       <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
         {/* Sort */}
@@ -499,7 +425,7 @@ function MapPlaceholder() {
       </div>
       <div style={{ textAlign: "center", zIndex: 1 }}>
         <p style={{ fontFamily: font, fontSize: 16, fontWeight: 600, color: C.textPrimary, margin: "0 0 4px" }}>Chế độ xem bản đồ</p>
-        <p style={{ fontFamily: font, fontSize: 13, color: C.textSecondary, margin: 0 }}>Hiển thị 1.200+ phòng trên bản đồ TP. Hồ Chí Minh</p>
+        <p style={{ fontFamily: font, fontSize: 13, color: C.textSecondary, margin: 0 }}>Xem vị trí các phòng đang đăng trên bản đồ</p>
       </div>
     </div>
   );
@@ -508,17 +434,30 @@ function MapPlaceholder() {
 /* ══════════════════════════════════════════
    EMPTY STATE
 ══════════════════════════════════════════ */
-function EmptyState({ onClear }: { onClear: () => void }) {
+/**
+ * Hai trạng thái rỗng khác nhau, và trước đây bị gộp thành một:
+ *   • ĐANG LỌC mà không ra kết quả → khuyên nới bộ lọc, cho nút "Xóa lọc"
+ *   • CHƯA LỌC gì mà vẫn rỗng      → hệ thống chưa có tin nào
+ *
+ * Bản cũ luôn hiện "Thử mở rộng khu vực… hoặc xóa bớt tiện ích" kèm nút "Xóa lọc"
+ * — trên hệ thống mới triển khai, người dùng chưa chạm bộ lọc nào mà bị bảo đi
+ * xóa lọc, và tưởng mình đang lọc sai chứ không biết là chưa có tin nào cả.
+ */
+function EmptyState({ onClear, isFiltered }: { onClear: () => void; isFiltered: boolean }) {
   return (
-    <div style={{ textAlign: "center", padding: "72px 24px", background: C.white, border: `1px solid ${C.border}`, borderRadius: 16 }}>
+    <div style={{ textAlign: "center", padding: "72px 24px", background: C.white, border: `1px solid ${C.border}`, borderRadius: 16 }} data-testid="all-listings-empty">
       <div style={{ width: 64, height: 64, borderRadius: "50%", background: C.cream, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px" }}>
         <Search size={28} color={C.sand} />
       </div>
-      <p style={{ fontFamily: font, fontSize: 17, fontWeight: 700, color: C.textPrimary, margin: "0 0 8px" }}>Không tìm thấy phòng phù hợp</p>
-      <p style={{ fontFamily: font, fontSize: 14, color: C.textSecondary, margin: "0 auto 24px", maxWidth: 320 }}>
-        Thử mở rộng khu vực, thay đổi khoảng giá hoặc xóa bớt tiện ích.
+      <p style={{ fontFamily: font, fontSize: 17, fontWeight: 700, color: C.textPrimary, margin: "0 0 8px" }}>
+        {isFiltered ? "Không tìm thấy phòng phù hợp" : "Chưa có tin đăng nào"}
       </p>
-      <Btn variant="outline" label="Xóa lọc" onClick={onClear} />
+      <p style={{ fontFamily: font, fontSize: 14, color: C.textSecondary, margin: "0 auto 24px", maxWidth: 340 }}>
+        {isFiltered
+          ? "Thử mở rộng khu vực, thay đổi khoảng giá hoặc xóa bớt tiện ích."
+          : "Hiện chưa có phòng nào được đăng công khai. Bạn có phòng cho thuê? Đăng tin để tiếp cận người đang tìm trọ."}
+      </p>
+      {isFiltered && <Btn variant="outline" label="Xóa lọc" onClick={onClear} />}
     </div>
   );
 }
@@ -646,14 +585,14 @@ function MobileFilterSheet({ open, filters, onChange, onApply, onClose, onClear 
 
           <div style={{ padding: "16px 0", borderBottom: `1px solid ${C.border}` }}>
             {grpTitle("Khu vực")}
-            <div style={{ position: "relative" }}>
-              <select value={filters.region} onChange={e => onChange({ ...filters, region: e.target.value })}
-                style={{ width: "100%", padding: "12px 36px 12px 14px", border: `1.5px solid ${filters.region ? C.primary : C.border}`, borderRadius: 12, background: C.white, fontFamily: font, fontSize: 15, color: filters.region ? C.textPrimary : C.textSecondary, appearance: "none", outline: "none", minHeight: 44 }}>
-                <option value="">Tất cả khu vực</option>
-                {REGION_OPTIONS.map(r => <option key={r} value={r}>{r}</option>)}
-              </select>
-              <ChevronDown size={15} color={C.textSecondary} style={{ position: "absolute", right: 14, top: "50%", transform: "translateY(-50%)", pointerEvents: "none" }} />
-            </div>
+            <AreaSelect
+              value={{ provinceCode: filters.provinceCode, wardCode: filters.wardCode }}
+              onChange={(a) => onChange({ ...filters, provinceCode: a.provinceCode, wardCode: a.wardCode })}
+              allowAllProvinces
+              allowAllWards
+              labels={false}
+              testIdPrefix="all-listings-area-mobile"
+            />
           </div>
 
           <div style={{ padding: "16px 0", borderBottom: `1px solid ${C.border}` }}>
@@ -744,6 +683,8 @@ export function AllListingsPage() {
   const { isMobile, isTablet } = useBreakpoint();
 
   const [dbRooms, setDbRooms]        = useState<Room[]>([]);
+  const [totalCount, setTotalCount]  = useState(0);
+  const [totalPages, setTotalPages]  = useState(1);
   const [filters, setFilters]        = useState<AllFilters>(EMPTY_FILTERS);
   const [pending, setPending]        = useState<AllFilters>(EMPTY_FILTERS);
   const [sortBy, setSortBy]          = useState("newest");
@@ -757,57 +698,67 @@ export function AllListingsPage() {
     const fetchRooms = async () => {
       setIsLoading(true);
       try {
-        const { data, error } = await supabase
-          .from("rental_listings")
-          .select(`
-            *,
-            listing_amenities (
-              amenity
-            )
-          `)
-          .eq("status", "Active")
-          .is("deleted_at", null)
-          .order("created_at", { ascending: false });
+        const { priceMin, priceMax } = parsePriceRangeLabel(filters.priceLabel);
+        const { areaMin, areaMax } = parseAreaRangeLabel(filters.area);
 
-        if (error) throw error;
+        const result = await searchListings({
+          provinceCode: filters.provinceCode,
+          wardCodes: filters.wardCode != null ? [filters.wardCode] : undefined,
+          priceMin,
+          priceMax,
+          areaMin,
+          areaMax,
+          propertyTypes: filters.roomTypes.length > 0 ? filters.roomTypes : undefined,
+          amenities: filters.amenities.length > 0 ? filters.amenities : undefined,
+          sort: sortBy as any,
+          page,
+          pageSize: ROOMS_PER_PAGE,
+        });
 
-        if (data) {
-          const mapped: Room[] = data.map((item: any) => {
-            const priceVal = Number(item.price);
-            const formattedPrice = priceVal.toLocaleString("vi-VN");
-            const ams = (item.listing_amenities || []).map((la: any) => mapAmenityToKey(la.amenity));
-            const isBoosted = item.boost_expire_at && new Date(item.boost_expire_at) > new Date();
+        const mapped: Room[] = result.data.map((item) => ({
+          id: item.id,
+          title: item.title,
+          price: item.price,
+          priceNum: item.priceNum,
+          area: item.area,
+          loc: item.loc,
+          amenities: item.amenities.map(mapAmenityToKey),
+          type: mapTypeToKey(item.type),
+          badge: item.badge,
+          img: item.img,
+          contact_phone: item.contact_phone,
+          boost_expire_at: item.boost_expire_at,
+          rating: item.rating ?? null,
+          reviewCount: item.reviewCount ?? 0,
+          propertySlug: item.propertySlug ?? null,
+        }));
 
-            return {
-              id: item.id,
-              title: item.title,
-              price: formattedPrice,
-              priceNum: priceVal,
-              area: Number(item.area),
-              loc: item.district,
-              amenities: ams,
-              type: mapTypeToKey(item.property_type),
-              badge: isBoosted ? "Nổi bật" : null,
-              img: getListingImage(item.id),
-              contact_phone: item.contact_phone || "",
-              boost_expire_at: item.boost_expire_at,
-            };
-          });
-          setDbRooms(mapped);
-        }
+        setDbRooms(mapped);
+        setTotalCount(result.totalCount);
+        setTotalPages(result.totalPages);
       } catch (err) {
-        console.error("Error loading listings:", err);
+        logError("AllListingsPage.fetchRooms", err);
       } finally {
         setIsLoading(false);
       }
     };
     fetchRooms();
-  }, []);
+  }, [filters, sortBy, page]);
 
   const applyFilters = () => {
     setFilters({ ...pending });
     setPage(1);
   };
+
+  // Có bộ lọc nào đang bật? Quyết định EmptyState nói gì.
+  const isFiltered =
+    filters.provinceCode !== null ||
+    filters.wardCode !== null ||
+    filters.priceLabel !== "" ||
+    filters.area !== "" ||
+    filters.roomTypes.length > 0 ||
+    filters.amenities.length > 0 ||
+    filters.status.length > 0;
 
   const clearAll = () => {
     setFilters(EMPTY_FILTERS);
@@ -817,7 +768,7 @@ export function AllListingsPage() {
 
   const removeChip = (chip: string) => {
     setFilters(f => {
-      if (f.region === chip)                          return { ...f, region: "" };
+      if (chip === areaChipLabel)                     return { ...f, provinceCode: null, wardCode: null };
       if (f.priceLabel === chip)                      return { ...f, priceLabel: "" };
       if (f.area === chip)                            return { ...f, area: "" };
       const typeVal = ROOM_TYPE_OPTS.find(o => o.label === chip)?.value;
@@ -829,10 +780,30 @@ export function AllListingsPage() {
     setPage(1);
   };
 
-  const filtered  = runFilters(dbRooms, filters);
-  const sorted    = runSort(filtered, sortBy);
-  const paginated = sorted.slice((page - 1) * ROOMS_PER_PAGE, page * ROOMS_PER_PAGE);
-  const chips     = getChips(filters);
+  // Tên phường cho chip: chỉ tra khi người dùng thực sự lọc tới phường, nên
+  // chunk 3.321 mục vẫn không bị tải ở lần vào trang đầu tiên.
+  const [wardLabel, setWardLabel] = useState<string | null>(null);
+  useEffect(() => {
+    if (filters.wardCode == null) { setWardLabel(null); return; }
+    let cancelled = false;
+    loadVnWards()
+      .then((ws: readonly VnWard[]) => {
+        if (cancelled) return;
+        setWardLabel(ws.find((w) => w.code === filters.wardCode)?.name ?? null);
+      })
+      .catch(() => { if (!cancelled) setWardLabel(null); });
+    return () => { cancelled = true; };
+  }, [filters.wardCode]);
+
+  const chips = getChips(filters, wardLabel);
+  // Chip khu vực chỉ có tối đa một cái, và `removeChip` cần biết nhãn của nó để
+  // xóa đúng cặp tỉnh+phường thay vì dò theo chuỗi.
+  const areaChipLabel =
+    filters.wardCode != null && wardLabel
+      ? wardLabel
+      : filters.provinceCode != null
+        ? provinceName(filters.provinceCode)
+        : null;
 
   /* ── MOBILE ──────────────────────────────────── */
   if (isMobile) {
@@ -841,7 +812,7 @@ export function AllListingsPage() {
         <PublicNavbarMobile onSearch={onBack} />
         <DemoBanner mobile />
         <MobileSearchBar />
-        <MobileToolbar count={filtered.length} onFilter={() => { setPending({ ...filters }); setMobileFilter(true); }} onSort={() => setMobileSort(true)} onMap={() => setViewMode(v => v === "map" ? "grid" : "map")} />
+        <MobileToolbar count={totalCount} onFilter={() => { setPending({ ...filters }); setMobileFilter(true); }} onSort={() => setMobileSort(true)} onMap={() => setViewMode(v => v === "map" ? "grid" : "map")} />
         <MobileActiveChips chips={chips} onRemove={removeChip} />
 
         <div style={{ flex: 1, overflowY: "auto" }}>
@@ -851,12 +822,12 @@ export function AllListingsPage() {
             <div style={{ display: "flex", flexDirection: "column", gap: 12, padding: "16px 16px 24px" }}>
               {Array.from({ length: 4 }).map((_, i) => <SkeletonCard key={i} />)}
             </div>
-          ) : sorted.length > 0 ? (
+          ) : dbRooms.length > 0 ? (
             <div style={{ display: "flex", flexDirection: "column", gap: 14, padding: "14px 16px 32px" }}>
-              {sorted.map(r => <RoomCard key={r.id} room={r} onClick={() => navigate(`/phong/${r.id}`)} />)}
+              {dbRooms.map(r => <RoomCard key={r.id} room={r} onClick={() => navigate(`/phong/${r.id}`)} />)}
             </div>
           ) : (
-            <div style={{ padding: 16 }}><EmptyState onClear={clearAll} /></div>
+            <div style={{ padding: 16 }}><EmptyState onClear={clearAll} isFiltered={isFiltered} /></div>
           )}
         </div>
 
@@ -875,7 +846,7 @@ export function AllListingsPage() {
       {/* MARKER-MAKE-KIT-INVOKED */}
       <PublicNavbarDesktop onSearch={onBack} />
       <DemoBanner />
-      <PageHeader count={filtered.length} onHome={() => navigate("/")} />
+      <PageHeader count={totalCount} onHome={() => navigate("/")} />
 
       <div style={{ flex: 1, maxWidth: 1280, margin: "0 auto", width: "100%", padding: "28px 32px 80px", display: "flex", gap: 28, alignItems: "flex-start" }}>
         {/* Sticky sidebar */}
@@ -888,7 +859,7 @@ export function AllListingsPage() {
         {/* Results */}
         <main style={{ flex: 1, minWidth: 0 }}>
           <ListingToolbar
-             count={filtered.length}
+             count={totalCount}
              sortBy={sortBy}
              onSort={setSortBy}
              viewMode={viewMode === "map" ? "grid" : viewMode}
@@ -904,19 +875,19 @@ export function AllListingsPage() {
             <div style={{ display: "grid", gridTemplateColumns: `repeat(${gridCols}, 1fr)`, gap: 20 }}>
               {Array.from({ length: ROOMS_PER_PAGE }).map((_, i) => <SkeletonCard key={i} listView={viewMode === "list"} />)}
             </div>
-          ) : paginated.length > 0 ? (
+          ) : dbRooms.length > 0 ? (
             <>
               <div style={viewMode === "list"
                 ? { display: "flex", flexDirection: "column", gap: 14 }
                 : { display: "grid", gridTemplateColumns: `repeat(${gridCols}, 1fr)`, gap: 20 }}>
-                {paginated.map(r => <RoomCard key={r.id} room={r} onClick={() => navigate(`/phong/${r.id}`)} listView={viewMode === "list"} />)}
+                {dbRooms.map(r => <RoomCard key={r.id} room={r} onClick={() => navigate(`/phong/${r.id}`)} listView={viewMode === "list"} />)}
               </div>
-              {filtered.length > ROOMS_PER_PAGE && (
-                <Pagination current={page} total={Math.min(TOTAL_PAGES, Math.ceil(filtered.length / ROOMS_PER_PAGE))} onChange={p => { setPage(p); setIsLoading(true); setTimeout(() => setIsLoading(false), 500); }} />
+              {totalPages > 1 && (
+                <Pagination current={page} total={totalPages} onChange={p => setPage(p)} />
               )}
             </>
           ) : (
-            <EmptyState onClear={clearAll} />
+            <EmptyState onClear={clearAll} isFiltered={isFiltered} />
           )}
         </main>
       </div>

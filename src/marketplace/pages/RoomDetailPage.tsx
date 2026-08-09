@@ -2,23 +2,30 @@ import { useState, useEffect, useRef } from "react";
 import { useNavigate, useParams } from "react-router";
 import {
   ArrowLeft, Heart, Share2, MapPin, Users, Building2,
-  Wifi, Wind, Car, Bath, Clock, Layers,
+  Clock,
   Zap, Droplets, Wrench, Key,
   Phone, MessageSquare, Star,
   ChevronLeft, ChevronRight, X,
   User,
   Shield, AlertTriangle,
-  ShoppingBag, GraduationCap, HeartPulse, UtensilsCrossed,
-  Fingerprint, ParkingCircle, WashingMachine, Refrigerator,
 } from "lucide-react";
 import { C, font } from "../../shared/theme";
 import { useBreakpoint } from "../../shared/components/useBreakpoint";
 import { PublicNavbarDesktop, DemoFAB } from "../../shared/components/PublicNavbar";
 import { DemoBanner } from "../../shared/components/common/DemoBanner";
 import { useAuth } from "../../shared/contexts/AuthContext";
-import { supabase } from "../../shared/supabaseClient";
-import { getListingImage } from "./AllListingsPage";
-import { parseMetadataFromDescription, ListingMetadata } from "../utils/listingMetadata";
+import { getListingImage, listingImageUrls } from "../services/listing-mappers";
+import { amenityIcon, amenityLabel } from "../../shared/constants/amenities";
+import { nearbyCategoryMeta } from "../../shared/constants/nearby";
+import { LeafletMap, isValidLatLng } from "../../shared/components/common/LeafletMap";
+import { useQuery } from "@tanstack/react-query";
+import { listPropertyReviews } from "../services/review-service";
+import { getListingById, incrementViewCount, getSimilarListings } from "../services/listing-queries";
+import type { ListingCardItem } from "../services/listing-mappers";
+import { SaveListingButton } from "../components/SaveListingButton";
+import { parseMetadataFromDescription } from "../utils/listingMetadata";
+import { logError } from "../../shared/services/supabase-error";
+import { startConversation } from "../../shared/services/messaging-service";
 
 /* ══════════════════════════════════════════
    CURFEW HELPER FUNCTIONS
@@ -45,106 +52,10 @@ export function appendCurfewToDescription(description: string, curfew: CurfewInf
   return `${cleanDescription}\n\n---METADATA---\n${JSON.stringify(metadata)}`;
 }
 
-/* ══════════════════════════════════════════
-   ROOM DATA
-══════════════════════════════════════════ */
-const IMAGES = [
-  "https://images.unsplash.com/photo-1555854877-bab0e564b8d5?w=1200&q=85",
-  "https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=800&q=80",
-  "https://images.unsplash.com/photo-1493809842364-78817add7ffb?w=800&q=80",
-  "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=800&q=80",
-  "https://images.unsplash.com/photo-1484154218962-a197022b5858?w=800&q=80",
-  "https://images.unsplash.com/photo-1512918728675-ed5a9ecdebfd?w=800&q=80",
-  "https://images.unsplash.com/photo-1489171078254-c3365d6e359f?w=800&q=80",
-  "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=800&q=80",
-];
 
-const AMENITIES: Array<{ key: string; Icon: React.ElementType; label: string }> = [
-  { key: "ac",      Icon: Wind,          label: "Máy lạnh" },
-  { key: "wifi",    Icon: Wifi,          label: "Wifi tốc độ cao" },
-  { key: "washer",  Icon: WashingMachine,label: "Máy giặt riêng" },
-  { key: "fridge",  Icon: Refrigerator,  label: "Tủ lạnh" },
-  { key: "key",     Icon: Fingerprint,   label: "Khóa vân tay" },
-  { key: "parking", Icon: ParkingCircle, label: "Hầm để xe" },
-];
 
-const COSTS: Array<{ Icon: React.ElementType; label: string; value: string }> = [
-  { Icon: Zap,      label: "Điện",      value: "3.500 đ/kWh" },
-  { Icon: Droplets, label: "Nước",      value: "100.000 đ/người" },
-  { Icon: Wrench,   label: "Dịch vụ",   value: "150.000 đ/tháng" },
-  { Icon: Key,      label: "Đặt cọc",   value: "1 tháng tiền thuê" },
-];
 
-const NEARBY_CATEGORIES = [
-  {
-    key: "shopping",
-    Icon: ShoppingBag,
-    label: "Mua sắm & Giải trí",
-    places: [
-      { name: "Vạn Hạnh Mall", dist: "500m" },
-      { name: "Chợ Nguyễn Tri Phương", dist: "800m" },
-      { name: "Big C Miền Đông", dist: "1.2km" },
-    ],
-  },
-  {
-    key: "edu",
-    Icon: GraduationCap,
-    label: "Giáo dục",
-    places: [
-      { name: "ĐH Kinh tế TP.HCM", dist: "600m" },
-      { name: "ĐH Bách Khoa", dist: "1.2km" },
-    ],
-  },
-  {
-    key: "health",
-    Icon: HeartPulse,
-    label: "Y tế",
-    places: [
-      { name: "Bệnh viện 115", dist: "400m" },
-      { name: "Viện Tim TP.HCM", dist: "900m" },
-    ],
-  },
-  {
-    key: "food",
-    Icon: UtensilsCrossed,
-    label: "Ẩm thực",
-    places: [
-      { name: "Khu ăn uống Sư Vạn Hạnh", dist: "300m" },
-      { name: "Quán cafe văn phòng", dist: "200m" },
-      { name: "Cửa hàng tiện lợi 24/7", dist: "150m" },
-    ],
-  },
-];
 
-const SIMILAR_ROOMS = [
-  {
-    id: 2,
-    img: "https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=600&q=80",
-    title: "Studio Full Nội Thất Quận 10",
-    area: "30 m²",
-    district: "Quận 10",
-    price: "4.500.000 đ",
-    tags: ["Máy lạnh", "Wifi", "Giờ tự do"],
-  },
-  {
-    id: 3,
-    img: "https://images.unsplash.com/photo-1493809842364-78817add7ffb?w=600&q=80",
-    title: "Phòng Có Ban Công Bình Thạnh",
-    area: "28 m²",
-    district: "Bình Thạnh",
-    price: "3.500.000 đ",
-    tags: ["WC riêng", "Wifi", "Để xe"],
-  },
-  {
-    id: 4,
-    img: "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=600&q=80",
-    title: "Căn Hộ Mini Gần ĐH RMIT",
-    area: "35 m²",
-    district: "Quận 7",
-    price: "5.200.000 đ",
-    tags: ["Máy lạnh", "Tủ lạnh", "Khóa vân tay"],
-  },
-];
 
 /* ══════════════════════════════════════════
    PRIMITIVES
@@ -216,23 +127,26 @@ function GalleryLightbox({
    DESKTOP — IMAGE GALLERY
 ══════════════════════════════════════════ */
 function ImageGallery({
-  images, saved, onSave, onOpen,
-}: { images: string[]; saved: boolean; onSave: () => void; onOpen: (idx: number) => void }) {
+  images, listingId, onOpen,
+}: { images: string[]; listingId: string; onOpen: (idx: number) => void }) {
   const [mainIdx, setMainIdx] = useState(0);
 
+  // Số ảnh thay đổi theo tin (3 ảnh thật, hoặc 5 ảnh fallback) — luôn kẹp chỉ số
+  // vào khoảng hợp lệ, nếu không badge sẽ hiện kiểu "4/3 ảnh" và <img> nhận undefined.
+  const safeMain = Math.min(Math.max(mainIdx, 0), images.length - 1);
+  const thumbs = images.slice(1, 5);
+  const hasThumbs = thumbs.length > 0;
+
   return (
-    <div style={{ display: "grid", gridTemplateColumns: "3fr 2fr", height: 460, gap: 8, borderRadius: 16, overflow: "hidden", marginBottom: 32 }}>
+    <div style={{ display: "grid", gridTemplateColumns: hasThumbs ? "3fr 2fr" : "1fr", height: 460, gap: 8, borderRadius: 16, overflow: "hidden", marginBottom: 32 }}>
       {/* Main image */}
-      <div style={{ position: "relative", cursor: "pointer" }} onClick={() => onOpen(mainIdx)}>
-        <img src={images[mainIdx]} alt="Ảnh chính"
+      <div style={{ position: "relative", cursor: "pointer" }} onClick={() => onOpen(safeMain)}>
+        <img src={images[safeMain]} alt="Ảnh chính"
           style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
         <div style={{ position: "absolute", top: 14, left: 14, background: "rgba(0,0,0,0.42)", borderRadius: 999, padding: "5px 13px" }}>
-          <span style={{ fontFamily: font, fontSize: 12, fontWeight: 600, color: "white" }}>{mainIdx + 1}/{images.length} ảnh</span>
+          <span style={{ fontFamily: font, fontSize: 12, fontWeight: 600, color: "white" }}>{safeMain + 1}/{images.length} ảnh</span>
         </div>
-        <button onClick={e => { e.stopPropagation(); onSave(); }}
-          style={{ position: "absolute", top: 14, right: 14, background: "rgba(255,255,255,0.92)", border: "none", borderRadius: "50%", width: 40, height: 40, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", boxShadow: "0 2px 8px rgba(0,0,0,0.15)" }}>
-          <Heart size={18} color={saved ? "#E05C5C" : C.secondary} fill={saved ? "#E05C5C" : "none"} strokeWidth={2} />
-        </button>
+        <SaveListingButton listingId={listingId} overlay size={18} />
         <button onClick={e => e.stopPropagation()}
           style={{ position: "absolute", bottom: 14, right: 14, background: "rgba(255,255,255,0.92)", border: "none", borderRadius: "50%", width: 36, height: 36, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", boxShadow: "0 2px 8px rgba(0,0,0,0.12)" }}>
           <Share2 size={15} color={C.textSecondary} />
@@ -243,19 +157,21 @@ function ImageGallery({
         </button>
       </div>
 
-      {/* 2×2 thumbnails */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gridTemplateRows: "1fr 1fr", gap: 8 }}>
-        {[1, 2, 3, 4].map(i => {
-          const isLast = i === 4;
+      {/* Thumbnail — chỉ render đúng số ảnh thật có, tối đa 4 */}
+      {hasThumbs && (
+      <div style={{ display: "grid", gridTemplateColumns: thumbs.length > 1 ? "1fr 1fr" : "1fr", gridTemplateRows: thumbs.length > 2 ? "1fr 1fr" : "1fr", gap: 8 }}>
+        {thumbs.map((src, k) => {
+          const i = k + 1;
+          const isOverflowSlot = k === thumbs.length - 1 && images.length > 5;
           return (
             <div key={i} style={{ position: "relative", cursor: "pointer", overflow: "hidden" }}
-              onClick={() => { setMainIdx(i); if (isLast) onOpen(i); }}>
-              <img src={images[i]} alt={`Ảnh ${i + 1}`}
+              onClick={() => { setMainIdx(i); if (isOverflowSlot) onOpen(i); }}>
+              <img src={src} alt={`Ảnh ${i + 1}`}
                 style={{ width: "100%", height: "100%", objectFit: "cover", display: "block", transition: "transform 0.2s" }}
                 onMouseEnter={e => (e.currentTarget.style.transform = "scale(1.04)")}
                 onMouseLeave={e => (e.currentTarget.style.transform = "scale(1)")}
               />
-              {isLast && images.length > 5 && (
+              {isOverflowSlot && (
                 <div style={{ position: "absolute", inset: 0, background: "rgba(20,10,4,0.55)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 4 }}>
                   <span style={{ fontFamily: font, fontSize: 22, fontWeight: 800, color: "white" }}>+{images.length - 4}</span>
                   <span style={{ fontFamily: font, fontSize: 12, color: "rgba(255,255,255,0.85)" }}>ảnh nữa</span>
@@ -265,9 +181,12 @@ function ImageGallery({
           );
         })}
       </div>
+      )}
     </div>
   );
-}/* ══════════════════════════════════════════
+}
+
+/* ══════════════════════════════════════════
    CONTENT BLOCKS — LEFT COLUMN
 ══════════════════════════════════════════ */
 function TitleBlock({ listing }: { listing: any }) {
@@ -356,14 +275,14 @@ function AmenitiesGrid({ listing }: { listing: any }) {
       {listingAmenities.length > 0 ? (
         <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10 }}>
           {listingAmenities.map((amenity: string) => {
-            const matchedMeta = AMENITIES.find(a => amenity.toLowerCase().includes(a.label.toLowerCase())) || { Icon: Wifi };
-            const Icon = matchedMeta.Icon;
+            const Icon = amenityIcon(amenity);
             return (
               <div key={amenity} style={{ display: "flex", alignItems: "center", gap: 10, padding: "11px 14px", background: C.white, border: `1px solid ${C.border}`, borderRadius: 10 }}>
                 <div style={{ width: 34, height: 34, borderRadius: 9, background: C.caramelSoft, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                   <Icon size={16} color={C.primary} strokeWidth={1.8} />
                 </div>
-                <span style={{ fontFamily: font, fontSize: 13, fontWeight: 500, color: C.textPrimary }}>{amenity}</span>
+                {/* Tin đăng trước bản vá backfill lưu `key` — amenityLabel() dịch lại sang tiếng Việt. */}
+                <span style={{ fontFamily: font, fontSize: 13, fontWeight: 500, color: C.textPrimary }}>{amenityLabel(amenity)}</span>
               </div>
             );
           })}
@@ -379,12 +298,37 @@ function CostTable({ listing }: { listing: any }) {
   const { metadata } = parseMetadataFromDescription(listing.description);
   const costsData = metadata.costs || {};
 
+  /**
+   * Chi phí: ưu tiên CỘT THẬT (có từ migration 0300), rồi mới tới `metadata.costs`
+   * của tin cũ. Thiếu cả hai thì ghi "Chưa cập nhật".
+   *
+   * Trước đây thiếu dữ liệu là rơi vào số mặc định: "3.500 đ/kWh",
+   * "100.000 đ/người", "150.000 đ/tháng". Người thuê đọc con số đó và tin rằng
+   * chủ nhà đã công bố như vậy — trong khi chủ nhà chưa khai gì cả. Đó không phải
+   * lỗi hiển thị mà là thông tin giá sai lệch, thứ người ta dựa vào để quyết định
+   * đi xem phòng hay không.
+   */
+  const NOT_SET = "Chưa cập nhật";
+  const formatVnd = (value: unknown): string | null => {
+    const num = Number(value);
+    return Number.isFinite(num) && num > 0 ? num.toLocaleString("vi-VN") : null;
+  };
+
   const priceFormatted = Number(listing.price).toLocaleString("vi-VN") + " đ/tháng";
-  const electricVal = costsData.electric ? `${costsData.electric} đ/kWh` : "3.500 đ/kWh";
-  const waterUnitStr = costsData.waterUnit === "cubic" ? "đ/m³" : "đ/người";
-  const waterVal = costsData.water ? `${costsData.water} ${waterUnitStr}` : "100.000 đ/người";
-  const serviceVal = costsData.service ? `${costsData.service} đ/tháng` : "150.000 đ/tháng";
-  const depositVal = costsData.deposit ? `${costsData.deposit} đ` : "1 tháng tiền thuê";
+
+  const electricAmount = formatVnd(listing.electricity_price) ?? formatVnd(costsData.electric);
+  const electricVal = electricAmount ? `${electricAmount} đ/kWh` : NOT_SET;
+
+  const waterUnitStr =
+    listing.water_unit === "cubic" || costsData.waterUnit === "cubic" ? "đ/m³" : "đ/người";
+  const waterAmount = formatVnd(listing.water_price) ?? formatVnd(costsData.water);
+  const waterVal = waterAmount ? `${waterAmount} ${waterUnitStr}` : NOT_SET;
+
+  const serviceAmount = formatVnd(listing.service_price) ?? formatVnd(costsData.service);
+  const serviceVal = serviceAmount ? `${serviceAmount} đ/tháng` : NOT_SET;
+
+  const depositAmount = formatVnd(listing.deposit) ?? formatVnd(costsData.deposit);
+  const depositVal = depositAmount ? `${depositAmount} đ` : NOT_SET;
 
   const costs = [
     { Icon: Key, label: "Giá thuê", value: priceFormatted },
@@ -418,27 +362,28 @@ function CostTable({ listing }: { listing: any }) {
 function NearbySection({ listing }: { listing: any }) {
   const { metadata } = parseMetadataFromDescription(listing.description);
   
-  const getNearbyCategories = () => {
-    if (metadata.nearby && metadata.nearby.length > 0) {
-      return metadata.nearby.map((cat: any) => {
-        let Icon = ShoppingBag;
-        if (cat.key === "edu") Icon = GraduationCap;
-        else if (cat.key === "health") Icon = HeartPulse;
-        else if (cat.key === "food") Icon = UtensilsCrossed;
-        return {
-          key: cat.key,
-          Icon,
-          label: cat.label,
-          places: cat.places || []
-        };
-      });
-    }
-    return NEARBY_CATEGORIES;
-  };
+  // KHÔNG fallback sang danh sách mock (PRD AC#1): tin không nhập gì thì khối này
+  // hiện trạng thái rỗng, chứ không bịa ra "Vạn Hạnh Mall".
+  //
+  // Bỏ `as any[]`: `metadata.nearby` đã là `NearbyCategory[]` từ
+  // `parseMetadataFromDescription`. Cast đó chỉ làm mất kiểu của `places`, và
+  // khi bật noImplicitAny thì `{ name, dist }` bên dưới thành `any`.
+  const categories = (metadata.nearby || [])
+    .map((cat) => {
+      const meta = nearbyCategoryMeta(cat.key);
+      return { key: cat.key, Icon: meta.Icon, label: cat.label || meta.label, places: cat.places || [] };
+    })
+    .filter((cat) => cat.places.length > 0);
 
-  const categories = getNearbyCategories();
-  const coords = metadata.coords || { lat: 10.7712, lng: 106.6823 };
-  const mapAddress = coords.address || `${listing.address || "Đường chính"}, ${listing.district}`;
+  // Ưu tiên cột thật; metadata.coords chỉ để đọc tin cũ (trước khi có cột).
+  const coords =
+    listing.latitude != null && listing.longitude != null
+      ? { lat: Number(listing.latitude), lng: Number(listing.longitude) }
+      : metadata.coords;
+  const hasCoords = isValidLatLng(coords);
+  const mapAddress = `${listing.address || "Đường chính"}, ${listing.district}`;
+
+  if (categories.length === 0 && !hasCoords) return null;
 
   return (
     <Section title="Vị trí & Tiện ích xung quanh">
@@ -466,70 +411,109 @@ function NearbySection({ listing }: { listing: any }) {
           </div>
         ))}
       </div>
-      {/* Map placeholder */}
-      <div style={{
-        borderRadius: 14,
-        overflow: "hidden",
-        border: `1px solid ${C.border}`,
-        height: 220,
-        background: "#ECE5D8",
-        position: "relative",
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        justifyContent: "center",
-      }}>
-        {/* Draw mock street lines */}
-        <div style={{ position: "absolute", top: "30%", left: 0, right: 0, height: 12, background: "white", transform: "rotate(-5deg)", opacity: 0.85 }} />
-        <div style={{ position: "absolute", top: 0, bottom: 0, left: "40%", width: 12, background: "white", transform: "rotate(15deg)", opacity: 0.85 }} />
-        <div style={{ position: "absolute", top: "70%", left: 0, right: 0, height: 8, background: "white", transform: "rotate(3deg)", opacity: 0.85 }} />
-        
-        {/* River */}
-        <div style={{ position: "absolute", top: "50%", left: "-10%", width: "120%", height: 24, background: "#A9D5EC", transform: "rotate(25deg)", opacity: 0.7 }} />
-
-        <div style={{
-          zIndex: 5,
-          background: "rgba(255, 255, 255, 0.92)",
-          padding: "12px 18px",
-          borderRadius: 12,
-          border: `1px solid ${C.border}`,
-          textAlign: "center",
-          boxShadow: "0 4px 14px rgba(0,0,0,0.12)",
-          maxWidth: "80%"
-        }}>
-          <MapPin size={22} color={C.primary} style={{ display: "block", margin: "0 auto 6px" }} />
-          <span style={{ fontFamily: font, fontSize: 14, fontWeight: 700, color: C.textPrimary, display: "block", marginBottom: 2 }}>{mapAddress}</span>
-          <span style={{ fontFamily: font, fontSize: 11, color: C.textSecondary }}>Tọa độ giả lập: {coords.lat.toFixed(5)}, {coords.lng.toFixed(5)}</span>
+      {hasCoords && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+          <LeafletMap center={coords} height={220} data-testid="listing-map" />
+          <span style={{ fontFamily: font, fontSize: 12, color: C.textSecondary, display: "inline-flex", alignItems: "center", gap: 5 }}>
+            <MapPin size={12} /> {mapAddress}
+          </span>
         </div>
-      </div>
+      )}
     </Section>
   );
 }
 
-function ReviewsPlaceholder() {
+/**
+ * Khối đánh giá thật của khu trọ.
+ *
+ * BR-024: RLS "Public reads visible reviews" chỉ trả review khi khu đã bật
+ * trang công khai — nên khu chưa bật sẽ ra danh sách rỗng và ta hiện trạng thái
+ * trống, KHÔNG phải "đang phát triển".
+ */
+function ReviewsSection({ listing }: { listing: any }) {
+  const propertyId = listing?.property_id as string | undefined;
+
+  const reviewsQuery = useQuery({
+    queryKey: ["marketplace", "listingReviews", propertyId],
+    queryFn: () => listPropertyReviews(propertyId || ""),
+    enabled: Boolean(propertyId),
+  });
+
+  const reviews = reviewsQuery.data ?? [];
+  const avg = reviews.length
+    ? reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length
+    : 0;
+
+  if (!propertyId || (!reviewsQuery.isPending && reviews.length === 0)) {
+    return (
+      <Section title="Đánh giá khu trọ">
+        <div style={{ padding: 24, background: C.bg, border: `1.5px dashed ${C.border}`, borderRadius: 16, textAlign: "center" }}>
+          <p style={{ fontFamily: font, fontSize: 14, fontWeight: 600, color: C.textPrimary, margin: "0 0 6px" }}>
+            Chưa có đánh giá cho khu trọ này
+          </p>
+          <p style={{ fontFamily: font, fontSize: 12.5, color: C.textSecondary, margin: "0 auto", maxWidth: 380 }}>
+            Chỉ người đã ở và xác nhận liên kết mới đánh giá được, nên đánh giá ở đây ít nhưng đáng tin.
+          </p>
+        </div>
+      </Section>
+    );
+  }
+
   return (
     <Section title="Đánh giá khu trọ">
-      <div style={{ padding: "24px", background: C.bg, border: `1.5px dashed ${C.border}`, borderRadius: 16, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 10, textAlign: "center" }}>
-        <div style={{ display: "flex", gap: 3 }}>
-          {[1,2,3,4,5].map(i => (
-            <Star key={i} size={20} color="#D2C7B7" fill="#D2C7B7" />
-          ))}
-        </div>
-        <p style={{ fontFamily: font, fontSize: 14, fontWeight: 600, color: C.textPrimary, margin: 0 }}>Chưa có đánh giá cho khu trọ này</p>
-        <p style={{ fontFamily: font, fontSize: 12.5, color: C.textSecondary, margin: 0, maxWidth: 360 }}>
-          [Review khu trọ — V1] đang được phát triển để người dùng có thể chia sẻ trải nghiệm thực tế về chủ nhà, an ninh và tiện ích.
-        </p>
-      </div>
+      {reviewsQuery.isPending ? (
+        <p style={{ fontFamily: font, fontSize: 13, color: C.textSecondary }}>Đang tải đánh giá...</p>
+      ) : (
+        <>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14 }}>
+            <Star size={20} color={C.warning} fill={C.warning} />
+            <span style={{ fontFamily: font, fontSize: 20, fontWeight: 800, color: C.textPrimary }}>{avg.toFixed(1)}</span>
+            <span style={{ fontFamily: font, fontSize: 13, color: C.textSecondary }}>({reviews.length} đánh giá)</span>
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            {reviews.slice(0, 5).map(r => (
+              <div key={r.id} data-testid="review-item" style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: 12, padding: 16 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 3, marginBottom: 6 }}>
+                  {[1,2,3,4,5].map(n => (
+                    <Star key={n} size={13} color={n <= r.rating ? C.warning : C.border} fill={n <= r.rating ? C.warning : "none"} />
+                  ))}
+                  <span style={{ fontFamily: font, fontSize: 12, color: C.textSecondary, marginLeft: 6 }}>
+                    {new Date(r.created_at).toLocaleDateString("vi-VN")}
+                  </span>
+                </div>
+                {r.content && (
+                  <p style={{ fontFamily: font, fontSize: 13.5, color: C.textPrimary, margin: 0, lineHeight: 1.6 }}>{r.content}</p>
+                )}
+                {r.seller_reply && (
+                  <div style={{ background: C.cream, borderRadius: 10, padding: 12, marginTop: 10 }}>
+                    <p style={{ fontFamily: font, fontSize: 11.5, fontWeight: 700, color: C.primary, margin: "0 0 3px" }}>Phản hồi của chủ trọ</p>
+                    <p style={{ fontFamily: font, fontSize: 12.5, color: C.textPrimary, margin: 0, lineHeight: 1.5 }}>{r.seller_reply}</p>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </>
+      )}
     </Section>
   );
 }
 
-function SimilarRooms() {
+/**
+ * Phòng tương tự — dữ liệu THẬT từ `getSimilarListings` (cùng quận, giá ±30%).
+ *
+ * Trước đây khối này render hằng số `SIMILAR_ROOMS` với 3 tin bịa và tiêu đề
+ * cứng "khu vực Bình Thạnh" — hiện y như vậy trên mọi tin, kể cả tin ở tỉnh khác.
+ * Không có tin nào khớp thì KHÔNG render gì (§8: DB rỗng thì đừng bịa nội dung).
+ */
+function SimilarRooms({ listings, district, onOpen }: { listings: ListingCardItem[]; district?: string | null; onOpen: (id: string) => void }) {
+  if (listings.length === 0) return null;
   return (
-    <Section title="Phòng tương tự khu vực Bình Thạnh" last>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 14 }}>
-        {SIMILAR_ROOMS.map(room => (
-          <div key={room.id} style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: 14, overflow: "hidden", cursor: "pointer", transition: "box-shadow 0.15s" }}
+    <Section title={district ? `Phòng tương tự khu vực ${district}` : "Phòng tương tự"} last>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 14 }} data-testid="similar-rooms">
+        {listings.map(room => (
+          <div key={room.id} onClick={() => onOpen(room.id)} data-testid="similar-room-card"
+            style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: 14, overflow: "hidden", cursor: "pointer", transition: "box-shadow 0.15s" }}
             onMouseEnter={e => (e.currentTarget.style.boxShadow = "0 4px 16px rgba(92,70,50,0.12)")}
             onMouseLeave={e => (e.currentTarget.style.boxShadow = "none")}>
             <div style={{ position: "relative", height: 140 }}>
@@ -542,10 +526,10 @@ function SimilarRooms() {
               <p style={{ fontFamily: font, fontSize: 13, fontWeight: 700, color: C.textPrimary, margin: "0 0 5px", lineHeight: 1.4 }}>{room.title}</p>
               <div style={{ display: "flex", alignItems: "center", gap: 5, marginBottom: 8 }}>
                 <MapPin size={11} color={C.secondary} />
-                <span style={{ fontFamily: font, fontSize: 12, color: C.textSecondary }}>{room.district} · {room.area}</span>
+                <span style={{ fontFamily: font, fontSize: 12, color: C.textSecondary }}>{room.loc} · {room.area} m²</span>
               </div>
               <div style={{ display: "flex", flexWrap: "wrap", gap: 5 }}>
-                {room.tags.map(tag => (
+                {room.amenities.slice(0, 3).map(tag => (
                   <span key={tag} style={{ fontFamily: font, fontSize: 11, color: C.textSecondary, background: C.caramelSoft, borderRadius: 6, padding: "2px 8px" }}>{tag}</span>
                 ))}
               </div>
@@ -604,14 +588,14 @@ function StickyContactCard({ listing, onChat, onPhone, user }: { listing: any; o
         </div>
 
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-          <button onClick={onChat}
+          <button onClick={onChat} data-testid="listing-chat-btn"
             style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, padding: "14px 20px", background: C.primary, color: C.white, border: "none", borderRadius: 12, fontFamily: font, fontSize: 15, fontWeight: 700, cursor: "pointer", transition: "background 0.12s", boxShadow: "0 2px 12px rgba(138,106,69,0.3)" }}
             onMouseEnter={e => (e.currentTarget.style.background = C.primaryHover)}
             onMouseLeave={e => (e.currentTarget.style.background = C.primary)}>
             <MessageSquare size={17} />
             Gửi tin nhắn
           </button>
-          <button onClick={onPhone}
+          <button onClick={onPhone} data-testid="listing-phone-btn"
             style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, padding: "13px 20px", background: "transparent", color: C.primary, border: `1.5px solid ${C.primary}`, borderRadius: 12, fontFamily: font, fontSize: 15, fontWeight: 600, cursor: "pointer", transition: "all 0.12s" }}
             onMouseEnter={e => { e.currentTarget.style.background = "#F0E7D6"; }}
             onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}>
@@ -639,8 +623,8 @@ function StickyContactCard({ listing, onChat, onPhone, user }: { listing: any; o
    MOBILE — IMAGE CAROUSEL
 ══════════════════════════════════════════ */
 function MobileImageCarousel({
-  images, onBack, saved, onSave, onOpen,
-}: { images: string[]; onBack: () => void; saved: boolean; onSave: () => void; onOpen: (i: number) => void }) {
+  images, onBack, listingId, onOpen,
+}: { images: string[]; onBack: () => void; listingId: string; onOpen: (i: number) => void }) {
   const [idx, setIdx] = useState(0);
 
   return (
@@ -651,10 +635,7 @@ function MobileImageCarousel({
         style={{ position: "absolute", top: 14, left: 14, width: 38, height: 38, borderRadius: "50%", background: "rgba(255,255,255,0.88)", border: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", boxShadow: "0 2px 8px rgba(0,0,0,0.15)" }}>
         <ArrowLeft size={18} color={C.textPrimary} />
       </button>
-      <button onClick={onSave}
-        style={{ position: "absolute", top: 14, right: 14, width: 38, height: 38, borderRadius: "50%", background: "rgba(255,255,255,0.88)", border: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", boxShadow: "0 2px 8px rgba(0,0,0,0.15)" }}>
-        <Heart size={17} color={saved ? "#E05C5C" : C.secondary} fill={saved ? "#E05C5C" : "none"} strokeWidth={2} />
-      </button>
+      <SaveListingButton listingId={listingId} overlay size={17} />
       <div style={{ position: "absolute", bottom: 14, right: 14, background: "rgba(0,0,0,0.5)", borderRadius: 999, padding: "4px 10px" }}>
         <span style={{ fontFamily: font, fontSize: 12, fontWeight: 600, color: "white" }}>{idx + 1}/{images.length} ảnh</span>
       </div>
@@ -703,7 +684,7 @@ function PhoneModal({ open, onClose, phone, user, sellerName }: { open: boolean;
               Số điện thoại đã bị ẩn một phần. Vui lòng đăng nhập để xem đầy đủ số điện thoại của chủ trọ.
             </p>
             <div style={{ background: C.caramelSoft, borderRadius: 12, padding: "12px 20px", margin: "16px 0 24px" }}>
-              <p style={{ fontFamily: font, fontSize: 22, fontWeight: 800, color: C.primary, margin: 0, letterSpacing: "0.03em" }}>{displayPhone}</p>
+              <p data-testid="listing-phone-value" style={{ fontFamily: font, fontSize: 22, fontWeight: 800, color: C.primary, margin: 0, letterSpacing: "0.03em" }}>{displayPhone}</p>
             </div>
             <div style={{ display: "flex", gap: 10 }}>
               <button onClick={onClose} style={{ flex: 1, padding: "12px", background: "transparent", border: `1.5px solid ${C.border}`, borderRadius: 10, fontFamily: font, fontSize: 14, fontWeight: 600, color: C.textSecondary, cursor: "pointer" }}>Đóng</button>
@@ -713,7 +694,7 @@ function PhoneModal({ open, onClose, phone, user, sellerName }: { open: boolean;
         ) : (
           <>
             <div style={{ background: C.caramelSoft, borderRadius: 12, padding: "12px 20px", margin: "16px 0 24px" }}>
-              <p style={{ fontFamily: font, fontSize: 22, fontWeight: 800, color: C.primary, margin: 0, letterSpacing: "0.03em" }}>{displayPhone}</p>
+              <p data-testid="listing-phone-value" style={{ fontFamily: font, fontSize: 22, fontWeight: 800, color: C.primary, margin: 0, letterSpacing: "0.03em" }}>{displayPhone}</p>
             </div>
             <div style={{ display: "flex", gap: 10 }}>
               <button onClick={onClose} style={{ flex: 1, padding: "12px", background: "transparent", border: `1.5px solid ${C.border}`, borderRadius: 10, fontFamily: font, fontSize: 14, fontWeight: 600, color: C.textSecondary, cursor: "pointer" }}>Hủy</button>
@@ -728,108 +709,6 @@ function PhoneModal({ open, onClose, phone, user, sellerName }: { open: boolean;
   );
 }
 
-const QUICK_MESSAGES = [
-  "Phòng này còn trống không?",
-  "Mình muốn hỏi thêm về chi phí điện nước.",
-  "Có thể xem phòng vào cuối tuần không?",
-];
-
-function ChatModal({ open, onClose }: { open: boolean; onClose: () => void }) {
-  const [messages, setMessages] = useState<{ text: string; sent: boolean }[]>([]);
-  const [input, setInput] = useState("");
-
-  const sendMessage = (text: string) => {
-    if (!text.trim()) return;
-    setMessages(prev => [...prev, { text: text.trim(), sent: true }]);
-    setInput("");
-    setTimeout(() => {
-      setMessages(prev => [...prev, { text: "Cảm ơn bạn đã nhắn tin! Mình sẽ phản hồi sớm nhé.", sent: false }]);
-    }, 1000);
-  };
-
-  if (!open) return null;
-  return (
-    <>
-      <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(20,10,4,0.5)", zIndex: 500, backdropFilter: "blur(3px)" }} />
-      <div style={{ position: "fixed", top: "50%", left: "50%", transform: "translate(-50%,-50%)", zIndex: 501, background: C.white, borderRadius: 20, width: "calc(100vw - 48px)", maxWidth: 440, maxHeight: "85vh", display: "flex", flexDirection: "column", boxShadow: "0 20px 60px rgba(20,10,4,0.25)", overflow: "hidden" }}>
-        {/* Header */}
-        <div style={{ background: C.primaryDark, padding: "16px 20px", display: "flex", alignItems: "center", gap: 12 }}>
-          <div style={{ width: 40, height: 40, borderRadius: "50%", background: `linear-gradient(135deg, ${C.sand}, ${C.secondary})`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-            <User size={18} color={C.white} />
-          </div>
-          <div style={{ flex: 1 }}>
-            <p style={{ fontFamily: font, fontSize: 15, fontWeight: 700, color: C.cream, margin: 0 }}>Tin nhắn với Anh Minh</p>
-            <p style={{ fontFamily: font, fontSize: 12, color: "rgba(232,222,201,0.7)", margin: "1px 0 0" }}>Chủ trọ · Phản hồi nhanh</p>
-          </div>
-          <button onClick={onClose} style={{ width: 32, height: 32, borderRadius: "50%", background: "rgba(255,255,255,0.12)", border: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
-            <X size={15} color={C.cream} />
-          </button>
-        </div>
-        {/* Banner Placeholder */}
-        <div style={{ background: C.caramelSoft, padding: "8px 16px", borderBottom: `1px solid ${C.border}`, display: "flex", alignItems: "center", gap: 8 }}>
-          <span style={{ fontFamily: font, fontSize: 11, color: C.primary, fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.05em" }}>[Nhắn tin — V1]</span>
-          <span style={{ fontFamily: font, fontSize: 11, color: C.textSecondary }}>Khung chat giả lập Demo</span>
-        </div>
-
-        {/* Listing context card */}
-        <div style={{ margin: "12px 14px 0", background: C.caramelSoft, border: `1px solid ${C.border}`, borderRadius: 12, display: "flex", gap: 12, padding: "10px 12px", alignItems: "center" }}>
-          <img src={IMAGES[0]} alt="Phòng" style={{ width: 52, height: 52, borderRadius: 8, objectFit: "cover", flexShrink: 0 }} />
-          <div style={{ minWidth: 0 }}>
-            <p style={{ fontFamily: font, fontSize: 13, fontWeight: 700, color: C.textPrimary, margin: "0 0 2px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Phòng trọ có gác lửng gần ĐH Hutech</p>
-            <p style={{ fontFamily: font, fontSize: 13, fontWeight: 700, color: C.primary, margin: "0 0 1px" }}>3.200.000 đ/tháng</p>
-            <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-              <MapPin size={11} color={C.secondary} />
-              <span style={{ fontFamily: font, fontSize: 11, color: C.textSecondary }}>Bình Thạnh, TP.HCM</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Messages area */}
-        <div style={{ flex: 1, overflowY: "auto", padding: "14px 14px 8px", display: "flex", flexDirection: "column", gap: 10, minHeight: 120 }}>
-          {messages.length === 0 && (
-            <p style={{ fontFamily: font, fontSize: 13, color: C.textSecondary, textAlign: "center", margin: "16px 0" }}>Bắt đầu cuộc trò chuyện với Anh Minh</p>
-          )}
-          {messages.map((msg, i) => (
-            <div key={i} style={{ display: "flex", justifyContent: msg.sent ? "flex-end" : "flex-start" }}>
-              <div style={{ maxWidth: "75%", padding: "9px 13px", borderRadius: msg.sent ? "14px 14px 4px 14px" : "14px 14px 14px 4px", background: msg.sent ? C.primary : C.caramelSoft, border: msg.sent ? "none" : `1px solid ${C.border}` }}>
-                <span style={{ fontFamily: font, fontSize: 14, color: msg.sent ? C.white : C.textPrimary, lineHeight: 1.5 }}>{msg.text}</span>
-              </div>
-            </div>
-          ))}
-        </div>
-
-        {/* Quick messages */}
-        {messages.length === 0 && (
-          <div style={{ padding: "0 14px 8px", display: "flex", flexWrap: "wrap", gap: 7 }}>
-            {QUICK_MESSAGES.map(qm => (
-              <button key={qm} onClick={() => sendMessage(qm)}
-                style={{ fontFamily: font, fontSize: 12, color: C.primary, background: C.white, border: `1.5px solid ${C.primary}`, borderRadius: 999, padding: "6px 13px", cursor: "pointer", transition: "background 0.12s" }}
-                onMouseEnter={e => (e.currentTarget.style.background = C.caramelSoft)}
-                onMouseLeave={e => (e.currentTarget.style.background = C.white)}>
-                {qm}
-              </button>
-            ))}
-          </div>
-        )}
-
-        {/* Input */}
-        <div style={{ padding: "10px 14px 14px", borderTop: `1px solid ${C.border}`, display: "flex", gap: 8, alignItems: "center" }}>
-          <input
-            value={input}
-            onChange={e => setInput(e.target.value)}
-            onKeyDown={e => e.key === "Enter" && sendMessage(input)}
-            placeholder="Nhập tin nhắn..."
-            style={{ flex: 1, fontFamily: font, fontSize: 14, color: C.textPrimary, padding: "10px 14px", background: C.caramelSoft, border: `1.5px solid ${C.border}`, borderRadius: 999, outline: "none" }}
-          />
-          <button onClick={() => sendMessage(input)}
-            style={{ width: 40, height: 40, borderRadius: "50%", background: C.primary, border: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0 }}>
-            <MessageSquare size={17} color={C.white} />
-          </button>
-        </div>
-      </div>
-    </>
-  );
-}
 
 /* ══════════════════════════════════════════
    MOBILE — OWNER CONTACT
@@ -878,35 +757,6 @@ function MobileContactCard({ listing, onChat, onPhone, user }: { listing: any; o
 /* ══════════════════════════════════════════
    MOBILE — DESCRIPTION SECTION
 ══════════════════════════════════════════ */
-function MobileDescriptionSection() {
-  const [expanded, setExpanded] = useState(false);
-  return (
-    <div style={{ marginBottom: 24, paddingBottom: 24, borderBottom: `1px solid ${C.border}` }}>
-      <h3 style={{ fontFamily: font, fontSize: 15, fontWeight: 700, color: C.textPrimary, margin: "0 0 12px" }}>Thông tin mô tả</h3>
-      <p style={{ fontFamily: font, fontSize: 14, color: C.textSecondary, lineHeight: 1.75, margin: "0 0 10px" }}>
-        Phòng trọ có gác lửng thoáng mát, phù hợp sinh viên hoặc người đi làm. Khu vực an ninh, yên tĩnh, gần trường học và các tiện ích thiết yếu.
-      </p>
-      {expanded && (
-        <div style={{ display: "flex", flexDirection: "column", gap: 7, marginBottom: 10 }}>
-          {[
-            "Diện tích: 25m², thiết kế có gác lửng tối ưu không gian.",
-            "Nội thất: Giường nệm, tủ quần áo, bàn làm việc, máy lạnh, máy giặt riêng.",
-            "Khu vực bếp nhỏ được trang bị bếp điện và kệ đựng đồ.",
-          ].map((pt, i) => (
-            <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: 8 }}>
-              <div style={{ width: 4, height: 4, borderRadius: "50%", background: C.secondary, flexShrink: 0, marginTop: 8 }} />
-              <span style={{ fontFamily: font, fontSize: 13, color: C.textSecondary, lineHeight: 1.65 }}>{pt}</span>
-            </div>
-          ))}
-        </div>
-      )}
-      <button onClick={() => setExpanded(v => !v)}
-        style={{ fontFamily: font, fontSize: 13, fontWeight: 600, color: C.primary, background: "none", border: "none", cursor: "pointer", padding: 0 }}>
-        {expanded ? "Rút gọn ▲" : "Xem thêm ▼"}
-      </button>
-    </div>
-  );
-}
 
 /* ══════════════════════════════════════════
    MOBILE — NEARBY SECTION
@@ -914,27 +764,22 @@ function MobileDescriptionSection() {
 function MobileNearbySection({ listing }: { listing: any }) {
   const { metadata } = parseMetadataFromDescription(listing.description);
 
-  const getNearbyCategories = () => {
-    if (metadata.nearby && metadata.nearby.length > 0) {
-      return metadata.nearby.map((cat: any) => {
-        let Icon = ShoppingBag;
-        if (cat.key === "edu") Icon = GraduationCap;
-        else if (cat.key === "health") Icon = HeartPulse;
-        else if (cat.key === "food") Icon = UtensilsCrossed;
-        return {
-          key: cat.key,
-          Icon,
-          label: cat.label,
-          places: cat.places || []
-        };
-      });
-    }
-    return NEARBY_CATEGORIES;
-  };
+  // Không fallback mock (PRD AC#1) — xem ghi chú ở NearbySection bản desktop.
+  const categories = (metadata.nearby || [])
+    .map((cat) => {
+      const meta = nearbyCategoryMeta(cat.key);
+      return { key: cat.key, Icon: meta.Icon, label: cat.label || meta.label, places: cat.places || [] };
+    })
+    .filter((cat) => cat.places.length > 0);
 
-  const categories = getNearbyCategories();
-  const coords = metadata.coords || { lat: 10.7712, lng: 106.6823 };
-  const mapAddress = coords.address || `${listing.address || "Đường chính"}, ${listing.district}`;
+  const coords =
+    listing.latitude != null && listing.longitude != null
+      ? { lat: Number(listing.latitude), lng: Number(listing.longitude) }
+      : metadata.coords;
+  const hasCoords = isValidLatLng(coords);
+  const mapAddress = `${listing.address || "Đường chính"}, ${listing.district}`;
+
+  if (categories.length === 0 && !hasCoords) return null;
 
   return (
     <div style={{ marginBottom: 24, paddingBottom: 24, borderBottom: `1px solid ${C.border}` }}>
@@ -961,41 +806,14 @@ function MobileNearbySection({ listing }: { listing: any }) {
           </div>
         ))}
       </div>
-      {/* Map placeholder */}
-      <div style={{
-        borderRadius: 12,
-        overflow: "hidden",
-        border: `1px solid ${C.border}`,
-        height: 160,
-        background: "#ECE5D8",
-        position: "relative",
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        justifyContent: "center",
-      }}>
-        {/* Draw mock street lines */}
-        <div style={{ position: "absolute", top: "30%", left: 0, right: 0, height: 10, background: "white", transform: "rotate(-5deg)", opacity: 0.85 }} />
-        <div style={{ position: "absolute", top: 0, bottom: 0, left: "40%", width: 10, background: "white", transform: "rotate(15deg)", opacity: 0.85 }} />
-        
-        {/* River */}
-        <div style={{ position: "absolute", top: "50%", left: "-10%", width: "120%", height: 20, background: "#A9D5EC", transform: "rotate(25deg)", opacity: 0.7 }} />
-
-        <div style={{
-          zIndex: 5,
-          background: "rgba(255, 255, 255, 0.92)",
-          padding: "10px 14px",
-          borderRadius: 10,
-          border: `1px solid ${C.border}`,
-          textAlign: "center",
-          boxShadow: "0 3px 10px rgba(0,0,0,0.12)",
-          maxWidth: "85%"
-        }}>
-          <MapPin size={18} color={C.primary} style={{ display: "block", margin: "0 auto 4px" }} />
-          <span style={{ fontFamily: font, fontSize: 12, fontWeight: 700, color: C.textPrimary, display: "block", marginBottom: 2 }}>{mapAddress}</span>
-          <span style={{ fontFamily: font, fontSize: 10, color: C.textSecondary }}>Tọa độ giả lập: {coords.lat.toFixed(5)}, {coords.lng.toFixed(5)}</span>
+      {hasCoords && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+          <LeafletMap center={coords} height={180} zoom={15} data-testid="listing-map-mobile" />
+          <span style={{ fontFamily: font, fontSize: 11.5, color: C.textSecondary, display: "inline-flex", alignItems: "center", gap: 5 }}>
+            <MapPin size={11} /> {mapAddress}
+          </span>
         </div>
-      </div>
+      )}
     </div>
   );
 }
@@ -1003,19 +821,21 @@ function MobileNearbySection({ listing }: { listing: any }) {
 /* ══════════════════════════════════════════
    MOBILE — SIMILAR ROOMS
 ══════════════════════════════════════════ */
-function MobileSimilarRooms() {
+function MobileSimilarRooms({ listings, onOpen }: { listings: ListingCardItem[]; onOpen: (id: string) => void }) {
+  if (listings.length === 0) return null;
   return (
     <div style={{ marginBottom: 24 }}>
       <h3 style={{ fontFamily: font, fontSize: 15, fontWeight: 700, color: C.textPrimary, margin: "0 0 12px" }}>Phòng tương tự khu vực</h3>
-      <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-        {SIMILAR_ROOMS.map(room => (
-          <div key={room.id} style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: 12, overflow: "hidden", display: "flex", cursor: "pointer" }}>
+      <div style={{ display: "flex", flexDirection: "column", gap: 12 }} data-testid="similar-rooms">
+        {listings.map(room => (
+          <div key={room.id} onClick={() => onOpen(room.id)} data-testid="similar-room-card"
+            style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: 12, overflow: "hidden", display: "flex", cursor: "pointer" }}>
             <img src={room.img} alt={room.title} style={{ width: 90, height: 90, objectFit: "cover", flexShrink: 0 }} />
             <div style={{ padding: "11px 13px", flex: 1, minWidth: 0 }}>
               <p style={{ fontFamily: font, fontSize: 13, fontWeight: 700, color: C.textPrimary, margin: "0 0 4px", lineHeight: 1.35 }}>{room.title}</p>
               <div style={{ display: "flex", alignItems: "center", gap: 4, marginBottom: 6 }}>
                 <MapPin size={11} color={C.secondary} />
-                <span style={{ fontFamily: font, fontSize: 11, color: C.textSecondary }}>{room.district} · {room.area}</span>
+                <span style={{ fontFamily: font, fontSize: 11, color: C.textSecondary }}>{room.loc} · {room.area} m²</span>
               </div>
               <span style={{ fontFamily: font, fontSize: 12, fontWeight: 700, color: C.primary }}>{room.price}/tháng</span>
             </div>
@@ -1037,12 +857,11 @@ export function RoomDetailPage() {
   const { user } = useAuth();
 
   const [listing, setListing]           = useState<any>(null);
+  const [similarListings, setSimilarListings] = useState<ListingCardItem[]>([]);
   const [isLoading, setIsLoading]       = useState(true);
-  const [saved, setSaved]               = useState(false);
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [lightboxIdx, setLightboxIdx]   = useState(0);
   const [phoneModal, setPhoneModal]     = useState(false);
-  const [chatModal, setChatModal]       = useState(false);
   const [showMobileStickyCta, setShowMobileStickyCta] = useState(false);
   const mobileContactRef = useRef<HTMLDivElement>(null);
 
@@ -1051,21 +870,17 @@ export function RoomDetailPage() {
     const fetchListing = async () => {
       setIsLoading(true);
       try {
-        const { data, error } = await supabase
-          .from("rental_listings")
-          .select(`
-            *,
-            listing_amenities (
-              amenity
-            )
-          `)
-          .eq("id", id)
-          .single();
-
-        if (error) throw error;
+        const data = await getListingById(id);
         setListing(data);
+        if (data) {
+          incrementViewCount(id);
+          // Tin tương tự tải sau, không chặn render trang chính.
+          getSimilarListings(id, data.district, Number(data.price))
+            .then(setSimilarListings)
+            .catch((err) => logError("RoomDetailPage.fetchSimilar", err));
+        }
       } catch (err) {
-        console.error("Error loading room details:", err);
+        logError("RoomDetailPage.fetchListing", err);
       } finally {
         setIsLoading(false);
       }
@@ -1073,8 +888,26 @@ export function RoomDetailPage() {
     fetchListing();
   }, [id]);
 
+  const openSimilar = (similarId: string) => {
+    navigate(`/phong/${similarId}`);
+    window.scrollTo({ top: 0 });
+  };
+
   const openLightbox = (idx: number) => { setLightboxIdx(idx); setLightboxOpen(true); };
-  const openChat = () => setChatModal(true);
+  const openChat = async () => {
+    if (!listing) return;
+    if (!user) {
+      navigate(`/dang-nhap?redirect=/phong/${listing.id}`);
+      return;
+    }
+    if (listing.seller_id === user.id) return;
+    try {
+      const convId = await startConversation("RentalListing", listing.id);
+      navigate(`/tin-nhan/${convId}`);
+    } catch (err: any) {
+      logError("RoomDetailPage.openChat", err);
+    }
+  };
   const openPhone = () => setPhoneModal(true);
 
   useEffect(() => {
@@ -1105,14 +938,19 @@ export function RoomDetailPage() {
     );
   }
 
-  // Generate deterministic images based on listing ID
-  const detailImages = [
-    getListingImage(listing.id),
-    getListingImage(listing.id + "_1"),
-    getListingImage(listing.id + "_2"),
-    getListingImage(listing.id + "_3"),
-    getListingImage(listing.id + "_4"),
-  ];
+  // Ảnh thật từ listing_media theo sort_order; tin cũ chưa có media thì
+  // listingImageUrls() tự trả về 1 ảnh Unsplash deterministic làm fallback.
+  const mediaImages = listingImageUrls(listing);
+  const detailImages =
+    mediaImages.length > 1
+      ? mediaImages
+      : [
+          mediaImages[0] ?? getListingImage(listing.id),
+          getListingImage(listing.id + "_1"),
+          getListingImage(listing.id + "_2"),
+          getListingImage(listing.id + "_3"),
+          getListingImage(listing.id + "_4"),
+        ];
 
   /* ── MOBILE ─────────────────────────────────────────── */
   if (isMobile) {
@@ -1123,8 +961,7 @@ export function RoomDetailPage() {
           <MobileImageCarousel
             images={detailImages}
             onBack={onBack}
-            saved={saved}
-            onSave={() => setSaved(v => !v)}
+            listingId={listing.id}
             onOpen={openLightbox}
           />
           <DemoBanner mobile />
@@ -1174,10 +1011,10 @@ export function RoomDetailPage() {
             <MobileNearbySection listing={listing} />
 
             {/* 11. Đánh giá khu trọ */}
-            <ReviewsPlaceholder />
+            <ReviewsSection listing={listing} />
 
             {/* 12. Phòng tương tự */}
-            <MobileSimilarRooms />
+            <MobileSimilarRooms listings={similarListings} onOpen={openSimilar} />
 
             {/* 12. Safety notice */}
             <div style={{ padding: "12px 14px", background: C.white, border: `1px solid ${C.border}`, borderRadius: 12, display: "flex", gap: 8 }}>
@@ -1202,7 +1039,6 @@ export function RoomDetailPage() {
         </div>
 
         <PhoneModal open={phoneModal} onClose={() => setPhoneModal(false)} phone={listing.contact_phone} user={user} sellerName={listing.contact_name} />
-        <ChatModal open={chatModal} onClose={() => setChatModal(false)} />
         <GalleryLightbox open={lightboxOpen} images={detailImages} initialIndex={lightboxIdx} onClose={() => setLightboxOpen(false)} />
       </div>
     );
@@ -1217,8 +1053,7 @@ export function RoomDetailPage() {
       <div style={{ flex: 1, maxWidth: 1200, margin: "0 auto", width: "100%", padding: "28px 32px 80px" }}>
         <ImageGallery
           images={detailImages}
-          saved={saved}
-          onSave={() => setSaved(v => !v)}
+          listingId={listing.id}
           onOpen={openLightbox}
         />
 
@@ -1231,8 +1066,8 @@ export function RoomDetailPage() {
             <AmenitiesGrid listing={listing} />
             <CostTable listing={listing} />
             <NearbySection listing={listing} />
-            <ReviewsPlaceholder />
-            <SimilarRooms />
+            <ReviewsSection listing={listing} />
+            <SimilarRooms listings={similarListings} district={listing?.district} onOpen={openSimilar} />
           </div>
 
           {/* Right sticky sidebar */}
@@ -1256,7 +1091,6 @@ export function RoomDetailPage() {
       </div>
 
       <PhoneModal open={phoneModal} onClose={() => setPhoneModal(false)} phone={listing.contact_phone} user={user} sellerName={listing.contact_name} />
-      <ChatModal open={chatModal} onClose={() => setChatModal(false)} />
       <GalleryLightbox open={lightboxOpen} images={detailImages} initialIndex={lightboxIdx} onClose={() => setLightboxOpen(false)} />
       <DemoFAB />
     </div>

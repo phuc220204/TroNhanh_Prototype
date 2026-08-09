@@ -5,13 +5,16 @@ import {
   Search, Heart, User, ChevronDown,
   Key, UserSearch,
   LayoutGrid, LayoutDashboard, Building2, FileText, BookOpen, HelpCircle, X,
-  Bell, Menu, Database
+  Bell, Menu, Database, MessageSquare, UserCheck
 } from "lucide-react";
 import { C, font } from "../theme";
 import { BrandLogo } from "./brand/BrandLogo";
 import { useAuth } from "../contexts/AuthContext";
 import { supabase } from "../supabaseClient";
 import { seedMockDataForUser } from "../utils/dbSeeder";
+import { logError, toUserMessage } from "../services/supabase-error";
+import { getTotalUnreadCount } from "../services/messaging-service";
+import { Toast } from "./common/Toast";
 
 /* ══════════════════════════════════════════
    ĐĂNG TIN DROPDOWN
@@ -64,13 +67,34 @@ function DangTinDropdown({ onRenter, onLandlord, onClose }: {
    ACCOUNT DROPDOWN
 ══════════════════════════════════════════ */
 function AccountDropdown({ onLandlord, onSignOut, onClose }: { onLandlord: () => void; onSignOut: () => void; onClose: () => void }) {
+  const navigate = useNavigate();
+  const { hasRole } = useAuth();
+  const isStaff = hasRole("Admin") || hasRole("Moderator");
+
+  /**
+   * Ba mục đầu trước đây là `action: () => {}` — bấm vào KHÔNG có gì xảy ra, dù
+   * `/tai-khoan` và `/tin-nhan` đã tồn tại từ T12/T25. "Tin đã lưu" thì không có
+   * route nào cả nên đã bỏ hẳn (nguyên tắc đã chốt: nút không làm được việc thì
+   * xóa, không dán nhãn phiên bản).
+   *
+   * Và thiếu hẳn đường vào `/quan-tri`: Admin đăng nhập không có cách nào tới màn
+   * kiểm duyệt ngoài việc tự gõ URL — mà với hash router thì gõ
+   * `localhost:5173/quan-tri` còn ra trang chủ, phải là `localhost:5173/#/quan-tri`.
+   */
   const items = [
-    { label: "Hồ sơ",             action: () => {} },
-    { label: "Tin nhắn",           action: () => {} },
-    { label: "Tin đã lưu",         action: () => {} },
-    { label: "Dashboard chủ trọ", action: onLandlord },
-    { label: "Đăng xuất",         action: onSignOut },
-  ];
+    { label: "Hồ sơ", testId: "account-menu-profile", action: () => navigate("/tai-khoan") },
+    { label: "Tin nhắn", testId: "account-menu-messages", action: () => navigate("/tin-nhan") },
+    // Cùng đích với nút trái tim trên navbar: "Tin đã lưu" và "Yêu thích" là một.
+    { label: "Tin đã lưu", testId: "account-menu-saved", action: () => navigate("/yeu-thich") },
+    ...(isStaff
+      ? [{ label: "Quản trị hệ thống", testId: "account-menu-admin", action: () => navigate("/quan-tri"), highlight: true }]
+      : []),
+    { label: "Dashboard chủ trọ", testId: "account-menu-landlord", action: onLandlord, highlight: true },
+    { label: "Đăng xuất", testId: "account-menu-signout", action: onSignOut, danger: true },
+    // `testId` khai ngay tại chỗ, KHÔNG suy từ `label`: nhãn tiếng Việt là copy
+    // hiển thị và sẽ đổi; selector E2E thì không được đổi theo. Bản cũ gán chung
+    // `account-menu-item` cho mọi mục nên không chọn được "Đăng xuất".
+  ] as Array<{ label: string; testId: string; action: () => void; highlight?: boolean; danger?: boolean }>;
   return (
     <div style={{
       position: "absolute", top: "calc(100% + 10px)", right: 0,
@@ -78,14 +102,17 @@ function AccountDropdown({ onLandlord, onSignOut, onClose }: { onLandlord: () =>
       borderRadius: 14, boxShadow: "0 12px 40px rgba(92,70,50,0.16)",
       padding: "6px 0", width: 200, zIndex: 200,
     }}>
-      {items.map(({ label, action }, i) => (
+      {items.map(({ label, testId, action, highlight, danger }) => (
         <button key={label} onClick={() => { action(); onClose(); }}
+          data-testid={testId}
           style={{
             display: "block", width: "100%", padding: "11px 16px",
-            border: "none", borderTop: i === items.length - 1 ? `1px solid ${C.border}` : "none",
+            border: "none", borderTop: danger ? `1px solid ${C.border}` : "none",
             background: "transparent", cursor: "pointer", textAlign: "left", fontFamily: font,
-            fontSize: 14, color: i === items.length - 1 ? "#C0392B" : C.textPrimary,
-            fontWeight: i === 3 ? 600 : 400, transition: "background 0.1s",
+            // Trước đây kiểu chữ bám theo CHỈ SỐ mảng (`i === 3`, `i === length-1`),
+            // nên thêm/bớt một mục là lệch hết. Giờ bám theo cờ của chính mục đó.
+            fontSize: 14, color: danger ? C.error : C.textPrimary,
+            fontWeight: highlight ? 600 : 400, transition: "background 0.1s",
           }}
           onMouseEnter={e => (e.currentTarget.style.background = C.bg)}
           onMouseLeave={e => (e.currentTarget.style.background = "transparent")}>
@@ -112,9 +139,18 @@ export function PublicNavbarDesktop({
   const [accountOpen, setAccountOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [localQuery, setLocalQuery] = useState(searchQuery || "");
+  const [unreadCount, setUnreadCount] = useState(0);
   const dangTinRef = useRef<HTMLDivElement>(null);
   const accountRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (!user) {
+      setUnreadCount(0);
+      return;
+    }
+    getTotalUnreadCount().then(setUnreadCount);
+  }, [user]);
 
   useEffect(() => {
     setLocalQuery(searchQuery || "");
@@ -215,13 +251,36 @@ export function PublicNavbarDesktop({
         {/* Tìm phòng */}
         <NavLink label="Tìm phòng" onClick={goSearch} />
 
-        {/* Yêu thích */}
-        <button style={{ display: "flex", alignItems: "center", gap: 5, background: "none", border: "none", cursor: "pointer", padding: "8px 12px", borderRadius: 8 }}
+        <NavLink label="Tin nhu cầu" onClick={() => navigate("/tin-nhu-cau")} />
+
+        {/* Yêu thích — nút này từng KHÔNG có `onClick` (bấm chỉ đổi màu nền) vì
+            tính năng lưu tin chưa được làm. Giờ đã có bảng `saved_listings` +
+            trang `/yeu-thich`, nên nó dẫn tới đúng chỗ. */}
+        <button onClick={() => navigate("/yeu-thich")}
+          data-testid="nav-saved-listings"
+          style={{ display: "flex", alignItems: "center", gap: 5, background: "none", border: "none", cursor: "pointer", padding: "8px 12px", borderRadius: 8 }}
           onMouseEnter={e => (e.currentTarget.style.background = C.cream)}
           onMouseLeave={e => (e.currentTarget.style.background = "none")}>
           <Heart size={15} color={C.textSecondary} strokeWidth={1.8} />
           <span style={{ fontFamily: font, fontSize: 13.5, color: C.textSecondary, whiteSpace: "nowrap" }}>Yêu thích</span>
         </button>
+
+        {user && (
+          <button
+            onClick={() => navigate("/tin-nhan")}
+            style={{ display: "flex", alignItems: "center", gap: 5, background: "none", border: "none", cursor: "pointer", padding: "8px 12px", borderRadius: 8, position: "relative" }}
+            onMouseEnter={e => (e.currentTarget.style.background = C.cream)}
+            onMouseLeave={e => (e.currentTarget.style.background = "none")}
+          >
+            <MessageSquare size={15} color={C.textSecondary} strokeWidth={1.8} />
+            <span style={{ fontFamily: font, fontSize: 13.5, color: C.textSecondary, whiteSpace: "nowrap" }}>Tin nhắn</span>
+            {unreadCount > 0 && (
+              <span data-testid="unread-badge" style={{ background: C.repairing, color: "white", fontSize: 10, fontWeight: 800, borderRadius: 999, padding: "1px 6px", marginLeft: 2 }}>
+                {unreadCount}
+              </span>
+            )}
+          </button>
+        )}
 
         <div style={{ width: 1, height: 20, background: C.border, margin: "0 4px" }} />
 
@@ -254,6 +313,7 @@ export function PublicNavbarDesktop({
         <div ref={accountRef} style={{ position: "relative" }}>
           {user ? (
             <button
+              data-testid="account-menu-trigger"
               onClick={() => { setAccountOpen(v => !v); setDangTinOpen(false); }}
               style={{
                 display: "flex", alignItems: "center", gap: 8,
@@ -273,6 +333,7 @@ export function PublicNavbarDesktop({
             </button>
           ) : (
             <button
+              data-testid="navbar-login-btn"
               onClick={() => navigate("/dang-nhap")}
               style={{
                 display: "flex", alignItems: "center", gap: 6,
@@ -321,18 +382,28 @@ function NavLink({ label, onClick }: { label: string; onClick?: () => void }) {
 ══════════════════════════════════════════ */
 export function PublicNavbarMobile({ onSearch }: { onSearch?: () => void }) {
   const navigate = useNavigate();
-  const { user, signOut } = useAuth();
+  const { user, signOut, hasRole } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
+  const isStaff = hasRole("Admin") || hasRole("Moderator");
+
+  /**
+   * "Yêu thích", "Đăng tin tìm phòng" và "Tin nhắn" trước đây chỉ gọi
+   * `setMenuOpen(false)` — bấm vào thì menu đóng lại và không đi đâu cả. Cả ba
+   * giờ đều có route thật.
+   */
+  const go = (path: string) => () => { navigate(path); setMenuOpen(false); };
 
   const menuItems = [
-    { label: "Tìm phòng", action: () => { navigate("/tim-phong"); setMenuOpen(false); } },
-    { label: "Yêu thích", action: () => setMenuOpen(false) },
-    { label: "Đăng tin tìm phòng", action: () => setMenuOpen(false), sub: true },
-    { label: "Đăng tin cho thuê", action: () => { navigate("/chu-tro/dang-tin"); setMenuOpen(false); }, sub: true },
-    { label: "Tin nhắn", action: () => setMenuOpen(false) },
+    { label: "Tìm phòng", action: go("/tim-phong") },
+    { label: "Tin nhu cầu", action: go("/tin-nhu-cau") },
+    ...(user ? [{ label: "Yêu thích", action: go("/yeu-thich") }] : []),
+    { label: "Đăng tin tìm phòng", action: go("/dang-tin-nhu-cau"), sub: true },
+    { label: "Đăng tin cho thuê", action: go("/chu-tro/dang-tin"), sub: true },
+    ...(user ? [{ label: "Tin nhắn", action: go("/tin-nhan") }] : []),
+    ...(isStaff ? [{ label: "Quản trị hệ thống", action: go("/quan-tri") }] : []),
     user
       ? { label: "Đăng xuất", action: () => { signOut(); setMenuOpen(false); } }
-      : { label: "Đăng nhập", action: () => { navigate("/dang-nhap"); setMenuOpen(false); } },
+      : { label: "Đăng nhập", action: go("/dang-nhap") },
   ];
 
   return (
@@ -404,6 +475,7 @@ export function PublicNavbarMobile({ onSearch }: { onSearch?: () => void }) {
 export function DemoFAB() {
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
+  const [toast, setToast] = useState<{ message: string; variant: "success" | "error" } | null>(null);
   const { isMobile } = useBreakpoint();
   const { user, profile } = useAuth();
 
@@ -414,8 +486,8 @@ export function DemoFAB() {
 
   const handleSeed = async () => {
     if (!user) {
-      alert("Vui lòng đăng nhập trước khi seed dữ liệu để tin đăng thuộc về tài khoản của bạn!");
-      navigate("/dang-nhap");
+      setToast({ message: "Vui lòng đăng nhập trước khi seed dữ liệu để tin đăng thuộc về tài khoản của bạn!", variant: "error" });
+      setTimeout(() => navigate("/dang-nhap"), 1000);
       return;
     }
     
@@ -433,21 +505,50 @@ export function DemoFAB() {
       
       await seedMockDataForUser(user, profile);
       
-      alert("Đã khởi tạo dữ liệu Marketplace & 3 Khu trọ SaaS cùng danh sách phòng, người ở, hợp đồng mẫu thành công! Trình duyệt sẽ tự động tải lại.");
-      window.location.reload();
+      setToast({ message: "Đã khởi tạo dữ liệu Marketplace & 3 Khu trọ SaaS thành công! Trình duyệt sẽ tự động tải lại.", variant: "success" });
+      setTimeout(() => window.location.reload(), 1500);
     } catch (err: any) {
-      console.error(err);
-      alert("Lỗi khi seed dữ liệu: " + err.message);
+      logError("PublicNavbar.handleSeed", err);
+      // §7: không ghép `err.message` vào chuỗi hiển thị — đó là văn bản Postgres
+      // thô (tên cột, constraint, có khi cả câu SQL). `toUserMessage` là nơi duy
+      // nhất dịch lỗi sang tiếng Việt an toàn.
+      setToast({ message: toUserMessage(err), variant: "error" });
     }
   };
 
+  /**
+   * BR-022 đòi hợp đồng ≥30 ngày hoặc ≥1 payment mới đánh giá được. Trên dữ liệu
+   * demo mới seed thì không đợt ở nào thoả, nên luồng đánh giá không demo được.
+   *
+   * ⚠️ Cách đúng là RPC demo này (backdate hợp đồng + tạo 1 payment thật),
+   * KHÔNG phải nới `can_review_contract()` — cổng 30 ngày là toàn bộ giá trị
+   * chống gian lận của tính năng.
+   */
+  const handleLinkDemoOccupancy = async () => {
+    if (!user) {
+      navigate("/dang-nhap");
+      return;
+    }
+    try {
+      const { error } = await supabase.rpc("demo_link_me_to_seeded_occupancy", {});
+      if (error) throw error;
+      setToast({ message: "Đã gắn bạn vào một đợt ở demo. Vào 'Phòng của tôi' để xác nhận liên kết rồi đánh giá.", variant: "success" });
+      setTimeout(() => navigate("/tai-khoan/phong-cua-toi"), 1200);
+    } catch (err) {
+      logError("PublicNavbar.handleLinkDemoOccupancy", err);
+      setToast({ message: toUserMessage(err), variant: "error" });
+    }
+  };
+
+  // `testId` khai tại chỗ, không suy từ `label` — nhãn là copy hiển thị và sẽ đổi.
   const shortcuts = [
-    { Icon: LayoutDashboard, label: "Dashboard chủ trọ",        action: () => navigate("/chu-tro") },
-    { Icon: Building2,       label: "Quản lý khu trọ & phòng",  action: () => navigate("/chu-tro/quan-ly-phong") },
-    { Icon: FileText,        label: "Quản lý tin đăng",          action: () => navigate("/chu-tro/tin-dang") },
-    { Icon: BookOpen,        label: "Design System",              action: () => navigate("/styleguide") },
-    { Icon: Database,        label: "Seed Dữ liệu mẫu (GĐ3)",     action: handleSeed },
-    { Icon: HelpCircle,      label: "Trợ giúp",                  action: () => {} },
+    { Icon: LayoutDashboard, label: "Dashboard chủ trọ",        testId: "demo-fab-dashboard",   action: () => navigate("/chu-tro") },
+    { Icon: Building2,       label: "Quản lý khu trọ & phòng",  testId: "demo-fab-rooms",       action: () => navigate("/chu-tro/quan-ly-phong") },
+    { Icon: FileText,        label: "Quản lý tin đăng",          testId: "demo-fab-listings",    action: () => navigate("/chu-tro/tin-dang") },
+    { Icon: BookOpen,        label: "Design System",              testId: "demo-fab-styleguide",  action: () => navigate("/styleguide") },
+    { Icon: Database,        label: "Seed Dữ liệu mẫu",           testId: "demo-fab-seed",        action: handleSeed },
+    { Icon: UserCheck,       label: "Tôi là người ở demo",        testId: "demo-fab-link-occupancy", action: handleLinkDemoOccupancy },
+    { Icon: HelpCircle,      label: "Trợ giúp",                  testId: "demo-fab-help",        action: () => {} },
   ];
 
   return (
@@ -457,6 +558,12 @@ export function DemoFAB() {
       bottom: isMobile ? "calc(72px + env(safe-area-inset-bottom))" : 24,
       zIndex: 300, display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 10,
     }}>
+      {toast && (
+        <div style={{ position: "fixed", top: 20, right: 20, zIndex: 1000 }}>
+          <Toast message={toast.message} variant={toast.variant} onClose={() => setToast(null)} />
+        </div>
+      )}
+
       {/* Popup */}
       {open && (
         <div style={{
@@ -466,13 +573,13 @@ export function DemoFAB() {
           animation: "fadeUp 0.16s ease-out",
         }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 16px 12px", borderBottom: `1px solid ${C.border}`, marginBottom: 6 }}>
-            <p style={{ fontFamily: font, fontSize: 12, fontWeight: 700, color: C.textSecondary, margin: 0, textTransform: "uppercase", letterSpacing: "0.08em" }}>Lối tắt demo</p>
+            <p style={{ fontFamily: font, fontSize: 12, fontWeight: 700, color: C.textSecondary, margin: 0, textTransform: "uppercase", letterSpacing: "0.08em" }}>Lối tắt nhanh</p>
             <button onClick={() => setOpen(false)} style={{ background: "none", border: "none", cursor: "pointer", padding: 2 }}>
               <X size={14} color={C.textSecondary} />
             </button>
           </div>
-          {shortcuts.map(({ Icon, label, action }) => (
-            <button key={label} onClick={() => { action(); setOpen(false); }}
+          {shortcuts.map(({ Icon, label, testId, action }) => (
+            <button key={label} data-testid={testId} onClick={() => { action(); setOpen(false); }}
               style={{
                 display: "flex", alignItems: "center", gap: 12, width: "100%",
                 padding: "10px 16px", border: "none", background: "transparent",
@@ -491,6 +598,7 @@ export function DemoFAB() {
 
       {/* FAB button */}
       <button
+        data-testid="demo-fab-trigger"
         onClick={() => setOpen(v => !v)}
         style={{
           width: fabSize, height: fabSize, borderRadius: "50%",
@@ -509,3 +617,9 @@ export function DemoFAB() {
     </div>
   );
 }
+
+export function PublicNavbar(props: { onSearch?: () => void; searchQuery?: string; onSearchChange?: (v: string) => void }) {
+  const { isMobile } = useBreakpoint();
+  return isMobile ? <PublicNavbarMobile onSearch={props.onSearch} /> : <PublicNavbarDesktop {...props} />;
+}
+

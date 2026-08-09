@@ -1,0 +1,186 @@
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router";
+import { PublicNavbar } from "../../shared/components/PublicNavbar";
+import { EmptyState } from "../../shared/components/common/EmptyState";
+import { DemandPostCard } from "../components/DemandPostCard";
+import { FileText, Search, Plus } from "lucide-react";
+import { C, font } from "../../shared/theme";
+import { useBreakpoint } from "../../shared/components/useBreakpoint";
+import { useAuth } from "../../shared/contexts/AuthContext";
+import { listActiveDemandPosts, type DemandPostItem } from "../services/demand-post-service";
+import { startConversation } from "../../shared/services/messaging-service";
+import { AreaSelect } from "../../shared/components/common";
+
+export function DemandListPage() {
+  const navigate = useNavigate();
+  const { isMobile } = useBreakpoint();
+  const { user } = useAuth();
+
+  const [kindFilter, setKindFilter] = useState<"all" | "RoomWanted" | "RoommateWanted">("all");
+  const [area, setArea] = useState<{ provinceCode: number | null; wardCode: number | null }>({
+    provinceCode: null,
+    wardCode: null,
+  });
+  const [posts, setPosts] = useState<DemandPostItem[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const fetchPosts = async () => {
+    try {
+      setLoading(true);
+      // Lọc hoàn toàn ở SERVER. Bản cũ gọi service rồi lọc lại y hệt ở client —
+      // hai tầng lọc cho cùng một điều kiện, và cái ở client chạy SAU phân
+      // trang nên số đếm không khớp danh sách.
+      const data = await listActiveDemandPosts({
+        kind: kindFilter,
+        provinceCode: area.provinceCode,
+        wardCode: area.wardCode,
+      });
+
+      const filtered = data;
+
+      setPosts(filtered);
+    } catch (_) {
+      setPosts([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchPosts();
+  }, [kindFilter, area.provinceCode, area.wardCode]);
+
+  const handleMessage = async (post: DemandPostItem) => {
+    if (!user) {
+      navigate(`/dang-nhap?redirect=/tin-nhu-cau`);
+      return;
+    }
+    if (post.renter_id === user.id) return;
+    try {
+      const convId = await startConversation("DemandPost", post.id);
+      navigate(`/tin-nhan/${convId}`);
+    } catch (_) {
+      // Handled in service
+    }
+  };
+
+  return (
+    <div style={{ minHeight: "100vh", background: C.bg, fontFamily: font }}>
+      <PublicNavbar />
+
+      <div style={{ maxWidth: 1200, margin: "0 auto", padding: isMobile ? 16 : "32px 24px 60px" }}>
+        {/* Header Bar */}
+        <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "space-between", alignItems: "center", gap: 12, marginBottom: 24 }}>
+          <div>
+            <h1 style={{ fontFamily: font, fontSize: isMobile ? 22 : 26, fontWeight: 800, color: C.textPrimary, margin: "0 0 4px" }}>
+              Nhu cầu tìm phòng &amp; Ở ghép
+            </h1>
+            <p style={{ fontFamily: font, fontSize: 13.5, color: C.textSecondary, margin: 0 }}>
+              Tổng hợp tin nhu cầu từ những người đang cần tìm phòng trọ hoặc tìm bạn ở ghép chia sẻ chi phí.
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => navigate("/dang-tin-nhu-cau")}
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 8,
+              padding: "10px 18px",
+              background: C.primary,
+              color: "white",
+              border: "none",
+              borderRadius: 12,
+              fontFamily: font,
+              fontSize: 14,
+              fontWeight: 700,
+              cursor: "pointer",
+            }}
+          >
+            <Plus size={16} /> Đăng tin nhu cầu
+          </button>
+        </div>
+
+        {/* Filter Bar */}
+        <div style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: 16, padding: 16, marginBottom: 24, display: "flex", flexWrap: "wrap", gap: 12, alignItems: "center" }}>
+          {/* Kind Filter Tabs */}
+          <div style={{ display: "flex", gap: 6 }}>
+            {[
+              { label: "Tất cả tin", value: "all" },
+              { label: "Tìm phòng", value: "RoomWanted" },
+              { label: "Ở ghép", value: "RoommateWanted" },
+            ].map((tab) => {
+              const active = kindFilter === tab.value;
+              return (
+                <button
+                  type="button"
+                  key={tab.value}
+                  onClick={() => setKindFilter(tab.value as any)}
+                  style={{
+                    padding: "7px 14px",
+                    borderRadius: 999,
+                    border: `1px solid ${active ? C.primary : C.border}`,
+                    background: active ? C.primary : C.white,
+                    color: active ? "white" : C.textPrimary,
+                    fontFamily: font,
+                    fontSize: 13,
+                    fontWeight: active ? 700 : 500,
+                    cursor: "pointer",
+                  }}
+                >
+                  {tab.label}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Khu vực */}
+          <div style={{ marginLeft: "auto", minWidth: 320 }}>
+            <AreaSelect
+              value={area}
+              onChange={(a) => setArea({ provinceCode: a.provinceCode, wardCode: a.wardCode })}
+              allowAllProvinces
+              allowAllWards
+              layout="inline"
+              labels={false}
+              testIdPrefix="demand-area"
+            />
+          </div>
+        </div>
+
+        {/* Posts Grid */}
+        {loading ? (
+          <p style={{ fontFamily: font, fontSize: 14, color: C.textSecondary, textAlign: "center", padding: "48px 0" }}>
+            Đang tải danh sách tin nhu cầu...
+          </p>
+        ) : posts.length === 0 ? (
+          <div style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: 16, padding: "48px 24px" }}>
+            <EmptyState
+              icon={FileText}
+              title="Chưa có tin nhu cầu phù hợp"
+              description="Thử đổi danh mục hoặc chọn khu vực khác để tìm kiếm."
+            />
+          </div>
+        ) : (
+          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(auto-fill, minmax(280px, 1fr))", gap: 18 }}>
+            {posts.map((post) => (
+              <DemandPostCard
+                key={post.id}
+                post={post}
+                /* BR-030: tin của chính mình thì KHÔNG truyền `onMessage`, và
+                   `DemandPostCard` bỏ luôn nút. Trước đây nút vẫn hiện nhưng
+                   `handleMessage` return sớm — bấm không có gì xảy ra, không có
+                   lời giải thích nào. Nút chết còn tệ hơn không có nút. */
+                onMessage={post.renter_id === user?.id ? undefined : () => handleMessage(post)}
+                onView={() => navigate(`/tin-nhu-cau/${post.id}`)}
+              />
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+export default DemandListPage;

@@ -8,31 +8,9 @@ import {
 } from "lucide-react";
 import { StyleSection } from "../../shared/components/StyleSection";
 
-/* ══════════════════════════════════════════
-   DESIGN TOKENS  (single source of truth)
-══════════════════════════════════════════ */
-const C = {
-  primary:        "#8A6A45",
-  primaryHover:   "#73572F",
-  primaryPress:   "#5C4632",
-  primaryDark:    "#5C4632",
-  secondary:      "#B08D63",
-  secondaryHover: "#9A784F",
-  secondaryPress: "#836237",
-  sand:           "#C2A982",
-  cream:          "#E8DEC9",
-  bg:             "#F5EFE4",
-  textPrimary:    "#3E2E1E",
-  textSecondary:  "#7A6A55",
-  border:         "#DDD0BC",
-  white:          "#FFFFFF",
-  available:      "#6B8E5A",
-  rented:         "#9B8C78",
-  repairing:      "#C07B4A",
-  error:          "#B5503C",
-  warning:        "#C8861A",
-};
-const font = "'Be Vietnam Pro', Inter, system-ui, sans-serif";
+import { C, font } from "../../shared/theme";
+import { Button, Badge, Card, Table, EmptyState, Pagination, Toast, Skeleton } from "../../shared/components/common";
+
 
 /* ── helpers ── */
 const row = (style: React.CSSProperties = {}): React.CSSProperties => ({
@@ -610,7 +588,7 @@ export function StyleGuidePage() {
             Hệ thống thiết kế — tông màu cát ấm, thân thiện &amp; đáng tin cậy.
           </p>
           <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-            {["1. Màu sắc","2. Chữ","3. Khoảng cách","4. Biểu tượng","5. Components","6. Navigation","7. Overlays"].map(n => (
+            {["1. Màu sắc","2. Chữ","3. Khoảng cách","4. Biểu tượng","5. Components","6. Navigation","7. Overlays","8. Primitives"].map(n => (
               <a key={n} href={`#sec-${n[0]}`}
                 style={{ fontFamily: font, fontSize: 11, color: "rgba(255,255,255,0.6)",
                   padding: "4px 12px", border: "1px solid rgba(255,255,255,0.14)",
@@ -954,6 +932,112 @@ export function StyleGuidePage() {
             </div>
           </div>
         </StyleSection>
+
+        {/* ── 8. UI PRIMITIVES (T08) ── */}
+        <StyleSection title="8 · UI Primitives (Common)" id="sec-8">
+          <p style={{ fontFamily: font, fontSize: 13, color: C.textSecondary, margin: "0 0 20px" }}>
+            Bộ 8 primitive dùng chung trong <code>src/shared/components/common/</code>.
+          </p>
+
+          <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+            {/* Button */}
+            <div>
+              <Tag>Button Primitive</Tag>
+              <div style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "center" }}>
+                <Button variant="primary">Primary</Button>
+                <Button variant="secondary">Secondary</Button>
+                <Button variant="outline">Outline</Button>
+                <Button variant="ghost">Ghost</Button>
+                <Button variant="danger">Danger</Button>
+                <Button variant="primary" loading>Loading</Button>
+                <Button variant="primary" disabled>Disabled</Button>
+              </div>
+            </div>
+
+            {/* Badge */}
+            <div>
+              <Tag>Badge Primitive (statusMaps integration)</Tag>
+              <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
+                <Badge kind="room" status="available" />
+                <Badge kind="room" status="rented" />
+                <Badge kind="room" status="deposited" />
+                <Badge kind="listing" status="active" />
+                <Badge kind="listing" status="pendingApproval" />
+                <Badge kind="listing" status="rejected" />
+                <Badge kind="invoice" status="paid" />
+                <Badge kind="invoice" status="unpaid" />
+                <Badge kind="contract" status="active" />
+              </div>
+            </div>
+
+            {/* Card */}
+            <div>
+              <Tag>Card Primitive</Tag>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 16 }}>
+                <Card hoverable>
+                  <p style={{ margin: 0, fontWeight: 600, color: C.textPrimary }}>Hoverable Card</p>
+                  <p style={{ margin: "4px 0 0", fontSize: 12, color: C.textSecondary }}>Di chuột để xem hiệu ứng viền & bóng.</p>
+                </Card>
+                <Card>
+                  <p style={{ margin: 0, fontWeight: 600, color: C.textPrimary }}>Standard Card</p>
+                  <p style={{ margin: "4px 0 0", fontSize: 12, color: C.textSecondary }}>Nền trắng bo góc chuẩn.</p>
+                </Card>
+              </div>
+            </div>
+
+            {/* Table */}
+            <div>
+              <Tag>Table Primitive</Tag>
+              {/* `Record<string, string>` chứ không để suy ra: `renderCell` nhận
+                  `key: string` (nó phải nhận được mọi cột), nên `row[key]` cần
+                  một kiểu index được. Không khai thì noImplicitAny báo lỗi ở
+                  đúng dòng đó. */}
+              <Table<Record<string, string>>
+                columns={[
+                  { key: "room", label: "Phòng", width: "30%" },
+                  { key: "price", label: "Giá thuê" },
+                  { key: "status", label: "Trạng thái" },
+                ]}
+                rows={[
+                  { id: "1", room: "Phòng 101", price: "3.500.000 đ", status: "available" },
+                  { id: "2", room: "Phòng 102", price: "4.000.000 đ", status: "rented" },
+                ]}
+                renderCell={(row, key) => key === "status" ? <Badge kind="room" status={row.status} /> : row[key]}
+              />
+            </div>
+
+            {/* Pagination & Toast & Skeleton & EmptyState */}
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 16 }}>
+              <div>
+                <Tag>Pagination Primitive</Tag>
+                <Pagination page={1} pageSize={10} total={35} onChange={() => {}} />
+              </div>
+              <div>
+                <Tag>Toast Primitive</Tag>
+                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                  <Toast message="Cập nhật thông tin thành công" variant="success" />
+                  <Toast message="Đã xảy ra lỗi kết nối" variant="error" />
+                </div>
+              </div>
+            </div>
+
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 16 }}>
+              <div>
+                <Tag>EmptyState Primitive</Tag>
+                <Card style={{ padding: 12 }}>
+                  <EmptyState title="Chưa có thông báo" description="Bạn đã xem hết tất cả thông báo." />
+                </Card>
+              </div>
+              <div>
+                <Tag>Skeleton Primitive</Tag>
+                <Card style={{ padding: 16 }}>
+                  <Skeleton variant="text" count={3} />
+                </Card>
+              </div>
+            </div>
+          </div>
+        </StyleSection>
+
 
       </div>
 
