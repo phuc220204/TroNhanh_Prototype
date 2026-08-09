@@ -93,6 +93,28 @@ where d.title = v.title
   and coalesce(array_length(d.desired_ward_codes, 1), 0) = 0
   and d.deleted_at is null;
 
+-- ══ 5. Bảy tin nhu cầu của seller.a (do dbSeeder tạo) ════════════════════
+-- Khối này thiếu ở bản đầu của script — `dbSeeder` cũng tạo tin nhu cầu, không
+-- chỉ tin cho thuê và khu trọ. Bảy dòng đó là phần `con_thieu = 7` còn lại.
+update public.demand_posts d set
+  desired_province_code = 79,
+  desired_ward_codes    = v.ward_codes,
+  desired_districts     = v.ward_names,
+  district              = case when d.kind = 'RoommateWanted' then v.ward_names[1] else d.district end,
+  updated_at            = now()
+from (values
+  ('Tìm phòng trọ khu Bình Thạnh / Gò Vấp, ưu tiên gần trường', array[26956, 26890]::integer[], array['Phường Thạnh Mỹ Tây', 'Phường Hạnh Thông']::text[]),
+  ('Cần thuê căn hộ mini Quận 7, có chỗ để xe', array[27475, 27655]::integer[], array['Phường Tân Hưng', 'Xã Nhà Bè']::text[]),
+  ('Tìm phòng trọ Tân Bình / Quận 10 cho sinh viên', array[27004, 27163]::integer[], array['Phường Tân Bình', 'Phường Hòa Hưng']::text[]),
+  ('Tìm phòng Gò Vấp, cần gác lửng', array[26890]::integer[], array['Phường Hạnh Thông']::text[]),
+  ('Tìm 1 bạn nữ ở ghép Quận 10, phòng đã có sẵn', array[27163]::integer[], array['Phường Hòa Hưng']::text[]),
+  ('Cần 2 bạn ở ghép Bình Thạnh, gần Hàng Xanh', array[26956]::integer[], array['Phường Thạnh Mỹ Tây']::text[]),
+  ('Tìm bạn ở ghép Bình Thạnh, phòng rộng có ban công', array[26956]::integer[], array['Phường Thạnh Mỹ Tây']::text[])
+) as v(title, ward_codes, ward_names)
+where d.title = v.title
+  and coalesce(array_length(d.desired_ward_codes, 1), 0) = 0
+  and d.deleted_at is null;
+
 commit;
 
 -- ══ KIỂM — mọi dòng phải là 0 ═════════════════════════════════════════════
