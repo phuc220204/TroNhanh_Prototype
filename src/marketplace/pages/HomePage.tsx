@@ -1,18 +1,13 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router";
 import {
-  Search, Heart, MapPin,
-  Wifi, Wind, Car, Bath, Clock, Layers,
-  Home, Star, Bell, User, Users,
-  SlidersHorizontal, ArrowRight,
-  Shield, ShieldCheck, UserCheck, CreditCard, MessageSquare, Headphones,
-  Mail, TrendingUp, Building2, Banknote, Phone,
-  FileText, Facebook, Youtube, MessageCircle,
+  Search, Heart, MapPin, Wifi, Wind, Car, Bath, Clock, Layers, Home, Star, Users, SlidersHorizontal, ArrowRight, Shield, ShieldCheck, UserCheck, CreditCard, MessageSquare, Headphones, Mail, TrendingUp, Building2, Banknote, Phone, FileText, Facebook, Youtube, MessageCircle,
 } from "lucide-react";
 import { useBreakpoint } from "../../shared/components/useBreakpoint";
 import { C, font } from "../../shared/theme";
 import { PublicNavbarDesktop, PublicNavbarMobile, DemoFAB } from "../../shared/components/PublicNavbar";
 import { DemoBanner } from "../../shared/components/common/DemoBanner";
+import { BottomTabBar } from "../../shared/components/common";
 import { AppSelect } from "../../shared/components/common/AppSelect";
 import { ModalShell } from "../../shared/components/common/ModalShell";
 import { EmptyState, Skeleton, Button } from "../../shared/components/common";
@@ -947,28 +942,6 @@ function SiteFooter({ mobile }: { mobile?: boolean }) {
 /* ══════════════════════════════════════════
    BOTTOM TAB BAR (Mobile)
    ══════════════════════════════════════════ */
-function BottomTabBar({ active }: { active: number }) {
-  const navigate = useNavigate();
-  const tabs: { icon: typeof Home; label: string; to?: string }[] = [
-    { icon: Home,   label: "Trang chủ", to: "/" },
-    { icon: Search, label: "Tìm phòng", to: "/search" },
-    { icon: Bell,   label: "Thông báo" },
-    { icon: User,   label: "Tài khoản" },
-  ];
-  return (
-    <nav style={{ background: C.white, borderTop: `1px solid ${C.border}`, height: 60, display: "flex", position: "sticky", bottom: 0, zIndex: 100, boxShadow: "0 -2px 12px rgba(92,70,50,0.08)" }}>
-      {tabs.map(({ icon: Icon, label, to }, i) => {
-        const isActive = active === i;
-        return (
-          <button key={label} onClick={to ? () => navigate(to) : undefined} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 3, background: "none", border: "none", cursor: "pointer" }}>
-            <Icon size={22} color={isActive ? C.primary : "#9B8C78"} strokeWidth={isActive ? 2.5 : 1.8} />
-            <span style={{ fontFamily: font, fontSize: 10, fontWeight: isActive ? 700 : 400, color: isActive ? C.primary : "#9B8C78" }}>{label}</span>
-          </button>
-        );
-      })}
-    </nav>
-  );
-}
 
 /* ══════════════════════════════════════════
    HOME PAGE — MAIN EXPORT
@@ -996,7 +969,10 @@ export function HomePage() {
           const formatted = featuredCards.map(l => ({
             id: l.id,
             title: l.title,
-            price: l.priceNum.toLocaleString("vi-VN"),
+            // Dùng chuỗi đã format của `toListingCard` chứ không tự format lại:
+            // bản cũ ra "5.500.000/tháng" trong khi Tất cả phòng và Tìm phòng
+            // ra "5,5 tr/tháng" — cùng một tin, hai cách viết giá.
+            price: l.price,
             area: l.area,
             loc: l.loc,
             amenities: ["wifi", "ac"],
@@ -1068,7 +1044,7 @@ export function HomePage() {
           <SiteFooter mobile />
         </div>
 
-        <BottomTabBar active={0} />
+        <BottomTabBar />
         <DemoFAB />
         <InfoModal content={infoModal} onClose={() => setInfoModal(null)} />
         {postTypeModal && <PostTypeModal onClose={() => setPostTypeModal(false)} onSelect={selectRenterPostType} />}

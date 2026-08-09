@@ -1,16 +1,14 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router";
 import {
-  Heart, MapPin, Wifi, Wind, Car, Bath, Clock, Layers,
-  Home, Bell, User, X, Star, ArrowLeft, SlidersHorizontal,
-  Map, List, ChevronDown, Search, Check, PawPrint,
+  Heart, MapPin, Wifi, Wind, Car, Bath, Clock, Layers, X, Star, ArrowLeft, SlidersHorizontal, Map, List, ChevronDown, Search, Check, PawPrint,
 } from "lucide-react";
 import { C, font } from "../../shared/theme";
 import { useBreakpoint } from "../../shared/components/useBreakpoint";
 import { PublicNavbarDesktop, PublicNavbarMobile, DemoFAB } from "../../shared/components/PublicNavbar";
 import { DemoBanner } from "../../shared/components/common/DemoBanner";
 import { PROPERTY_TYPES, PRICE_RANGES, AMENITIES as CATALOG_AMENITIES, AREA_RANGES } from "../../shared/constants/catalog";
-import { AreaSelect } from "../../shared/components/common";
+import { AreaSelect, BottomTabBar } from "../../shared/components/common";
 import { provinceName } from "../../shared/utils/vn-regions";
 import { getListingImage, mapAmenityToKey, mapTypeToKey } from "../services/listing-mappers";
 import { SaveListingButton } from "../components/SaveListingButton";
@@ -535,28 +533,6 @@ function MobileActiveChips({ chips, onRemove }: { chips: string[]; onRemove: (c:
   );
 }
 
-function BottomTabBar({ active }: { active: number }) {
-  const navigate = useNavigate();
-  const tabs: { icon: typeof Home; label: string; to?: string }[] = [
-    { icon: Home,   label: "Trang chủ", to: "/" },
-    { icon: Search, label: "Tìm phòng", to: "/tim-phong" },
-    { icon: Bell,   label: "Thông báo" },
-    { icon: User,   label: "Tài khoản" },
-  ];
-  return (
-    <nav style={{ background: C.white, borderTop: `1px solid ${C.border}`, height: 60, display: "flex", position: "sticky", bottom: 0, zIndex: 100, boxShadow: "0 -2px 12px rgba(92,70,50,0.08)" }}>
-      {tabs.map(({ icon: Icon, label, to }, i) => {
-        const isActive = active === i;
-        return (
-          <button key={label} onClick={to ? () => navigate(to) : undefined} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 3, background: "none", border: "none", cursor: "pointer" }}>
-            <Icon size={22} color={isActive ? C.primary : "#9B8C78"} strokeWidth={isActive ? 2.5 : 1.8} />
-            <span style={{ fontFamily: font, fontSize: 10, fontWeight: isActive ? 700 : 400, color: isActive ? C.primary : "#9B8C78" }}>{label}</span>
-          </button>
-        );
-      })}
-    </nav>
-  );
-}
 
 /* ══════════════════════════════════════════
    MOBILE — FILTER BOTTOM SHEET
@@ -791,7 +767,7 @@ export function SearchResultsPage() {
           )}
         </div>
 
-        <BottomTabBar active={1} />
+        <BottomTabBar />
         <MobileFilterSheet
           open={mobileFilterOpen}
           filters={pendingFilters}

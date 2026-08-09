@@ -1,5 +1,6 @@
 export * from "./AppSelect";
 export * from "./AreaSelect";
+export * from "./BottomTabBar";
 export * from "./FormField";
 export * from "./ModalShell";
 export * from "./DemoBanner";

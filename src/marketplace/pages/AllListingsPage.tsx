@@ -1,10 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router";
 import {
-  Search, Heart, MapPin, Wifi, Wind, Car, Bath, Clock, Layers,
-  Home, Bell, User, X, Star, ArrowLeft, SlidersHorizontal,
-  Map, LayoutGrid, List, ChevronDown, ChevronLeft, ChevronRight,
-  Check, ArrowUpDown, PawPrint,
+  Search, Heart, MapPin, Wifi, Wind, Car, Bath, Clock, Layers, X, Star, ArrowLeft, SlidersHorizontal, Map, LayoutGrid, List, ChevronDown, ChevronLeft, ChevronRight, Check, ArrowUpDown, PawPrint,
 } from "lucide-react";
 import { C, font } from "../../shared/theme";
 import { useBreakpoint } from "../../shared/components/useBreakpoint";
@@ -12,7 +9,7 @@ import { PublicNavbarDesktop, PublicNavbarMobile, DemoFAB } from "../../shared/c
 import { DemoBanner } from "../../shared/components/common/DemoBanner";
 import { logError } from "../../shared/services/supabase-error";
 import { PROPERTY_TYPES, PRICE_RANGES, AMENITIES as CATALOG_AMENITIES, AREA_RANGES } from "../../shared/constants/catalog";
-import { AreaSelect } from "../../shared/components/common";
+import { AreaSelect, BottomTabBar } from "../../shared/components/common";
 import { provinceName, loadVnWards, type VnWard } from "../../shared/utils/vn-regions";
 import { parsePriceRangeLabel, parseAreaRangeLabel } from "../../shared/utils/catalog-bounds";
 import { searchListings } from "../services/listing-queries";
@@ -533,22 +530,6 @@ function MobileActiveChips({ chips, onRemove }: { chips: string[]; onRemove: (c:
   );
 }
 
-function BottomTabBar({ active }: { active: number }) {
-  const tabs = [{ icon: Home, label: "Trang chủ" }, { icon: Search, label: "Tìm phòng" }, { icon: Bell, label: "Thông báo" }, { icon: User, label: "Tài khoản" }];
-  return (
-    <nav style={{ background: C.white, borderTop: `1px solid ${C.border}`, height: 60, display: "flex", position: "sticky", bottom: 0, zIndex: 100, boxShadow: "0 -2px 12px rgba(92,70,50,0.08)", flexShrink: 0 }}>
-      {tabs.map(({ icon: Icon, label }, i) => {
-        const on = active === i;
-        return (
-          <button key={label} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 3, background: "none", border: "none", cursor: "pointer" }}>
-            <Icon size={22} color={on ? C.primary : "#9B8C78"} strokeWidth={on ? 2.5 : 1.8} />
-            <span style={{ fontFamily: font, fontSize: 10, fontWeight: on ? 700 : 400, color: on ? C.primary : "#9B8C78" }}>{label}</span>
-          </button>
-        );
-      })}
-    </nav>
-  );
-}
 
 /* ══════════════════════════════════════════
    MOBILE — FILTER BOTTOM SHEET
@@ -831,7 +812,7 @@ export function AllListingsPage() {
           )}
         </div>
 
-        <BottomTabBar active={1} />
+        <BottomTabBar />
         <MobileFilterSheet open={mobileFilter} filters={pending} onChange={setPending} onApply={applyFilters} onClose={() => setMobileFilter(false)} onClear={clearAll} />
         <MobileSortSheet open={mobileSort} sortBy={sortBy} onChange={setSortBy} onClose={() => setMobileSort(false)} />
       </div>
