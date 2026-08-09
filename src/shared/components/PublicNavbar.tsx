@@ -476,6 +476,22 @@ export function PublicNavbarMobile({ onSearch }: { onSearch?: () => void }) {
   );
 }
 
+/**
+ * Công tắc hiện nút FAB "Lối tắt nhanh".
+ *
+ * Đặt `false` để ẩn khỏi giao diện mà KHÔNG xóa code: nút này là công cụ nội bộ
+ * (seed dữ liệu mẫu, nhảy thẳng vào dashboard, gắn tài khoản vào đợt ở demo) —
+ * hữu ích lúc phát triển nhưng không nên xuất hiện trước người xem ngoài.
+ *
+ * ⚠️ `tests/e2e/review.spec.ts` bấm `demo-fab-trigger` và
+ * `demo-fab-link-occupancy` để dựng điều kiện BR-022. Bật lại cờ này trước khi
+ * chạy `pnpm test:e2e`, nếu không spec đánh giá sẽ fail vì không thấy nút.
+ *
+ * Khai kiểu `boolean` tường minh để TypeScript không thu hẹp về literal `false`
+ * rồi coi toàn bộ thân hàm là code không tới được.
+ */
+const SHOW_DEMO_FAB: boolean = false;
+
 export function DemoFAB() {
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
@@ -554,6 +570,10 @@ export function DemoFAB() {
     { Icon: UserCheck,       label: "Tôi là người ở demo",        testId: "demo-fab-link-occupancy", action: handleLinkDemoOccupancy },
     { Icon: HelpCircle,      label: "Trợ giúp",                  testId: "demo-fab-help",        action: () => {} },
   ];
+
+  // Đặt SAU mọi hook, không phải đầu hàm: thứ tự hook phải giữ nguyên vô điều
+  // kiện, kể cả khi ai đó biến cờ trên thành giá trị đổi được lúc chạy.
+  if (!SHOW_DEMO_FAB) return null;
 
   return (
     <div style={{
