@@ -4,6 +4,7 @@ import { supabase } from "../../shared/supabaseClient";
 import { C, font } from "../../shared/theme";
 import { Eye, EyeOff, Mail, Lock, User, Phone, ArrowLeft } from "lucide-react";
 import { GoogleSignInButton, AuthDivider } from "../../shared/components/common";
+import { logError, toUserMessage } from "../../shared/services/supabase-error";
 
 export function RegisterPage() {
   const navigate = useNavigate();
@@ -18,8 +19,33 @@ export function RegisterPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!fullName || !email || !password || !contactPhone) {
-      setErrorMessage("Vui lòng điền đầy đủ tất cả các trường.");
+
+    const name = fullName.trim();
+    const mail = email.trim();
+    const phone = contactPhone.trim();
+
+    /*
+     * SỐ ĐIỆN THOẠI KHÔNG CÒN BẮT BUỘC.
+     *
+     * Trước đây một thông báo gộp "Vui lòng điền đầy đủ tất cả các trường" chặn
+     * cả form mà không nói thiếu cái gì. Giờ mỗi trường một câu riêng.
+     *
+     * Email vẫn bắt buộc vì nó là ĐỊNH DANH ĐĂNG NHẬP, không phải thông tin liên
+     * hệ: dự án Supabase đang bật `email` + `google`, còn `phone` = false
+     * (kiểm bằng GET /auth/v1/settings). Cho đăng ký bằng SĐT thôi sẽ tạo ra tài
+     * khoản không bao giờ đăng nhập lại được, vì `LoginPage` chỉ gọi
+     * `signInWithPassword({ email, password })`.
+     *
+     * SĐT thiếu thì bổ sung sau ở /tai-khoan/cai-dat, và form đăng tin cho thuê
+     * có ô SĐT riêng nên tin đăng vẫn luôn có số liên hệ.
+     */
+    if (!name) {
+      setErrorMessage("Vui lòng nhập họ và tên.");
+      return;
+    }
+
+    if (!mail) {
+      setErrorMessage("Vui lòng nhập địa chỉ email — đây là tên đăng nhập của bạn.");
       return;
     }
 
@@ -34,18 +60,21 @@ export function RegisterPage() {
 
     try {
       const { data, error } = await supabase.auth.signUp({
-        email,
+        email: mail,
         password,
         options: {
           data: {
-            full_name: fullName,
-            contact_phone: contactPhone,
+            full_name: name,
+            contact_phone: phone,
           },
         },
       });
 
       if (error) {
-        setErrorMessage(error.message || "Đã xảy ra lỗi đăng ký.");
+        // §7: không ghép `error.message` thô vào UI — đó là chuỗi tiếng Anh của
+        // GoTrue ("User already registered"). `toUserMessage` đã có bảng dịch.
+        logError("RegisterPage.signUp", error);
+        setErrorMessage(toUserMessage(error));
         return;
       }
 
@@ -63,8 +92,9 @@ export function RegisterPage() {
           navigate("/");
         }, 1500);
       }
-    } catch (err: any) {
-      setErrorMessage(err.message || "Không thể kết nối đến máy chủ.");
+    } catch (err) {
+      logError("RegisterPage.handleSubmit", err);
+      setErrorMessage(toUserMessage(err));
     } finally {
       setIsLoading(false);
     }
@@ -212,7 +242,8 @@ export function RegisterPage() {
           {/* Phone number field */}
           <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
             <label style={{ fontSize: 13, fontWeight: 600, color: C.textPrimary }}>
-              Số điện thoại liên hệ
+              Số điện thoại liên hệ{" "}
+              <span style={{ fontWeight: 500, color: C.textSecondary }}>(không bắt buộc)</span>
             </label>
             <div style={{ position: "relative" }}>
               <Phone
@@ -246,6 +277,9 @@ export function RegisterPage() {
                 }}
               />
             </div>
+            <p style={{ fontSize: 12, color: C.textSecondary, margin: 0, lineHeight: 1.4 }}>
+              Có thể bỏ trống và bổ sung sau ở Tài khoản → Cài đặt.
+            </p>
           </div>
 
           {/* Email field */}
