@@ -81,13 +81,11 @@ export function AccountPage() {
           </div>
         </div>
 
-        {/* Thiếu SĐT thì tin đăng không ai liên hệ được — nhắc ngay, không giấu
-            trong trang cài đặt. */}
+        {/* Tin cho thuê vẫn cần thông tin liên hệ, nhưng không bắt xác minh OTP. */}
         {!profile?.contact_phone && (
           <div data-testid="account-missing-phone" style={{ background: C.cream, border: `1px solid ${C.border}`, borderRadius: radius.sm, padding: "12px 14px", marginBottom: 20 }}>
             <p style={{ fontFamily: font, fontSize: 13, color: C.textPrimary, margin: 0, lineHeight: 1.5 }}>
-              Bạn chưa có số điện thoại. Tin đăng của bạn sẽ không hiện số liên hệ, và
-              người tìm trọ không gọi được. <strong>Bổ sung ở Cài đặt tài khoản.</strong>
+              Bạn chưa có số điện thoại trong hồ sơ. Khi đăng tin cho thuê, hãy nhập số liên hệ trong biểu mẫu; không cần xác minh OTP.
             </p>
           </div>
         )}
@@ -124,7 +122,7 @@ export function AccountPage() {
 export function AccountSettingsPage() {
   const { user, profile, refreshProfile } = useAuth();
   const [fullName, setFullName] = useState("");
-  const [phone, setPhone] = useState("");
+  const [contactEmail, setContactEmail] = useState("");
   const [saving, setSaving] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
   const [saved, setSaved] = useState(false);
@@ -133,8 +131,8 @@ export function AccountSettingsPage() {
   // AuthContext nạp profile bất đồng bộ — lần render đầu nó còn null.
   useEffect(() => {
     setFullName(profile?.full_name ?? "");
-    setPhone(profile?.contact_phone ?? "");
-  }, [profile?.full_name, profile?.contact_phone]);
+    setContactEmail(profile?.contact_email ?? "");
+  }, [profile?.full_name, profile?.contact_email]);
 
   const handleSave = async () => {
     setErrorMsg("");
@@ -144,15 +142,14 @@ export function AccountSettingsPage() {
       setErrorMsg("Vui lòng nhập họ và tên.");
       return;
     }
-    // Cùng luật với form đăng tin (`useListingForm`): 10–11 số, bắt đầu bằng 0.
-    if (phone.trim() && !/^0\d{8,9}$/.test(phone.trim())) {
-      setErrorMsg("Số điện thoại chưa hợp lệ. Ví dụ: 0901234567.");
+    if (contactEmail.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contactEmail.trim())) {
+      setErrorMsg("Địa chỉ email liên hệ chưa đúng định dạng.");
       return;
     }
 
     try {
       setSaving(true);
-      await updateMyProfile({ fullName, contactPhone: phone });
+      await updateMyProfile({ fullName, contactEmail });
       // Nạp lại profile trong context, nếu không thì navbar và mọi chỗ hiển thị
       // tên vẫn giữ giá trị cũ cho tới lần tải trang sau.
       await refreshProfile();
@@ -180,7 +177,16 @@ export function AccountSettingsPage() {
 
         <div style={{ display: "flex", flexDirection: "column", gap: 14, maxWidth: 460 }}>
           <Field label="Họ và tên *" data-testid="account-fullname" value={fullName} onChange={setFullName} placeholder="VD: Nguyễn Văn A" />
-          <Field label="Số điện thoại" data-testid="account-phone" value={phone} onChange={setPhone} placeholder="VD: 0901234567" />
+          <label style={{ display: "flex", flexDirection: "column", gap: 5 }}>
+            <span style={{ fontFamily: font, fontSize: 13, fontWeight: 600, color: C.textPrimary }}>Số điện thoại liên hệ</span>
+            <div style={{ display: "flex", gap: 8 }}>
+              <input value={profile?.contact_phone ?? user?.phone ?? ""} readOnly data-testid="account-phone" placeholder="Chưa có số điện thoại" style={{ flex: 1, minWidth: 0, fontFamily: font, fontSize: 14, color: C.textSecondary, border: `1.5px solid ${C.border}`, borderRadius: 10, padding: "10px 13px", boxSizing: "border-box", background: C.bg }} />
+            </div>
+            <span style={{ fontFamily: font, fontSize: 12, color: C.textSecondary }}>
+              Số điện thoại chỉ dùng làm thông tin liên hệ; ứng dụng hiện không yêu cầu xác minh.
+            </span>
+          </label>
+          <Field label="Email liên hệ (không bắt buộc)" data-testid="account-contact-email" value={contactEmail} onChange={setContactEmail} placeholder="ten@example.com" />
 
           <label style={{ display: "flex", flexDirection: "column", gap: 5 }}>
             <span style={{ fontFamily: font, fontSize: 13, fontWeight: 600, color: C.textPrimary }}>Email đăng nhập</span>
@@ -194,7 +200,7 @@ export function AccountSettingsPage() {
             {/* Đổi email đụng cả `auth.users` lẫn identity của Google, và phải
                 xác thực lại địa chỉ mới — không gộp vào form này. */}
             <span style={{ fontFamily: font, fontSize: 12, color: C.textSecondary }}>
-              Email dùng để đăng nhập, hiện chưa đổi được tại đây.
+              {user?.email ? "Email đăng nhập hiện tại được giữ nguyên trong đợt review này." : "Tài khoản này chưa có email đăng nhập; email liên hệ không dùng để đăng nhập."}
             </span>
           </label>
 

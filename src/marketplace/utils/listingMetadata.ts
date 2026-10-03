@@ -35,7 +35,26 @@ export interface ListingMetadata {
   curfew?: CurfewInfo;
   costs?: ListingCosts;
   nearby?: NearbyCategory[];
-  coords?: ListingCoords;
+  coords?: ListingCoords | null;
+  /** Seller preference only; never grants paid Boost access. */
+  boost_intent?: { days: number; selected_at?: string } | null;
+}
+
+/** Giữ metadata cũ khi chỉ sửa vài trường của tin, kể cả đặt cọc dạng chữ. */
+export function mergeEditedListingMetadata(
+  original: ListingMetadata,
+  edited: ListingMetadata,
+  legacyDepositText = "",
+): ListingMetadata {
+  return {
+    ...original,
+    ...edited,
+    costs: {
+      ...original.costs,
+      ...edited.costs,
+      deposit: edited.costs?.deposit || legacyDepositText,
+    },
+  };
 }
 
 const METADATA_MARKER = "\n\n---METADATA---\n";
@@ -69,7 +88,6 @@ export function parseMetadataFromDescription(description: string): {
     curfew: { type: "free", time: "" },
     costs: { electric: "", water: "", waterUnit: "person", service: "", deposit: "", other: "" },
     nearby: [],
-    coords: { lat: 10.7712, lng: 106.6823, address: "" }
   };
 
   if (!description) {

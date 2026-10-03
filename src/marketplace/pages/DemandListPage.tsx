@@ -136,13 +136,17 @@ export function DemandListPage() {
           </div>
 
           {/* Khu vực */}
-          <div style={{ marginLeft: "auto", minWidth: 320 }}>
+          <div style={{
+            marginLeft: isMobile ? 0 : "auto",
+            minWidth: isMobile ? 0 : 320,
+            width: isMobile ? "100%" : undefined,
+          }}>
             <AreaSelect
               value={area}
               onChange={(a) => setArea({ provinceCode: a.provinceCode, wardCode: a.wardCode })}
               allowAllProvinces
               allowAllWards
-              layout="inline"
+              layout={isMobile ? "stack" : "inline"}
               labels={false}
               testIdPrefix="demand-area"
             />

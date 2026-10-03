@@ -70,7 +70,7 @@ export function Step3Photos({ photos, setPhotos, error, uploadProgress }: Step3P
           Hình ảnh thực tế phòng trọ
         </h2>
         <p style={{ fontFamily: font, fontSize: 13.5, color: C.textSecondary, margin: 0 }}>
-          Tải lên ít nhất 3 hình ảnh rõ nét. Tin đăng có hình ảnh chân thực giúp tăng 300% lượng liên hệ.
+            Tải lên ít nhất 3 hình ảnh rõ nét để người thuê xem đúng hiện trạng phòng.
         </p>
       </div>
 

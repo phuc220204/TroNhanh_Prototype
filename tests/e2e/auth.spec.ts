@@ -47,7 +47,7 @@ test.describe("Xác thực", () => {
 
   test("sai mật khẩu hiện lỗi tiếng Việt và KHÔNG tạo phiên", async ({ page }) => {
     await go(page, "/dang-nhap");
-    await page.getByTestId("login-email").fill(ACCOUNTS.renterA);
+    await page.getByTestId("login-identifier").fill(ACCOUNTS.renterA);
     await page.getByTestId("login-password").fill("sai-mat-khau-hoan-toan");
     await page.getByTestId("login-submit").click();
 
@@ -64,7 +64,7 @@ test.describe("Xác thực", () => {
 
   test("?redirect= đưa về đúng trang đã yêu cầu sau khi đăng nhập", async ({ page }) => {
     await page.goto(`${url("/dang-nhap")}?redirect=${encodeURIComponent("/yeu-thich")}`);
-    await page.getByTestId("login-email").fill(ACCOUNTS.renterA);
+    await page.getByTestId("login-identifier").fill(ACCOUNTS.renterA);
     await page.getByTestId("login-password").fill(DEMO_PASSWORD);
     await page.getByTestId("login-submit").click();
 

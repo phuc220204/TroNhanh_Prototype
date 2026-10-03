@@ -30,12 +30,7 @@ export async function seedMockDataForUser(user: { id: string }, profile: any) {
 
   // 1. Seed Listings
   //
-  // ⚠️ KHÔNG có `boost_expire_at` ở đây, và đó là bắt buộc chứ không phải quên.
-  // Trigger `trg_guard_boost_expire_at` (migration 20260806150000) ném
-  // `BOOST_REQUIRES_PAYMENT` với mọi INSERT/UPDATE tự đặt cột này ngoài RPC
-  // `boost_listing()`. Vì 4 tin được insert trong MỘT câu lệnh, chỉ cần một tin
-  // mang `boost_expire_at` là cả 4 fail và seeder không tạo được gì.
-  // Boost được đặt sau, qua RPC — xem bước 1b.
+  // Không seed boost/VIP: chưa có thanh toán thật, nên không thể ghi payment giả.
   const listingsToSeed = [
     {
       seller_id: user.id,
@@ -133,29 +128,6 @@ export async function seedMockDataForUser(user: { id: string }, profile: any) {
 
     if (amenitiesError) throw amenitiesError;
 
-    // ── 1b. Đẩy tin qua ĐÚNG đường có thanh toán ──────────────────────────
-    // BR-005 cần vài tin còn hạn boost để chứng minh "tin nổi bật xếp trước".
-    // `boost_listing()` là đường DUY NHẤT đặt được `boost_expire_at`: nó tra giá
-    // từ `platform_settings.boost_config`, ghi một dòng `payments` purpose
-    // 'Boost', rồi mới mở cờ cho trigger. Nhờ vậy dữ liệu seed phản ánh đúng
-    // trạng thái thật của một tin đã trả tiền, thay vì một cột được nhét tay.
-    //
-    // `days` PHẢI là gói có thật trong `boost_config` (đã seed: 7 / 15 / 30),
-    // nếu không RPC ném `INVALID_BOOST_PACKAGE`.
-    const boostPlan: Array<{ index: number; days: number }> = [
-      { index: 0, days: 30 },
-      { index: 1, days: 7 },
-    ];
-
-    for (const { index, days } of boostPlan) {
-      const target = createdListings[index];
-      if (!target) continue;
-      const { error: boostError } = await supabase.rpc("boost_listing", {
-        p_listing_id: target.id,
-        p_days: days,
-      });
-      if (boostError) throw boostError;
-    }
   }
 
   // 2. Seed Demand Posts

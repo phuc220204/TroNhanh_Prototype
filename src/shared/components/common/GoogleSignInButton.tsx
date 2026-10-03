@@ -27,6 +27,7 @@ export interface GoogleSignInButtonProps {
   label?: string;
   disabled?: boolean;
   onError?: (message: string) => void;
+  redirect?: string | null;
   "data-testid"?: string;
 }
 
@@ -43,6 +44,7 @@ export function GoogleSignInButton({
   label = "Tiếp tục với Google",
   disabled,
   onError,
+  redirect,
   "data-testid": testId = "google-signin-btn",
 }: GoogleSignInButtonProps) {
   const { signInWithGoogle } = useAuth();
@@ -55,7 +57,7 @@ export function GoogleSignInButton({
     if (isDisabled) return;
     try {
       setPending(true);
-      await signInWithGoogle();
+      await signInWithGoogle(redirect);
       // Không tắt `pending` ở đây: trình duyệt đang chuyển sang trang Google.
       // Tắt sẽ làm nút nhấp nháy trở lại trạng thái bình thường trước khi rời trang.
     } catch (err) {

@@ -256,13 +256,15 @@ otp_expiry = 3600
 
 [auth.sms]
 # Allow/disallow new user signups via SMS to your project.
-enable_signup = false
+enable_signup = true
 # If enabled, users need to confirm their phone number before signing in.
 enable_confirmations = false
 # Template for sending OTP to users
-template = "Your code is {{ `{{ .Code }}` }}"
+template = "Ma xac minh Tro Nhanh cua ban: {{ `{{ .Code }}` }}"
 # Controls the minimum amount of time that must pass before sending another sms otp.
-max_frequency = "5s"
+max_frequency = "60s"
+otp_length = 6
+otp_expiry = 300
 
 # Use pre-defined map of phone number to OTP for testing.
 # [auth.sms.test_otp]
@@ -292,6 +294,11 @@ account_sid = ""
 message_service_sid = ""
 # DO NOT commit your Twilio auth token to git. Use environment variable substitution instead:
 auth_token = "env(SUPABASE_AUTH_SMS_TWILIO_AUTH_TOKEN)"
+
+# Supabase Auth calls this HTTP hook without a user JWT; the function verifies
+# the Standard Webhooks signature before forwarding OTPs to SpeedSMS.
+[functions.speedsms-auth-hook]
+verify_jwt = false
 
 # Multi-factor-authentication is available to Supabase Pro plan.
 [auth.mfa]
@@ -381,6 +388,21 @@ policy = "per_worker"
 inspector_port = 8083
 # The Deno major version to use.
 deno_version = 2
+
+# payOS webhook is authenticated by its HMAC signature, not by a Supabase JWT.
+# Checkout also needs to answer CORS preflight; its handler verifies the user
+# token with Supabase Auth before creating any order.
+[functions.payos-create-checkout]
+verify_jwt = false
+
+[functions.payos-webhook]
+verify_jwt = false
+
+[functions.payos-boost-packages]
+verify_jwt = false
+
+[functions.payos-check-status]
+verify_jwt = false
 
 # [edge_runtime.secrets]
 # secret_key = "env(SECRET_VALUE)"

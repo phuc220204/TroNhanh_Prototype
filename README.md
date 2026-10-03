@@ -3,6 +3,9 @@
 Nền tảng tìm/cho thuê phòng trọ, kèm module SaaS quản lý dành cho chủ trọ.
 Đồ án EXE101 — nhóm 211, Checkpoint 4.
 
+Tiếp tục sửa OC1 hoặc chuyển sang Antigravity: đọc [file bàn giao](docs/ANTIGRAVITY_OC1_HANDOFF.md)
+và [hướng dẫn thao tác tay](docs/OC1_MANUAL_STEPS_VI.md) trước khi triển khai.
+
 **Stack:** Vite · React 18 · TypeScript · Supabase (Postgres + Auth + Storage) ·
 React Query · React Router (hash router).
 
@@ -60,11 +63,11 @@ Mở http://localhost:5173
 
 Không có lệnh CLI nào làm thay được hai việc này.
 
-**a) TẮT email confirmation** — Authentication → Providers → Email → tắt
-*Confirm email*.
-
-Còn bật thì `signUp` không trả về session: người đăng ký bị kẹt ở màn "kiểm tra
-email", tài khoản demo tạo không được, và `auth.spec.ts` sẽ đỏ.
+**a) Email confirmation** — Trên database kiểm thử riêng, có thể tắt
+*Confirm email* ở Authentication → Providers → Email để các tài khoản demo và
+`auth.spec.ts` hoạt động tức thì. Trên production, giữ xác nhận email và kiểm
+tra email xác thực được gửi/nhận: `RegisterPage` đã hiển thị hướng dẫn kiểm tra
+hộp thư khi `signUp` chưa trả session.
 
 **b) Tạo Admin đầu tiên bằng SQL** — đăng ký `admin@tronhanh.demo` qua
 `/dang-ky` trước, rồi chạy đúng một lần trong SQL Editor:
@@ -93,13 +96,9 @@ Chi tiết dữ liệu từng tài khoản: [`docs/cp4/DEMO_ACCOUNTS.md`](docs/c
 | `renter.a@tronhanh.demo` | Renter | tin nhu cầu · nhắn tin · đánh giá khu trọ |
 | `admin@tronhanh.demo` | Admin | kiểm duyệt tin · quản lý user · chế độ kiểm duyệt |
 
-> ⚠️ **Đuôi `@tronhanh.demo` là bắt buộc.** RPC `demo_link_me_to_seeded_occupancy()`
-> chỉ tác động lên khu trọ của chủ có email kết thúc bằng đuôi này — ràng buộc
-> phạm vi cố ý để hàm demo không đụng vào dữ liệu thật.
-
-**Tài khoản mới chưa có dữ liệu nghiệp vụ.** Đăng nhập `seller.a` → nút
-**"Khởi tạo dữ liệu mẫu"** trên dải onboarding (chỉ hiện khi chưa có khu nào),
-hoặc DemoFAB → *Seed Dữ liệu mẫu*.
+Các tài khoản này chỉ dành cho database kiểm thử. Production không còn DemoFAB,
+banner seed hay RPC `demo_*`; fixture cần thiết phải được nạp có chủ đích từ SQL
+Editor, không qua giao diện người dùng.
 
 ---
 
@@ -162,6 +161,7 @@ nối được phép: `CLAUDE.md` §2.
 | Test storage cross-folder | console trình duyệt khi đã đăng nhập — upload vào thư mục của UUID người khác phải bị chặn |
 | Quét VietQR bằng app ngân hàng thật | 28 mã BIN chưa đối chiếu NAPAS; BIN sai thì QR vẫn quét ra, chỉ là ra sai ngân hàng |
 | Đi checklist DB trống | [`docs/cp4/09_T32_CHECKLIST_DB_TRONG.md`](docs/cp4/09_T32_CHECKLIST_DB_TRONG.md) — **làm trước khi chạy E2E**, vì E2E tạo dữ liệu và xoá mất trạng thái "hệ thống trống" |
+| Cấu hình domain Auth + thương hiệu Google | Làm trong Supabase/Google Cloud rồi chạy checklist [`docs/OC1_DEPLOYMENT_CHECKLIST.md`](docs/OC1_DEPLOYMENT_CHECKLIST.md); mã nguồn không thể tự thay cấu hình tài khoản nhà cung cấp |
 
 ---
 

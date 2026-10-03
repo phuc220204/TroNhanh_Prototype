@@ -70,16 +70,22 @@ export function Step2Amenities({ formik }: Step2AmenitiesProps) {
 
       {/* Description Textarea */}
       <div>
-        <p style={{ fontFamily: font, fontSize: 13, fontWeight: 700, color: C.textPrimary, margin: "0 0 6px" }}>
+        <label htmlFor="listing-description" style={{ display: "block", fontFamily: font, fontSize: 13, fontWeight: 700, color: C.textPrimary, margin: "0 0 6px" }}>
           Mô tả chi tiết tin đăng <span style={{ color: C.repairing }}>*</span>
-        </p>
+        </label>
         <textarea
+          id="listing-description"
           name="description"
           rows={6}
           placeholder="Mô tả vị trí phòng, nội thất, tiện ích xung quanh, đối tượng phù hợp (sinh viên, người đi làm)..."
           value={values.description}
           onChange={(e) => setFieldValue("description", e.target.value)}
           onBlur={handleBlur}
+          minLength={10}
+          maxLength={5000}
+          required
+          aria-invalid={Boolean(errors.description)}
+          aria-describedby={errors.description ? "listing-description-error" : undefined}
           style={{
             width: "100%",
             fontFamily: font,
@@ -95,7 +101,7 @@ export function Step2Amenities({ formik }: Step2AmenitiesProps) {
           }}
         />
         {errors.description && (
-          <div style={{ display: "flex", alignItems: "center", gap: 4, marginTop: 4, color: C.repairing }}>
+          <div id="listing-description-error" role="alert" style={{ display: "flex", alignItems: "center", gap: 4, marginTop: 4, color: C.repairing }}>
             <AlertCircle size={12} />
             <span style={{ fontFamily: font, fontSize: 12 }}>{errors.description}</span>
           </div>

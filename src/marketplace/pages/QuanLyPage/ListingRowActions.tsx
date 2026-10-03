@@ -1,5 +1,5 @@
 import React from "react";
-import { Eye, EyeOff, Pencil, ArrowUpCircle, Trash2, Star, TriangleAlert } from "lucide-react";
+import { Eye, EyeOff, Pencil, Sparkles, Trash2, TriangleAlert } from "lucide-react";
 import { C, font, radius, space } from "../../../shared/theme";
 import { LISTING_META } from "../../../shared/utils/statusMaps";
 import { toListingStatus } from "../../../shared/types/status";
@@ -11,22 +11,14 @@ import { toListingStatus } from "../../../shared/types/status";
  * bắt Active/PendingApproval/Expired nên `Draft`, `Rejected`, `Rented` đều rơi
  * vào nhánh mặc định và hiện "Đã ẩn" — người bán bị từ chối không hề biết.
  */
-export function getStatusMeta(status: string, boostExpire: string | null) {
-  const isVIP = !!(boostExpire && new Date(boostExpire) > new Date());
-  const meta = LISTING_META[toListingStatus(status)];
-  if (isVIP && meta.label === "Đang hiển thị") {
-    return { label: "Hiển thị (VIP)", color: C.repairing, bg: C.cream, vip: true };
-  }
-  return { ...meta, vip: false };
+export function getStatusMeta(status: string) {
+  return LISTING_META[toListingStatus(status)];
 }
 
-export function StatusChip({ status, boostExpire }: { status: string; boostExpire: string | null }) {
-  const m = getStatusMeta(status, boostExpire);
+export function StatusChip({ status }: { status: string }) {
+  const m = getStatusMeta(status);
   return (
-    <span style={{ fontFamily: font, fontSize: 11.5, fontWeight: 700, color: m.color, background: m.bg, borderRadius: 8, padding: "3px 9px", whiteSpace: "nowrap", display: "inline-flex", alignItems: "center", gap: 4 }}>
-      {m.vip && <Star size={10.5} fill={C.repairing} stroke="none" />}
-      {m.label}
-    </span>
+    <span style={{ fontFamily: font, fontSize: 11.5, fontWeight: 700, color: m.color, background: m.bg, borderRadius: 8, padding: "3px 9px", whiteSpace: "nowrap", display: "inline-flex", alignItems: "center", gap: 4 }}>{m.label}</span>
   );
 }
 
@@ -64,7 +56,7 @@ export function RejectionNotice({ reason, onEdit }: { reason: string | null; onE
   );
 }
 
-export function IconAction({ icon, label, onClick, danger, vip, disabled }: { icon: React.ReactNode; label: string; onClick?: () => void; danger?: boolean; vip?: boolean; disabled?: boolean }) {
+export function IconAction({ icon, label, onClick, danger, disabled }: { icon: React.ReactNode; label: string; onClick?: () => void; danger?: boolean; disabled?: boolean }) {
   return (
     <button 
       disabled={disabled}
@@ -73,24 +65,22 @@ export function IconAction({ icon, label, onClick, danger, vip, disabled }: { ic
       aria-label={label}
       style={{ 
         width: 32, height: 32, borderRadius: 8, 
-        border: `1px solid ${vip ? C.repairing : C.border}`, 
-        background: vip ? "#FEF6EC" : C.white, 
+        border: `1px solid ${C.border}`,
+        background: C.white,
         display: "flex", alignItems: "center", justifyContent: "center", 
         cursor: disabled ? "not-allowed" : "pointer", 
-        color: danger ? "#B5503C" : vip ? C.repairing : C.textSecondary,
+        color: danger ? "#B5503C" : C.textSecondary,
         transition: "all 0.15s", opacity: disabled ? 0.5 : 1
       }}
       onMouseEnter={e => {
         if (disabled) return;
         e.currentTarget.style.transform = "translateY(-1px)";
-        if (vip) e.currentTarget.style.background = "#FDE4CA";
-        else e.currentTarget.style.borderColor = C.primary;
+        e.currentTarget.style.borderColor = C.primary;
       }}
       onMouseLeave={e => {
         if (disabled) return;
         e.currentTarget.style.transform = "none";
-        if (vip) e.currentTarget.style.background = "#FEF6EC";
-        else e.currentTarget.style.borderColor = C.border;
+        e.currentTarget.style.borderColor = C.border;
       }}>
       {icon}
     </button>
@@ -98,24 +88,24 @@ export function IconAction({ icon, label, onClick, danger, vip, disabled }: { ic
 }
 
 export interface ListingActionGroupProps {
-  id: string;
   status: string;
   isBlocked: boolean;
-  isVIP: boolean;
   onView: () => void;
   onEdit: () => void;
   onToggleStatus: () => void;
-  onBoost: () => void;
   onDelete: () => void;
+  onBoost?: () => void;
 }
 
-export function ListingActionGroup({ id, status, isBlocked, isVIP, onView, onEdit, onToggleStatus, onBoost, onDelete }: ListingActionGroupProps) {
+export function ListingActionGroup({ status, isBlocked, onView, onEdit, onToggleStatus, onDelete, onBoost }: ListingActionGroupProps) {
+  const canToggleVisibility = status === "Active" || status === "Hidden";
+  const canBuyBoost = status === "Active" || status === "PendingApproval";
   return (
     <div style={{ display: "flex", gap: 6 }} onClick={e => e.stopPropagation()}>
       <IconAction icon={<Eye size={14} />} label="Xem tin" onClick={onView} disabled={isBlocked} />
       <IconAction icon={<Pencil size={14} />} label="Chỉnh sửa" onClick={onEdit} disabled={isBlocked} />
-      <IconAction icon={status === "Active" ? <EyeOff size={14} /> : <Eye size={14} />} label={status === "Active" ? "Ẩn tin" : "Hiện tin"} onClick={onToggleStatus} disabled={isBlocked} />
-      <IconAction icon={<ArrowUpCircle size={14} />} label="Đẩy tin VIP" vip onClick={onBoost} disabled={isBlocked || isVIP} />
+      {canBuyBoost && onBoost ? <IconAction icon={<Sparkles size={14} />} label={status === "PendingApproval" ? "Thanh toán Boost" : "Đẩy tin với Boost"} onClick={onBoost} disabled={isBlocked} /> : null}
+      {canToggleVisibility && <IconAction icon={status === "Active" ? <EyeOff size={14} /> : <Eye size={14} />} label={status === "Active" ? "Ẩn tin" : "Hiện tin"} onClick={onToggleStatus} disabled={isBlocked} />}
       <IconAction icon={<Trash2 size={14} />} label="Xóa tin" danger onClick={onDelete} disabled={isBlocked} />
     </div>
   );

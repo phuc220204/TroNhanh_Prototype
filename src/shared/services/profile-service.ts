@@ -12,7 +12,7 @@ import { logError } from "./supabase-error";
 
 export interface UpdateMyProfileInput {
   fullName: string;
-  contactPhone: string;
+  contactEmail: string;
 }
 
 /**
@@ -35,7 +35,7 @@ export async function updateMyProfile(input: UpdateMyProfileInput): Promise<void
       .from("profiles")
       .update({
         full_name: input.fullName.trim() || null,
-        contact_phone: input.contactPhone.trim() || null,
+        contact_email: input.contactEmail.trim() || null,
       })
       .eq("user_id", uid);
 

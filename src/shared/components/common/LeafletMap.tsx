@@ -53,6 +53,9 @@ interface LeafletMapProps {
   onChange?: (next: LatLng) => void;
   height?: number;
   zoom?: number;
+  /** Tách tâm bản đồ fallback khỏi ghim thật của người dùng. */
+  showMarker?: boolean;
+  ariaLabel?: string;
   "data-testid"?: string;
 }
 
@@ -62,6 +65,8 @@ export function LeafletMap({
   onChange,
   height = 320,
   zoom = 16,
+  showMarker = true,
+  ariaLabel,
   "data-testid": testId,
 }: LeafletMapProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -86,24 +91,32 @@ export function LeafletMap({
       attribution: "© OpenStreetMap",
     }).addTo(map);
 
-    const marker = L.marker([resolved.lat, resolved.lng], {
-      icon: markerIcon(),
-      draggable: editable,
-    }).addTo(map);
+    const addMarker = (point: LatLng) => {
+      const marker = L.marker([point.lat, point.lng], {
+        icon: markerIcon(),
+        draggable: editable,
+      }).addTo(map);
+      markerRef.current = marker;
+      if (editable) {
+        marker.on("dragend", () => {
+          const { lat, lng } = marker.getLatLng();
+          onChangeRef.current?.({ lat, lng });
+        });
+      }
+      return marker;
+    };
+
+    if (showMarker && isValidLatLng(center)) addMarker(resolved);
 
     if (editable) {
-      marker.on("dragend", () => {
-        const { lat, lng } = marker.getLatLng();
-        onChangeRef.current?.({ lat, lng });
-      });
       map.on("click", (e: L.LeafletMouseEvent) => {
+        const marker = markerRef.current ?? addMarker({ lat: e.latlng.lat, lng: e.latlng.lng });
         marker.setLatLng(e.latlng);
         onChangeRef.current?.({ lat: e.latlng.lat, lng: e.latlng.lng });
       });
     }
 
     mapRef.current = map;
-    markerRef.current = marker;
 
     // Container thường có kích thước 0 ở frame đầu (modal/step ẩn) —
     // không gọi invalidateSize thì tile chỉ render một mảnh.
@@ -122,18 +135,40 @@ export function LeafletMap({
   // Đồng bộ khi toạ độ đổi từ bên ngoài (ví dụ nút "Lấy vị trí hiện tại").
   useEffect(() => {
     const map = mapRef.current;
-    const marker = markerRef.current;
-    if (!map || !marker) return;
+    let marker = markerRef.current;
+    if (!map) return;
+    if (!showMarker || !isValidLatLng(center)) {
+      if (marker) {
+        map.removeLayer(marker);
+        markerRef.current = null;
+      }
+      return;
+    }
+    if (!marker) {
+      marker = L.marker([resolved.lat, resolved.lng], {
+        icon: markerIcon(),
+        draggable: editable,
+      }).addTo(map);
+      if (editable) {
+        marker.on("dragend", () => {
+          const { lat, lng } = marker!.getLatLng();
+          onChangeRef.current?.({ lat, lng });
+        });
+      }
+      markerRef.current = marker;
+    }
     const current = marker.getLatLng();
     if (Math.abs(current.lat - resolved.lat) < 1e-7 && Math.abs(current.lng - resolved.lng) < 1e-7) return;
     marker.setLatLng([resolved.lat, resolved.lng]);
     map.setView([resolved.lat, resolved.lng], map.getZoom());
-  }, [resolved.lat, resolved.lng]);
+  }, [center, editable, resolved.lat, resolved.lng, showMarker]);
 
   return (
     <div
       ref={containerRef}
       data-testid={testId}
+      role="application"
+      aria-label={ariaLabel ?? (editable ? "Bản đồ chọn vị trí phòng" : "Bản đồ vị trí phòng")}
       style={{
         height,
         width: "100%",

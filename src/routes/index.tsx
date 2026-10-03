@@ -16,8 +16,9 @@ export const router = createHashRouter([
       { path: "khu-tro/:slug", lazy: async () => ({ Component: (await import("../marketplace/pages/PropertyDetailPage")).PropertyDetailPage }) },
       { path: "tin-nhu-cau", lazy: async () => ({ Component: (await import("../marketplace/pages/DemandListPage")).DemandListPage }) },
       { path: "tin-nhu-cau/:id", lazy: async () => ({ Component: (await import("../marketplace/pages/DemandDetailPage")).DemandDetailPage }) },
-      { path: "dang-tin-nhu-cau", lazy: async () => ({ Component: (await import("../marketplace/pages/PostDemandPage")).PostDemandPage }) },
-      { path: "styleguide", lazy: async () => ({ Component: (await import("../marketplace/pages/StyleGuidePage")).StyleGuidePage }) },
+      ...(import.meta.env.DEV
+        ? [{ path: "styleguide", lazy: async () => ({ Component: (await import("../marketplace/pages/StyleGuidePage")).StyleGuidePage }) }]
+        : []),
       { path: "dang-nhap", lazy: async () => ({ Component: (await import("../marketplace/pages/LoginPage")).LoginPage }) },
       { path: "dang-ky", lazy: async () => ({ Component: (await import("../marketplace/pages/RegisterPage")).RegisterPage }) },
 
@@ -36,6 +37,9 @@ export const router = createHashRouter([
       {
         lazy: async () => ({ Component: RequireAuth }),
         children: [
+          // Legacy verification links now land in settings; phone ownership is
+          // intentionally not required in this review release.
+          { path: "xac-minh-sdt", loader: () => redirect("/tai-khoan/cai-dat") },
           // Unified Messaging
           { path: "tin-nhan", lazy: async () => ({ Component: (await import("../shared/pages/InboxPage")).InboxPage }) },
           { path: "tin-nhan/:conversationId", lazy: async () => ({ Component: (await import("../shared/pages/InboxPage")).InboxPage }) },
@@ -53,14 +57,18 @@ export const router = createHashRouter([
           { path: "tai-khoan/phong-cua-toi", lazy: async () => ({ Component: (await import("../marketplace/pages/MyStaysPage")).MyStaysPage }) },
           { path: "tai-khoan/danh-gia", lazy: async () => ({ Component: (await import("../marketplace/pages/MyReviewsPage")).MyReviewsPage }) },
 
+          { path: "dang-tin-nhu-cau", lazy: async () => ({ Component: (await import("../marketplace/pages/PostDemandPage")).PostDemandPage }) },
+          { path: "dang-tin-cho-thue", lazy: async () => ({ Component: (await import("../marketplace/pages/DangTinPage")).DangTinPage }) },
+          { path: "dang-tin-cho-thue/:id", lazy: async () => ({ Component: (await import("../marketplace/pages/DangTinPage")).DangTinPage }) },
+          { path: "chu-tro", lazy: async () => ({ Component: (await import("../workspace/pages/ChuTroDashboardPage")).ChuTroDashboardPage }) },
+          { path: "chu-tro/quan-ly-phong", lazy: async () => ({ Component: (await import("../workspace/pages/QuanLyPhongPage")).QuanLyPhongPage }) },
+          { path: "chu-tro/tim-nguoi-thue", lazy: async () => ({ Component: (await import("../marketplace/pages/FindRenterPage")).FindRenterPage }) },
+          { path: "chu-tro/danh-gia", lazy: async () => ({ Component: (await import("../marketplace/pages/LandlordReviewsPage")).LandlordReviewsPage }) },
+          { path: "chu-tro/hoa-don", lazy: async () => ({ Component: (await import("../workspace/pages/LandlordBillingPage")).LandlordBillingPage }) },
+
           // Tin đã lưu / yêu thích — MỘT trang cho cả hai nhãn.
           { path: "yeu-thich", lazy: async () => ({ Component: (await import("../marketplace/pages/SavedListingsPage")).SavedListingsPage }) },
           { path: "tai-khoan/tin-da-luu", loader: () => redirect("/yeu-thich") },
-
-          // Đăng tin cho thuê — công khai với mọi tài khoản, không nằm dưới
-          // tiền tố `/chu-tro`.
-          { path: "dang-tin-cho-thue", lazy: async () => ({ Component: (await import("../marketplace/pages/DangTinPage")).DangTinPage }) },
-          { path: "dang-tin-cho-thue/:id", lazy: async () => ({ Component: (await import("../marketplace/pages/DangTinPage")).DangTinPage }) },
 
           // ── URL CŨ → MỚI ───────────────────────────────────────────────────
           // Giữ redirect vì người dùng đã bookmark, và tài liệu CP4 còn trỏ vào
@@ -75,12 +83,6 @@ export const router = createHashRouter([
           // Gác bằng TRẠNG THÁI GÓI, không phải role: role `Seller` được RPC tự
           // cấp ngay lần đăng tin đầu tiên nên nó chỉ có nghĩa "đã từng đăng
           // tin", không phải "là chủ trọ vận hành".
-          { path: "chu-tro", lazy: async () => ({ Component: (await import("../workspace/pages/ChuTroDashboardPage")).ChuTroDashboardPage }) },
-          { path: "chu-tro/quan-ly-phong", lazy: async () => ({ Component: (await import("../workspace/pages/QuanLyPhongPage")).QuanLyPhongPage }) },
-          { path: "chu-tro/tim-nguoi-thue", lazy: async () => ({ Component: (await import("../marketplace/pages/FindRenterPage")).FindRenterPage }) },
-          { path: "chu-tro/danh-gia", lazy: async () => ({ Component: (await import("../marketplace/pages/LandlordReviewsPage")).LandlordReviewsPage }) },
-          { path: "chu-tro/hoa-don", lazy: async () => ({ Component: (await import("../workspace/pages/LandlordBillingPage")).LandlordBillingPage }) },
-
           // Admin / Moderator Routes (Require Role Admin or Moderator)
           {
             lazy: async () => ({ Component: RequireAdminOrModerator }),

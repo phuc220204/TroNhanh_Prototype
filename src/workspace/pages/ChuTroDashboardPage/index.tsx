@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { useNavigate } from "react-router";
 import {
   Building2, FileText, Plus, Zap, ChevronRight,
@@ -12,8 +12,8 @@ import { EmptyState, Button, Toast } from "../../../shared/components/common";
 import { logError } from "../../../shared/services/supabase-error";
 import { useAuth } from "../../../shared/contexts/AuthContext";
 import { useCanWrite } from "../../../shared/contexts/SubscriptionContext";
-import { getPropertiesByOwner } from "../../services/property-service";
-import { getRoomsByOwner } from "../../services/room-service";
+import { getPropertiesByOwnerOrThrow } from "../../services/property-service";
+import { getRoomsByOwnerOrThrow } from "../../services/room-service";
 import { getDashboardMetrics, type DashboardKPIs } from "../../services/dashboard-service";
 import { getMyListings } from "../../../marketplace/services/listing-queries";
 import {
@@ -45,8 +45,9 @@ export function ChuTroDashboardPage() {
   const [rooms, setRooms] = useState<any[]>([]);
   const [realListings, setRealListings] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [dashboardError, setDashboardError] = useState(false);
 
-  const [property, setProperty] = useState("Tất cả khu trọ");
+  const [property, setProperty] = useState("all");
   const [modal, setModal] = useState<null | "utility" | "room">(null);
   const [revealKPIs, setRevealKPIs] = useState(false);
   const [toast, setToast] = useState<{ message: string; variant: "success" | "error" } | null>(null);
@@ -69,46 +70,46 @@ export function ChuTroDashboardPage() {
 
   const [dbKpis, setDbKpis] = useState<DashboardKPIs | null>(null);
 
-  const loadDashboardData = async () => {
+  const loadDashboardData = useCallback(async (propertyId?: string) => {
     if (!user) return;
     try {
       setLoading(true);
-      // Load properties
-      const props = await getPropertiesByOwner(user.id);
-      setProperties(props || []);
-
-      setProperty("Tất cả khu trọ");
-
-      // Load rooms
-      const rms = await getRoomsByOwner(user.id);
-      setRooms(rms || []);
-
-      // Load server-side KPI counts via head: true
-      const kpis = await getDashboardMetrics(user.id);
+      setDashboardError(false);
+      const [props, rms, kpis, listings] = await Promise.all([
+        getPropertiesByOwnerOrThrow(user.id),
+        getRoomsByOwnerOrThrow(user.id),
+        getDashboardMetrics(user.id, propertyId),
+        getMyListings(user.id),
+      ]);
+      setProperties(props);
+      setRooms(rms);
       setDbKpis(kpis);
-
-      // Load recent listings from user
-      const listings = await getMyListings(user.id);
       setRealListings(listings ? listings.slice(0, 3) : []);
     } catch (err) {
       logError("ChuTroDashboardPage.loadDashboardData", err);
+      setDashboardError(true);
     } finally {
       setLoading(false);
     }
-  };
-
-  useEffect(() => {
-    loadDashboardData();
   }, [user]);
 
+  useEffect(() => {
+    void loadDashboardData();
+  }, [loadDashboardData]);
+
+  const handlePropertyChange = (value: string) => {
+    setProperty(value);
+    void loadDashboardData(value === "all" ? undefined : value);
+  };
+
   const displayProperties = useMemo(() => {
-    return ["Tất cả khu trọ", ...properties.map(p => p.name)];
+    return [{ value: "all", label: "Tất cả khu trọ" }, ...properties.map(p => ({ value: p.id, label: p.name }))];
   }, [properties]);
 
   // Filter rooms based on the selected property name
   const filteredRooms = useMemo(() => {
     if (rooms.length > 0) {
-      return property === "Tất cả khu trọ" ? rooms : rooms.filter(r => r.properties?.name === property);
+      return property === "all" ? rooms : rooms.filter(r => r.property_id === property);
     }
     return [];
   }, [rooms, property]);
@@ -141,56 +142,31 @@ export function ChuTroDashboardPage() {
       title: l.title,
       sub: `${l.property_type || "Tin cho thuê"} · ${l.district || ""} · ${Number(l.price || 0).toLocaleString("vi-VN")}đ`,
       status: (l.status === "Active" ? "active" : l.status === "Inactive" ? "hidden" : l.status) as any,
+      views: l.view_count ?? l.views,
+      createdAt: l.created_at,
       canDelete: true
     }));
   }, [realListings]);
 
-  // Dynamic KPIs calculations
-  const totalRoomsCount = (property === "Tất cả khu trọ" && dbKpis) ? dbKpis.totalRoomsCount : activeRoomsList.length;
-
-  const rentedRoomsCount = useMemo(() => {
-    if (property === "Tất cả khu trọ" && dbKpis) return dbKpis.rentedRoomsCount;
-    return rooms.length > 0
-      ? activeRoomsList.filter(r => r.status === "Rented").length
-      : activeRoomsList.filter(r => r.status === "rented").length;
-  }, [rooms, activeRoomsList, property, dbKpis]);
-
-  const emptyRoomsCount = useMemo(() => {
-    if (property === "Tất cả khu trọ" && dbKpis) return dbKpis.emptyRoomsCount;
-    return rooms.length > 0
-      ? activeRoomsList.filter(r => r.status === "Available").length
-      : activeRoomsList.filter(r => r.status === "available").length;
-  }, [rooms, activeRoomsList, property, dbKpis]);
-
-  const unpaidRoomsCount = useMemo(() => {
-    if (property === "Tất cả khu trọ" && dbKpis) return dbKpis.unpaidRoomsCount;
-    return rooms.length > 0
-      ? activeRoomsList.filter(r => r.payment_status === "Unpaid").length
-      : activeRoomsList.filter(r => r.bill && !r.bill.paid).length;
-  }, [rooms, activeRoomsList, property, dbKpis]);
-
-  const revenueAmount = useMemo(() => {
-    return rooms.length > 0
-      ? activeRoomsList.filter(r => r.status === "Rented").reduce((sum, r) => sum + Number(r.price || 0), 0)
-      : activeRoomsList.filter(r => r.status === "rented").reduce((sum, r) => {
-          const priceStr = typeof r.price === "string" ? r.price : String(r.price || "");
-          return sum + (Number(priceStr.replace(/\D/g, "")) || 0);
-        }, 0);
-  }, [rooms, activeRoomsList]);
-
-  const revenueFormatted = revenueAmount >= 1000000
-    ? `${(revenueAmount / 1000000).toFixed(1)} triệu`
-    : revenueAmount.toLocaleString("vi-VN") + "đ";
+  const totalRoomsCount = dbKpis?.totalRoomsCount ?? 0;
+  const rentedRoomsCount = dbKpis?.rentedRoomsCount ?? 0;
+  const occupantCount = dbKpis?.occupantCount ?? 0;
+  const emptyRoomsCount = dbKpis?.emptyRoomsCount ?? 0;
+  const occupancyRate = totalRoomsCount > 0 ? Math.round((rentedRoomsCount / totalRoomsCount) * 100) : 0;
+  const formatMoney = (amount: number) => amount >= 1_000_000
+    ? `${(amount / 1_000_000).toLocaleString("vi-VN", { maximumFractionDigits: 1 })} triệu đ`
+    : `${Math.round(amount).toLocaleString("vi-VN")}đ`;
 
   // BR-012 — "Phòng trống" và "Chưa đóng tiền" LUÔN hiện (`secret: false`);
-  // "Tổng số phòng" / "Khách đang ở" / "Doanh thu" mặc định ẩn sau toggle
+  // "Tổng số phòng" / "Khách đang ở" / "Đã thu trong tháng" mặc định ẩn
   // (`secret: true` + `revealKPIs` khởi tạo `false`).
   const dynamicKPIS = [
-    { label: "Tổng số phòng", value: totalRoomsCount, accent: C.primary, secret: true },
-    { label: "Khách đang ở", value: rentedRoomsCount, accent: "#4F7A4A", secret: true },
-    { label: "Phòng trống", value: emptyRoomsCount, accent: C.secondary, secret: false },
-    { label: "Chưa đóng tiền", value: unpaidRoomsCount, accent: "#C07B4A", secret: false },
-    { label: "Doanh thu tháng", value: revenueFormatted, accent: C.primaryDark, secret: true },
+    { label: "Tổng số phòng", value: totalRoomsCount, unit: "Phòng", accent: C.primary, secret: true },
+    { label: "Khách đang ở", value: occupantCount, unit: "Người", hint: `${occupancyRate}% lấp đầy`, accent: "#4F7A4A", secret: true },
+    { label: "Phòng trống", value: emptyRoomsCount, unit: "Phòng", accent: C.secondary, secret: false },
+    { label: "Hóa đơn chưa thu", value: dbKpis?.unpaidInvoiceCount ?? 0, unit: "HĐ", hint: formatMoney(dbKpis?.unpaidInvoiceAmount ?? 0), accent: "#C07B4A", secret: false },
+    { label: "Đã thu trong tháng", value: formatMoney(dbKpis?.collectedThisMonth ?? 0), unit: "", accent: C.primaryDark, secret: true },
+    { label: "Hóa đơn kỳ này", value: dbKpis?.invoiceCountThisPeriod ?? 0, unit: "HĐ", hint: formatMoney(dbKpis?.invoiceAmountThisPeriod ?? 0), accent: "#4F7A4A", secret: false },
   ];
 
   const handleRoomTask = (task: string) => {
@@ -212,18 +188,39 @@ export function ChuTroDashboardPage() {
 
   const Modals = (
     <>
-      {modal === "utility" && <UtilityModal onClose={() => setModal(null)} properties={properties} onSave={loadDashboardData} />}
+      {modal === "utility" && <UtilityModal onClose={() => setModal(null)} properties={properties} onSave={() => void loadDashboardData(property === "all" ? undefined : property)} />}
       {modal === "room" && (
         <AddRoomModal
           properties={properties.map((p: any) => ({ id: p.id, name: p.name }))}
           onClose={() => setModal(null)}
-          onCreated={loadDashboardData}
+          onCreated={() => void loadDashboardData(property === "all" ? undefined : property)}
         />
       )}
     </>
   );
 
-  if (!loading && properties.length === 0) {
+  if (loading) {
+    return (
+      <LandlordShell active="overview" mobileTitle="Dashboard">
+        <div role="status" style={{ minHeight: "55vh", display: "grid", placeItems: "center", color: C.textSecondary, fontFamily: font, fontWeight: 600 }}>Đang tải dữ liệu dashboard...</div>
+      </LandlordShell>
+    );
+  }
+
+  if (dashboardError) {
+    return (
+      <LandlordShell active="overview" mobileTitle="Dashboard">
+        <div role="alert" style={{ maxWidth: 560, margin: "70px auto", padding: 24, background: C.white, border: `1px solid ${C.border}`, borderRadius: 16, textAlign: "center", fontFamily: font }}>
+          <AlertTriangle size={30} color="#C07B4A" />
+          <h1 style={{ fontSize: 18, color: C.textPrimary, margin: "12px 0 6px" }}>Chưa tải được dữ liệu dashboard</h1>
+          <p style={{ color: C.textSecondary, fontSize: 13.5, lineHeight: 1.5 }}>Không thể đọc khu trọ, phòng hoặc hóa đơn. Dữ liệu chưa bị thay đổi; hãy thử tải lại.</p>
+          <PrimaryBtn onClick={() => void loadDashboardData(property === "all" ? undefined : property)}>Thử tải lại</PrimaryBtn>
+        </div>
+      </LandlordShell>
+    );
+  }
+
+  if (properties.length === 0) {
     return (
       <LandlordShell active="overview" mobileTitle="Dashboard">
         <div style={{ maxWidth: 600, margin: "60px auto", width: "100%", padding: "0 24px" }}>
@@ -260,7 +257,7 @@ export function ChuTroDashboardPage() {
           <p style={{ fontFamily: font, fontSize: 19, fontWeight: 800, color: C.textPrimary, margin: "0 0 4px" }}>Chào {displayName} 👋</p>
           <p style={{ fontFamily: font, fontSize: 13, color: C.textSecondary, margin: "0 0 14px" }}>Mọi thứ trong tầm kiểm soát. Chúc bạn một ngày làm việc hiệu quả!</p>
 
-          <div style={{ marginBottom: 18 }}><PropertySelector value={property} onChange={setProperty} options={displayProperties} mobile /></div>
+          <div style={{ marginBottom: 18 }}><PropertySelector value={property} onChange={handlePropertyChange} options={displayProperties} mobile /></div>
 
           {/* Vacant Rooms Banner */}
           {emptyRoomsCount > 0 ? (
@@ -290,6 +287,7 @@ export function ChuTroDashboardPage() {
                 <div key={k.label} style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: 12, padding: "13px 16px", minWidth: 120, flexShrink: 0 }}>
                   <p style={{ fontFamily: font, fontSize: 10.5, fontWeight: 700, color: C.textSecondary, margin: "0 0 6px", textTransform: "uppercase", letterSpacing: "0.04em" }}>{k.label}</p>
                   <span style={{ fontFamily: font, fontSize: 26, fontWeight: 900, color: k.accent, lineHeight: 1 }}>{isSecret ? "•••" : k.value}</span>
+                  {k.hint && <p style={{ fontFamily: font, fontSize: 11, color: C.textSecondary, margin: "5px 0 0" }}>{isSecret ? "••••" : k.hint}</p>}
                 </div>
               );
             })}
@@ -390,7 +388,7 @@ export function ChuTroDashboardPage() {
 
           {/* Property Selector */}
           <div style={{ marginBottom: 24 }}>
-            <PropertySelector value={property} onChange={setProperty} options={displayProperties} />
+            <PropertySelector value={property} onChange={handlePropertyChange} options={displayProperties} />
           </div>
 
           {/* Vacant Rooms Banner */}
@@ -414,17 +412,17 @@ export function ChuTroDashboardPage() {
                 Tạo tin đăng <ChevronRight size={16} />
               </button>
             </div>
-          ) : (
+          ) : totalRoomsCount > 0 ? (
             <div style={{ background: "#F5F8F5", border: "1px solid #D5E2D5", borderRadius: 16, padding: "16px 20px", display: "flex", alignItems: "center", gap: 14, marginBottom: 24 }}>
               <div style={{ width: 38, height: 38, borderRadius: 10, background: "#85A081", display: "flex", alignItems: "center", justifyContent: "center", color: "white", flexShrink: 0 }}>
                 <Home size={18} />
               </div>
               <div>
-                <h4 style={{ fontFamily: font, fontSize: 14.5, fontWeight: 800, color: C.textPrimary, margin: "0 0 2px" }}>Tất cả phòng hiện đã có người thuê.</h4>
-                <p style={{ fontFamily: font, fontSize: 12.5, color: C.textSecondary, margin: 0 }}>Bạn đang vận hành hiệu suất 100%!</p>
+                <h4 style={{ fontFamily: font, fontSize: 14.5, fontWeight: 800, color: C.textPrimary, margin: "0 0 2px" }}>Hiện không có phòng trống.</h4>
+                <p style={{ fontFamily: font, fontSize: 12.5, color: C.textSecondary, margin: 0 }}>Xem chi tiết trạng thái từng phòng ở mục Khu trọ &amp; Phòng.</p>
               </div>
             </div>
-          )}
+          ) : null}
 
           {/* Operational Metrics (KPI Section) */}
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
@@ -437,7 +435,7 @@ export function ChuTroDashboardPage() {
             </button>
           </div>
 
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 12, marginBottom: 28 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 12, marginBottom: 28 }}>
             {dynamicKPIS.map((k, index) => {
               const isSecret = k.secret && !revealKPIs;
               let IconComponent = Home;
@@ -460,10 +458,10 @@ export function ChuTroDashboardPage() {
                 IconComponent = AlertTriangle;
                 iconColor = "#C07B4A";
                 iconBg = "rgba(192, 123, 74, 0.06)";
-              } else if (index === 4) {
+              } else if (index === 4 || index === 5) {
                 IconComponent = TrendingUp;
-                iconColor = C.primary;
-                iconBg = "rgba(138, 74, 32, 0.06)";
+                iconColor = index === 4 ? C.primary : "#4F7A4A";
+                iconBg = index === 4 ? "rgba(138, 74, 32, 0.06)" : "rgba(79, 122, 74, 0.06)";
               }
 
               return (
@@ -472,11 +470,10 @@ export function ChuTroDashboardPage() {
                     <p style={{ fontFamily: font, fontSize: 11, fontWeight: 700, color: C.textSecondary, margin: "0 0 6px", textTransform: "uppercase", letterSpacing: "0.05em" }}>{k.label}</p>
                     <span style={{ fontFamily: font, fontSize: 20, fontWeight: 800, color: C.textPrimary, lineHeight: 1 }}>
                       {isSecret ? "••••••" : k.value}
-                      {!isSecret && <span style={{ fontSize: 12, fontWeight: 500, color: C.textSecondary, marginLeft: 4 }}>
-                        {index === 4 ? "" : index === 1 ? "Người" : "Phòng"}
-                      </span>}
+                      {!isSecret && k.unit && <span style={{ fontSize: 12, fontWeight: 500, color: C.textSecondary, marginLeft: 4 }}>{k.unit}</span>}
                     </span>
-                    {index === 4 && <p style={{ fontFamily: font, fontSize: 11, color: C.textSecondary, margin: "4px 0 0" }}>Tháng 6/2026</p>}
+                    {k.hint && <p style={{ fontFamily: font, fontSize: 11, color: C.textSecondary, margin: "4px 0 0" }}>{isSecret ? "••••" : `${k.hint}${index === 5 ? ` · ${dbKpis?.periodLabel ?? "kỳ hiện tại"}` : ""}`}</p>}
+                    {index === 4 && <p style={{ fontFamily: font, fontSize: 11, color: C.textSecondary, margin: "4px 0 0" }}>{dbKpis?.periodLabel ?? "Tháng hiện tại"}</p>}
                   </div>
                   <div style={{ width: 36, height: 36, borderRadius: 10, background: iconBg, display: "flex", alignItems: "center", justifyContent: "center", color: iconColor }}>
                     <IconComponent size={18} />
@@ -493,7 +490,7 @@ export function ChuTroDashboardPage() {
               <button onClick={toRooms} style={{ fontFamily: font, fontSize: 13, fontWeight: 700, color: C.primary, background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: 4 }}>Xem tất cả phòng <ChevronRight size={15} /></button>
             </div>
 
-            <SegmentedBar rooms={rooms} property={property} />
+            <SegmentedBar rooms={rooms} propertyId={property} />
 
             <div style={{ overflowX: "auto", marginTop: 12 }}>
               <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 720 }}>
@@ -565,8 +562,7 @@ export function ChuTroDashboardPage() {
           />
           <UtilityCard
             title="Thanh toán & Điện nước"
-            desc="Theo dõi hóa đơn tháng này và các khoản chưa thu."
-            progress={{ pct: 85, label: "85% đã thu tiền" }}
+            desc="Theo dõi hóa đơn kỳ này và số tiền đang chờ thu."
             cta="Thu tiền"
             onClick={() => navigate("/chu-tro/hoa-don")}
             color="#C8861A"

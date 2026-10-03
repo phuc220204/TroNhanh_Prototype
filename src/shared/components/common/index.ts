@@ -3,8 +3,6 @@ export * from "./AreaSelect";
 export * from "./BottomTabBar";
 export * from "./FormField";
 export * from "./ModalShell";
-export * from "./DemoBanner";
-
 export * from "./Button";
 export * from "./Badge";
 export * from "./Card";

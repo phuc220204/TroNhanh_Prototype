@@ -18,6 +18,14 @@ export interface CreateListingInput {
   wardCode?: number | null;
   contactPhone: string;
   contactName: string;
+  electricityPrice?: number | null;
+  waterPrice?: number | null;
+  waterUnit?: "person" | "cubic" | null;
+  servicePrice?: number | null;
+  deposit?: number | null;
+  accessPolicy?: "Free" | "Restricted" | null;
+  accessOpenTime?: string | null;
+  accessCloseTime?: string | null;
   amenities?: string[];
   media?: UploadedMedia[];
   /** Toạ độ ghim trên bản đồ. Ghi vào cột thật, không phải chỉ trong metadata. */
@@ -49,9 +57,15 @@ export async function createListing(input: CreateListingInput): Promise<string> 
         ward_code: input.wardCode ?? null,
         contact_phone: input.contactPhone,
         contact_name: input.contactName,
-        // `boost_expire_at` CỐ Ý không có ở đây: boost chỉ đặt được qua RPC
-        // `boost_listing()` sau khi ghi thanh toán. Gửi từ đây thì trigger
-        // `trg_guard_boost_expire_at` raise BOOST_REQUIRES_PAYMENT.
+        electricity_price: input.electricityPrice ?? null,
+        water_price: input.waterPrice ?? null,
+        water_unit: input.waterUnit ?? "person",
+        service_price: input.servicePrice ?? null,
+        deposit: input.deposit ?? null,
+        access_policy: input.accessPolicy ?? "Free",
+        access_open_time: input.accessOpenTime ?? null,
+        access_close_time: input.accessCloseTime ?? null,
+        // Boost không được cấp từ client; quyền chỉ được ghi nhận sau webhook phía máy chủ.
         latitude: input.latitude ?? null,
         longitude: input.longitude ?? null,
         metadata: input.metadata ?? {},
@@ -152,16 +166,37 @@ export async function updateListing(input: UpdateListingInput): Promise<string> 
   }
 }
 
+/**
+ * Gửi một bản nháp đã hoàn tất vào luồng duyệt. Không dùng update status trực
+ * tiếp vì trigger database phải kiểm toàn bộ dữ liệu trước khi nó thành tin chờ
+ * duyệt/đang hiển thị.
+ */
+export async function submitDraftListing(id: string): Promise<string> {
+  try {
+    const { data, error } = await supabase.rpc("submit_draft_listing", {
+      p_listing_id: id,
+    });
+    if (error) throw error;
+    return (data as string) || "";
+  } catch (err) {
+    logError("listing-mutations.submitDraftListing", err);
+    throw err;
+  }
+}
+
 
 /**
  * Update listing status (e.g. Active <-> Hidden).
  */
 export async function updateListingStatus(id: string, status: string): Promise<void> {
   try {
-    const { error } = await supabase
-      .from("rental_listings")
-      .update({ status })
-      .eq("id", id);
+    if (status !== "Active" && status !== "Hidden") {
+      throw new Error("INVALID_LISTING_VISIBILITY_TRANSITION");
+    }
+    const { error } = await supabase.rpc("set_listing_visibility" as any, {
+      p_listing_id: id,
+      p_visible: status === "Active",
+    } as any);
     if (error) throw error;
   } catch (err) {
     logError("listing-mutations.updateListingStatus", err);
@@ -174,10 +209,9 @@ export async function updateListingStatus(id: string, status: string): Promise<v
  */
 export async function deleteListing(id: string): Promise<void> {
   try {
-    const { error } = await supabase
-      .from("rental_listings")
-      .update({ deleted_at: new Date().toISOString() })
-      .eq("id", id);
+    const { error } = await supabase.rpc("delete_listing" as any, {
+      p_listing_id: id,
+    } as any);
     if (error) throw error;
   } catch (err) {
     logError("listing-mutations.deleteListing", err);
@@ -222,34 +256,6 @@ export async function linkListingToRoom(
     if (error) throw error;
   } catch (err) {
     logError("listing-mutations.linkListingToRoom", err);
-    throw err;
-  }
-}
-
-/**
- * Đẩy tin nổi bật (boost) — BR-005.
- *
- * ⚠️ ĐI QUA RPC, KHÔNG update cột trực tiếp. Bản trước của hàm này chạy
- * `.from("rental_listings").update({ boost_expire_at })` — nghĩa là client tự đặt
- * được ngày hết hạn boost, không trả một đồng nào, và tin xếp đầu mọi danh sách
- * (BR-005). Cột `boost_expire_at` giờ có trigger canh; mọi đường ghi khác ngoài
- * RPC này đều bị raise `BOOST_REQUIRES_PAYMENT`.
- *
- * `days` phải là một gói có trong `platform_settings.boost_config`
- * (7 / 15 / 30). Giá do server tra từ config — client không gửi giá.
- *
- * @returns `boost_expire_at` mới (server tính, có cộng dồn nếu boost còn hạn).
- */
-export async function boostListing(id: string, days = 7): Promise<string> {
-  try {
-    const { data, error } = await supabase.rpc("boost_listing", {
-      p_listing_id: id,
-      p_days: days,
-    });
-    if (error) throw error;
-    return data as string;
-  } catch (err) {
-    logError("listing-mutations.boostListing", err);
     throw err;
   }
 }

@@ -125,7 +125,7 @@ export function SaveListingButton({
           ? {
               position: "absolute", top: 10, right: 10,
               background: "rgba(255,255,255,0.92)", border: "none", borderRadius: "50%",
-              width: size + 18, height: size + 18,
+              width: Math.max(44, size + 18), height: Math.max(44, size + 18),
               display: "flex", alignItems: "center", justifyContent: "center",
               cursor: "pointer", boxShadow: "0 1px 6px rgba(0,0,0,0.12)",
               padding: 0,
@@ -133,6 +133,7 @@ export function SaveListingButton({
           : {
               background: "none", border: "none", cursor: "pointer",
               display: "inline-flex", alignItems: "center", justifyContent: "center",
+              minWidth: 44, minHeight: 44,
               padding: 4,
             }
       }

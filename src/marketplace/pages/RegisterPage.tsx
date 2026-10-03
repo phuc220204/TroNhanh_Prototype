@@ -1,16 +1,22 @@
 import { useState } from "react";
-import { useNavigate, Link } from "react-router";
+import { useNavigate, Link, useSearchParams } from "react-router";
 import { supabase } from "../../shared/supabaseClient";
 import { C, font } from "../../shared/theme";
 import { Eye, EyeOff, Mail, Lock, User, Phone, ArrowLeft } from "lucide-react";
 import { GoogleSignInButton, AuthDivider } from "../../shared/components/common";
 import { logError, toUserMessage } from "../../shared/services/supabase-error";
+import { clearPostAuthRedirect, toSafeRedirect, withAuthRedirect } from "../../shared/utils/auth-redirect";
+import { registerWithCredentials, RegistrationInputError } from "../../shared/services/auth-registration";
+import { updateMyProfile } from "../../shared/services/profile-service";
 
 export function RegisterPage() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const redirectUrl = toSafeRedirect(searchParams.get("redirect"));
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [contactPhone, setContactPhone] = useState("");
+  const [canContinueAfterPartialSignup, setCanContinueAfterPartialSignup] = useState(false);
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -20,81 +26,47 @@ export function RegisterPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    const name = fullName.trim();
-    const mail = email.trim();
-    const phone = contactPhone.trim();
-
-    /*
-     * SỐ ĐIỆN THOẠI KHÔNG CÒN BẮT BUỘC.
-     *
-     * Trước đây một thông báo gộp "Vui lòng điền đầy đủ tất cả các trường" chặn
-     * cả form mà không nói thiếu cái gì. Giờ mỗi trường một câu riêng.
-     *
-     * Email vẫn bắt buộc vì nó là ĐỊNH DANH ĐĂNG NHẬP, không phải thông tin liên
-     * hệ: dự án Supabase đang bật `email` + `google`, còn `phone` = false
-     * (kiểm bằng GET /auth/v1/settings). Cho đăng ký bằng SĐT thôi sẽ tạo ra tài
-     * khoản không bao giờ đăng nhập lại được, vì `LoginPage` chỉ gọi
-     * `signInWithPassword({ email, password })`.
-     *
-     * SĐT thiếu thì bổ sung sau ở /tai-khoan/cai-dat, và form đăng tin cho thuê
-     * có ô SĐT riêng nên tin đăng vẫn luôn có số liên hệ.
-     */
-    if (!name) {
-      setErrorMessage("Vui lòng nhập họ và tên.");
-      return;
-    }
-
-    if (!mail) {
-      setErrorMessage("Vui lòng nhập địa chỉ email — đây là tên đăng nhập của bạn.");
-      return;
-    }
-
-    if (password.length < 6) {
-      setErrorMessage("Mật khẩu phải chứa ít nhất 6 ký tự.");
-      return;
-    }
-
     setIsLoading(true);
     setErrorMessage("");
     setSuccessMessage("");
+    setCanContinueAfterPartialSignup(false);
 
     try {
-      const { data, error } = await supabase.auth.signUp({
-        email: mail,
+      const result = await registerWithCredentials({
+        signUp: (credentials) => supabase.auth.signUp(credentials as Parameters<typeof supabase.auth.signUp>[0]),
+        updateUser: (attributes) => supabase.auth.updateUser(attributes),
+      }, {
+        fullName,
+        email,
+        phone: contactPhone,
         password,
-        options: {
-          data: {
-            full_name: name,
-            contact_phone: phone,
-          },
-        },
       });
 
-      if (error) {
-        // §7: không ghép `error.message` thô vào UI — đó là chuỗi tiếng Anh của
-        // GoTrue ("User already registered"). `toUserMessage` đã có bảng dịch.
-        logError("RegisterPage.signUp", error);
-        setErrorMessage(toUserMessage(error));
+      if (result.secondaryEmailError) {
+        logError("RegisterPage.attachSecondaryEmail", result.secondaryEmailError);
+        setErrorMessage(
+          `Tài khoản đã được tạo bằng số điện thoại nhưng email chưa được liên kết: ${toUserMessage(result.secondaryEmailError)}. Không tự ghép tài khoản đã tồn tại. Bạn vẫn có thể tiếp tục bằng số điện thoại.`,
+        );
+        setSuccessMessage("Tài khoản đã tạo và bạn đang đăng nhập.");
+        setCanContinueAfterPartialSignup(true);
         return;
       }
 
-      // Check if registration requires email confirmation
-      if (data.user && data.session === null) {
-        setSuccessMessage("Đăng ký thành công! Vui lòng kiểm tra email của bạn để xác thực tài khoản.");
-        // Clear form
-        setFullName("");
-        setEmail("");
-        setContactPhone("");
-        setPassword("");
-      } else if (data.session) {
-        setSuccessMessage("Đăng ký thành công!");
-        setTimeout(() => {
-          navigate("/");
-        }, 1500);
+      if (result.secondaryEmailLinked) {
+        try {
+          await updateMyProfile({ fullName: result.normalized.fullName, contactEmail: result.normalized.email });
+        } catch (profileError) {
+          // Login identity is attached successfully; profile contact metadata is
+          // best-effort and must not invalidate the account/session.
+          logError("RegisterPage.saveContactEmail", profileError);
+        }
       }
+
+      clearPostAuthRedirect();
+      navigate(redirectUrl ?? "/");
     } catch (err) {
-      logError("RegisterPage.handleSubmit", err);
-      setErrorMessage(toUserMessage(err));
+      if (!(err instanceof RegistrationInputError)) logError("RegisterPage.handleSubmit", err);
+      setErrorMessage(err instanceof RegistrationInputError ? err.message : toUserMessage(err));
     } finally {
       setIsLoading(false);
     }
@@ -164,6 +136,8 @@ export function RegisterPage() {
         {errorMessage && (
           <div
             data-testid="register-error"
+            role="alert"
+            aria-live="assertive"
             style={{
               background: "#FDF2F0",
               border: "1px solid #F5C2B9",
@@ -183,6 +157,8 @@ export function RegisterPage() {
         {successMessage && (
           <div
             data-testid="register-success"
+            role="status"
+            aria-live="polite"
             style={{
               background: "#F2F9EE",
               border: "1px solid #C9E8BB",
@@ -196,13 +172,18 @@ export function RegisterPage() {
             }}
           >
             {successMessage}
+            {canContinueAfterPartialSignup && (
+            <button type="button" onClick={() => { clearPostAuthRedirect(); navigate(redirectUrl ?? "/"); }} style={{ marginLeft: 8, color: C.primary, background: "none", border: 0, font: "inherit", fontWeight: 700, cursor: "pointer" }}>
+                Tiếp tục
+              </button>
+            )}
           </div>
         )}
 
         <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 16 }}>
           {/* Full Name field */}
           <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-            <label style={{ fontSize: 13, fontWeight: 600, color: C.textPrimary }}>
+            <label htmlFor="register-fullname" style={{ fontSize: 13, fontWeight: 600, color: C.textPrimary }}>
               Họ và Tên
             </label>
             <div style={{ position: "relative" }}>
@@ -218,7 +199,11 @@ export function RegisterPage() {
               />
               <input
                 type="text"
+                id="register-fullname"
+                name="fullName"
                 data-testid="register-fullname"
+                autoComplete="name"
+                required
                 placeholder="Nguyễn Văn A"
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
@@ -241,9 +226,8 @@ export function RegisterPage() {
 
           {/* Phone number field */}
           <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-            <label style={{ fontSize: 13, fontWeight: 600, color: C.textPrimary }}>
-              Số điện thoại liên hệ{" "}
-              <span style={{ fontWeight: 500, color: C.textSecondary }}>(không bắt buộc)</span>
+            <label htmlFor="register-phone" style={{ fontSize: 13, fontWeight: 600, color: C.textPrimary }}>
+              Số điện thoại <span style={{ fontWeight: 500, color: C.textSecondary }}>(không bắt buộc)</span>
             </label>
             <div style={{ position: "relative" }}>
               <Phone
@@ -258,8 +242,11 @@ export function RegisterPage() {
               />
               <input
                 type="tel"
+                id="register-phone"
+                name="contactPhone"
                 data-testid="register-phone"
-                placeholder="09xx xxx xxx"
+                autoComplete="tel"
+                placeholder="0912 345 678"
                 value={contactPhone}
                 onChange={(e) => setContactPhone(e.target.value)}
                 style={{
@@ -277,15 +264,12 @@ export function RegisterPage() {
                 }}
               />
             </div>
-            <p style={{ fontSize: 12, color: C.textSecondary, margin: 0, lineHeight: 1.4 }}>
-              Có thể bỏ trống và bổ sung sau ở Tài khoản → Cài đặt.
-            </p>
           </div>
 
           {/* Email field */}
           <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-            <label style={{ fontSize: 13, fontWeight: 600, color: C.textPrimary }}>
-              Địa chỉ Email
+            <label htmlFor="register-email" style={{ fontSize: 13, fontWeight: 600, color: C.textPrimary }}>
+              Địa chỉ Email <span style={{ fontWeight: 500, color: C.textSecondary }}>(không bắt buộc)</span>
             </label>
             <div style={{ position: "relative" }}>
               <Mail
@@ -300,7 +284,10 @@ export function RegisterPage() {
               />
               <input
                 type="email"
+                id="register-email"
+                name="email"
                 data-testid="register-email"
+                autoComplete="email"
                 placeholder="ten@example.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
@@ -323,7 +310,7 @@ export function RegisterPage() {
 
           {/* Password field */}
           <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-            <label style={{ fontSize: 13, fontWeight: 600, color: C.textPrimary }}>
+            <label htmlFor="register-password" style={{ fontSize: 13, fontWeight: 600, color: C.textPrimary }}>
               Mật khẩu (tối thiểu 6 ký tự)
             </label>
             <div style={{ position: "relative" }}>
@@ -339,7 +326,12 @@ export function RegisterPage() {
               />
               <input
                 type={showPassword ? "text" : "password"}
+                id="register-password"
+                name="password"
                 data-testid="register-password"
+                autoComplete="new-password"
+                minLength={6}
+                required
                 placeholder="••••••••"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
@@ -359,6 +351,8 @@ export function RegisterPage() {
               />
               <button
                 type="button"
+                aria-label={showPassword ? "Ẩn mật khẩu" : "Hiện mật khẩu"}
+                aria-pressed={showPassword}
                 onClick={() => setShowPassword(!showPassword)}
                 style={{
                   position: "absolute",
@@ -386,9 +380,9 @@ export function RegisterPage() {
           <button
             type="submit"
             data-testid="register-submit"
-            disabled={isLoading}
+            disabled={isLoading || canContinueAfterPartialSignup}
             style={{
-              background: isLoading ? "#D8C9B2" : C.primary,
+              background: isLoading || canContinueAfterPartialSignup ? "#D8C9B2" : C.primary,
               color: C.white,
               border: "none",
               borderRadius: 10,
@@ -396,7 +390,7 @@ export function RegisterPage() {
               fontFamily: font,
               fontSize: 15,
               fontWeight: 600,
-              cursor: isLoading ? "not-allowed" : "pointer",
+              cursor: isLoading || canContinueAfterPartialSignup ? "not-allowed" : "pointer",
               transition: "background 0.2s",
               display: "flex",
               alignItems: "center",
@@ -409,19 +403,19 @@ export function RegisterPage() {
           </button>
         </form>
 
-        <AuthDivider />
+        {!canContinueAfterPartialSignup && <AuthDivider />}
 
         {/*
           Cùng một nút với trang đăng nhập, cố ý. Với OAuth thì "đăng ký" và
           "đăng nhập" là một lời gọi: Supabase tạo user mới nếu email chưa có, và
           gộp vào user cũ nếu email đã tồn tại + đã xác minh.
         */}
-        <GoogleSignInButton disabled={isLoading} onError={setErrorMessage} />
+        {!canContinueAfterPartialSignup && <GoogleSignInButton disabled={isLoading} onError={setErrorMessage} redirect={redirectUrl} />}
 
         <div style={{ marginTop: 24, textAlign: "center", fontSize: 13, color: C.textSecondary }}>
           Đã có tài khoản?{" "}
           <Link
-            to="/dang-nhap"
+            to={withAuthRedirect("/dang-nhap", redirectUrl)}
             style={{
               color: C.primary,
               fontWeight: 600,

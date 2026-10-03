@@ -72,6 +72,32 @@ export async function getRoomsByOwner(ownerId: string | undefined): Promise<Room
   }
 }
 
+/** Strict dashboard variant: propagate errors so the UI never reports a false empty state. */
+export async function getRoomsByOwnerOrThrow(ownerId: string): Promise<RoomItem[]> {
+  const { data, error } = await supabase
+    .from("rooms")
+    .select(`
+      *,
+      properties(name),
+      contracts(
+        id, start_date, end_date, rent_price, deposit, status,
+        occupancies!occupancies_contract_id_fkey(id, full_name, phone_number, occupant_count)
+      ),
+      invoices(
+        id, period, due_date, total_amount, status,
+        invoice_items(id, type, description, quantity, unit_price, amount)
+      )
+    `)
+    .eq("owner_id", ownerId)
+    .is("deleted_at", null)
+    .order("created_at", { ascending: false });
+  if (error) {
+    logError("room-service.getRoomsByOwnerOrThrow", error);
+    throw error;
+  }
+  return (data ?? []) as RoomItem[];
+}
+
 /**
  * Fetch rooms belonging to a specific property.
  */

@@ -1,8 +1,8 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { useNavigate } from "react-router";
 import { 
-  Plus, Search, Eye, EyeOff, ArrowUpCircle, Pencil,
-  FileText, Star, TrendingUp, Phone, Sparkles, X, SlidersHorizontal, ChevronRight, ChevronLeft,
+  Plus, Search, Eye, EyeOff,
+  FileText, TrendingUp, Phone, Sparkles, X, SlidersHorizontal, ChevronRight, ChevronLeft,
   AlertTriangle
 } from "lucide-react";
 import { C, font } from "../../../shared/theme";
@@ -11,21 +11,22 @@ import { useBreakpoint } from "../../../shared/components/useBreakpoint";
 // từ 2026-08-09 nằm trong khu vực TÀI KHOẢN, không phải "Dashboard chủ trọ".
 // Đăng tin là việc miễn phí ai cũng làm được; `/chu-tro/*` là module SaaS trả phí.
 import { RenterShell } from "../../../shared/components/RenterShell";
+import { config } from "../../../shared/config";
 import { useAuth } from "../../../shared/contexts/AuthContext";
-import { supabase } from "../../../shared/supabaseClient";
-import { DemoFAB } from "../../../shared/components/PublicNavbar";
 import { searchListings } from "../../services/listing-queries";
-import { updateListingStatus, deleteListing, boostListing, linkListingToRoom } from "../../services/listing-mutations";
+import { listMyBoostOrders, type BoostOrderSummary } from "../../services/boost-orders-service";
+import { updateListingStatus, deleteListing, linkListingToRoom } from "../../services/listing-mutations";
 import { formatVND } from "../../utils/listingMetadata";
+import { canShowBoostAction } from "../../../../supabase/functions/_shared/boost-access.mjs";
 import { logError, toUserMessage } from "../../../shared/services/supabase-error";
 import { MyListingsTable, type DbListing } from "./MyListingsTable";
-import { BoostModal } from "./BoostModal";
 import { LinkRoomModal } from "./LinkRoomModal";
+import { DeleteListingModal } from "./DeleteListingModal";
+import { BoostCheckoutModal } from "./BoostCheckoutModal";
 
 const FILTERS = [
   { label: "Tất cả", value: "all" },
   { label: "Đang hiển thị", value: "Active" },
-  { label: "Tin VIP nổi bật", value: "VIP" },
   { label: "Đã ẩn", value: "Hidden" },
 ];
 
@@ -48,35 +49,9 @@ const REGION_OPTIONS = [
   "Tân Bình"
 ];
 
-function Sparkline({ data, color }: { data: number[]; color: string }) {
-  const width = 100;
-  const height = 28;
-  const max = Math.max(...data);
-  const min = Math.min(...data);
-  const range = max - min || 1;
-  const points = data.map((val, index) => {
-    const x = (index / (data.length - 1)) * width;
-    const y = height - ((val - min) / range) * height;
-    return `${x},${y}`;
-  }).join(" ");
-
-  return (
-    <svg width={width} height={height} viewBox={`0 0 ${width} ${height}`} style={{ flexShrink: 0 }}>
-      <polyline
-        fill="none"
-        stroke={color}
-        strokeWidth="2.2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        points={points}
-      />
-    </svg>
-  );
-}
-
 function Toast({ show, message }: { show: boolean; message: string }) {
   return (
-    <div style={{ position: "fixed", bottom: 32, left: "50%", transform: `translateX(-50%) translateY(${show ? 0 : 20}px)`, opacity: show ? 1 : 0, transition: "all 0.25s", zIndex: 600, background: C.primaryDark, borderRadius: 10, padding: "12px 22px", pointerEvents: "none" }}>
+    <div role="status" aria-live="polite" aria-atomic="true" style={{ position: "fixed", bottom: 32, left: "50%", transform: `translateX(-50%) translateY(${show ? 0 : 20}px)`, opacity: show ? 1 : 0, transition: "all 0.25s", zIndex: 600, background: C.primaryDark, borderRadius: 10, padding: "12px 22px", pointerEvents: "none" }}>
       <span style={{ fontFamily: font, fontSize: 13, fontWeight: 600, color: C.cream }}>{message}</span>
     </div>
   );
@@ -84,8 +59,15 @@ function Toast({ show, message }: { show: boolean; message: string }) {
 
 export function QuanLyPage() {
   const navigate = useNavigate();
-  const { isMobile } = useBreakpoint();
+  const { isMobile, width } = useBreakpoint();
+  const isCompact = width < 1180;
   const { user } = useAuth();
+  const showBoostAction = canShowBoostAction(
+    config.payments.boostCheckoutEnabled,
+    config.payments.boostTestMode,
+    config.payments.boostTestSellerId,
+    user?.id,
+  );
 
   const [dbListings, setDbListings]   = useState<DbListing[]>([]);
   const [isLoading, setIsLoading]     = useState(true);
@@ -96,6 +78,8 @@ export function QuanLyPage() {
   const [sort, setSort]               = useState("newest");
   const [toast, setToast]             = useState(false);
   const [toastMsg, setToastMsg]       = useState("");
+  const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const deletingRef = useRef(false);
 
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [selDistrict, setSelDistrict]   = useState("Tất cả quận/huyện");
@@ -106,35 +90,57 @@ export function QuanLyPage() {
 
   const [page, setPage]               = useState(1);
   const [pageSize, setPageSize]       = useState(10);
-  const [boostTarget, setBoostTarget] = useState<DbListing | null>(null);
-  const [boostSubmitting, setBoostSubmitting] = useState(false);
-  const [boostError, setBoostError] = useState<string | null>(null);
   const [linkTarget, setLinkTarget] = useState<DbListing | null>(null);
   const [linkSubmitting, setLinkSubmitting] = useState(false);
   const [linkError, setLinkError] = useState<string | null>(null);
   const [mutatingId, setMutatingId]   = useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<DbListing | null>(null);
+  const [boostTarget, setBoostTarget] = useState<DbListing | null>(null);
 
   const showToast = (msg: string) => {
+    if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
     setToastMsg(msg);
     setToast(true);
-    setTimeout(() => setToast(false), 2500);
+    toastTimerRef.current = setTimeout(() => setToast(false), 2500);
   };
+
+  useEffect(() => () => {
+    if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+  }, []);
 
   const fetchListings = async () => {
     if (!user) return;
     setIsLoading(true);
     setIsError(false);
     try {
-      const result = await searchListings({
-        sellerId: user.id,
-        // "All" để thấy CẢ tin Chờ duyệt / Bị từ chối / Đã ẩn — đây là trang
-        // quản lý tin của chính mình, không phải trang tìm kiếm công khai.
-        status: "All",
-        pageSize: 100,
-        page: 1,
-      });
+      const [result, boostOrders] = await Promise.all([
+        searchListings({
+          sellerId: user.id,
+          // "All" để thấy CẢ tin Chờ duyệt / Bị từ chối / Đã ẩn — đây là trang
+          // quản lý tin của chính mình, không phải trang tìm kiếm công khai.
+          status: "All",
+          pageSize: 100,
+          page: 1,
+        }),
+        // The order panel is supplemental. A temporary read failure must not
+        // hide the seller's listings or make ordinary management unavailable.
+        listMyBoostOrders().catch((error): BoostOrderSummary[] => {
+          logError("QuanLyPage.fetchBoostOrders", error);
+          return [];
+        }),
+      ]);
       if (result.rawRows) {
-        setDbListings(result.rawRows.map(l => ({ ...l, views: l.view_count ?? 0 })));
+        const ordersByListing = new Map<string, typeof boostOrders>();
+        for (const order of boostOrders) {
+          const orders = ordersByListing.get(order.listing_id) ?? [];
+          orders.push(order);
+          ordersByListing.set(order.listing_id, orders);
+        }
+        setDbListings(result.rawRows.map(l => ({
+          ...l,
+          views: l.view_count ?? 0,
+          boost_orders: ordersByListing.get(l.id) ?? [],
+        })));
       }
     } catch (err: any) {
       logError("QuanLyPage.fetchListings", err);
@@ -150,32 +156,46 @@ export function QuanLyPage() {
   }, [user]);
 
   const handleToggleStatus = async (id: string, currentStatus: string) => {
+    if (currentStatus !== "Active" && currentStatus !== "Hidden") return;
     const nextStatus = currentStatus === "Active" ? "Hidden" : "Active";
     try {
       setMutatingId(id);
       await updateListingStatus(id, nextStatus);
       setDbListings(prev => prev.map(l => l.id === id ? { ...l, status: nextStatus } : l));
       showToast(nextStatus === "Active" ? "Đã hiển thị tin đăng thành công" : "Đã ẩn tin đăng thành công");
-    } catch (err: any) {
+    } catch (err: unknown) {
       logError("QuanLyPage.handleToggleStatus", err);
-      showToast("Có lỗi xảy ra: " + err.message);
+      showToast(toUserMessage(err));
     } finally {
       setMutatingId(null);
     }
   };
 
-  const handleDeleteListing = async (id: string) => {
-    if (!window.confirm("Bạn có chắc chắn muốn xóa tin đăng này? Thao tác này không thể hoàn tác.")) return;
+  const handleDeleteListing = (id: string) => {
+    const listing = dbListings.find((item) => item.id === id);
+    if (listing) setDeleteTarget(listing);
+  };
+
+  const confirmDeleteListing = async () => {
+    if (!deleteTarget || deletingRef.current) return;
+    const target = deleteTarget;
+    deletingRef.current = true;
+    // Xóa khỏi danh sách ngay; nếu RPC thất bại, hoàn tác rồi nạp lại để xử lý
+    // cả trường hợp server đã commit nhưng response bị mất trên đường về.
+    setDbListings(prev => prev.filter(l => l.id !== target.id));
     try {
-      setMutatingId(id);
-      await deleteListing(id);
-      setDbListings(prev => prev.filter(l => l.id !== id));
+      setMutatingId(target.id);
+      await deleteListing(target.id);
+      setDeleteTarget(null);
       showToast("Đã xóa tin đăng thành công");
-    } catch (err: any) {
+    } catch (err: unknown) {
       logError("QuanLyPage.handleDeleteListing", err);
-      showToast("Có lỗi xảy ra: " + err.message);
+      setDbListings(prev => prev.some(l => l.id === target.id) ? prev : [...prev, target]);
+      showToast(toUserMessage(err));
+      await fetchListings();
     } finally {
       setMutatingId(null);
+      deletingRef.current = false;
     }
   };
 
@@ -193,26 +213,6 @@ export function QuanLyPage() {
       setLinkError(toUserMessage(err));
     } finally {
       setLinkSubmitting(false);
-    }
-  };
-
-  const handleConfirmBoost = async (days: number) => {
-    if (!boostTarget) return;
-    setBoostError(null);
-    try {
-      setBoostSubmitting(true);
-      // Ngày hết hạn do SERVER trả về (RPC tự cộng dồn nếu boost còn hạn).
-      // Trước đây client tự tính `Date.now() + days` rồi ghi thẳng vào cột —
-      // vừa không qua thanh toán, vừa xóa mất phần hạn còn lại.
-      const newExpiry = await boostListing(boostTarget.id, days);
-      setDbListings(prev => prev.map(l => l.id === boostTarget.id ? { ...l, boost_expire_at: newExpiry } : l));
-      setBoostTarget(null);
-      showToast("Đã đẩy tin nổi bật thành công!");
-    } catch (err: unknown) {
-      logError("QuanLyPage.handleConfirmBoost", err);
-      setBoostError(toUserMessage(err));
-    } finally {
-      setBoostSubmitting(false);
     }
   };
 
@@ -241,11 +241,7 @@ export function QuanLyPage() {
     }
     
     if (filter !== "all") {
-      if (filter === "VIP") {
-        r = r.filter(l => l.boost_expire_at && new Date(l.boost_expire_at) > new Date());
-      } else {
-        r = r.filter(l => l.status === filter);
-      }
+      r = r.filter(l => l.status === filter);
     }
 
     if (selDistrict !== "Tất cả quận/huyện") {
@@ -274,7 +270,6 @@ export function QuanLyPage() {
   const kpis = useMemo(() => {
     const total = dbListings.length;
     const active = dbListings.filter(l => l.status === "Active" || l.status === "active").length;
-    const vip = dbListings.filter(l => l.boost_expire_at && new Date(l.boost_expire_at) > new Date()).length;
     const hidden = dbListings.filter(l => l.status === "Inactive" || l.status === "Hidden" || l.status === "hidden").length;
     const views = dbListings.reduce((s, l) => s + (l.views ?? 0), 0);
     const contacts = dbListings.reduce((s, l) => s + (l.contacts ?? 0), 0);
@@ -282,7 +277,6 @@ export function QuanLyPage() {
     return [
       { label: "Tổng tin đăng", value: total, icon: FileText, color: C.primary, bg: "rgba(147,69,27,0.08)" },
       { label: "Đang hiển thị", value: active, icon: Eye, color: "#4A7A34", bg: "#E8F5E1" },
-      { label: "Tin VIP nổi bật", value: vip, icon: Star, color: "#EAA329", bg: "#FEF6EC" },
       { label: "Đã ẩn", value: hidden, icon: EyeOff, color: "#7A685B", bg: "#F5EFE6" },
       { label: "Tổng lượt xem", value: formatVND(views) || "0", icon: TrendingUp, color: "#3678C6", bg: "#EDF5F9" },
       { label: "Tổng liên hệ", value: formatVND(contacts) || "0", icon: Phone, color: "#8A5BB5", bg: "#F5EEFA" },
@@ -326,7 +320,7 @@ export function QuanLyPage() {
           </div>
         </div>
 
-        <div style={{ display: "flex", flexDirection: isMobile ? "column" : "row", gap: 24, alignItems: "flex-start" }}>
+        <div style={{ display: "flex", flexDirection: isCompact ? "column" : "row", gap: 24, alignItems: "flex-start" }}>
           <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 20, width: "100%" }}>
             
             {isLoading ? (
@@ -336,7 +330,7 @@ export function QuanLyPage() {
                 ))}
               </div>
             ) : (
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(6, 1fr)", gap: 12, width: "100%", overflowX: "auto", paddingBottom: 6 }}>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(135px, 1fr))", gap: 12, width: "100%", paddingBottom: 6 }}>
                 {kpis.map(it => {
                   const IconComp = it.icon;
                   return (
@@ -463,13 +457,14 @@ export function QuanLyPage() {
               totalRows={totalRows}
               totalListingsCount={dbListings.length}
               mutatingId={mutatingId}
-              isMobile={isMobile}
+              isMobile={isCompact}
               toPost={toPost}
               resetFilters={resetFilters}
               handleToggleStatus={handleToggleStatus}
             onLinkRoom={(l) => { setLinkError(null); setLinkTarget(l); }}
               handleDeleteListing={handleDeleteListing}
-              setBoostTarget={setBoostTarget}
+              showBoostAction={showBoostAction}
+              onBoostListing={setBoostTarget}
             />
 
             {!isLoading && totalRows > 0 && (
@@ -511,14 +506,14 @@ export function QuanLyPage() {
 
           </div>
 
-          <aside style={{ width: isMobile ? "100%" : 320, flexShrink: 0, display: "flex", flexDirection: "column", gap: 20 }}>
+          <aside style={{ width: isCompact ? "100%" : 320, flexShrink: 0, display: "flex", flexDirection: isCompact ? "row" : "column", flexWrap: "wrap", gap: 20 }}>
             <div style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: 20, padding: "20px 22px", display: "flex", flexDirection: "column", gap: 16 }}>
               <div>
                 <h3 style={{ fontFamily: font, fontSize: 15, fontWeight: 800, color: C.textPrimary, margin: "0 0 4px", display: "flex", alignItems: "center", gap: 8 }}>
                   <TrendingUp size={16} color={C.primary} />
                   Hiệu quả tin đăng
                 </h3>
-                <p style={{ fontFamily: font, fontSize: 11.5, color: C.textSecondary, margin: 0 }}>30 ngày gần nhất</p>
+                <p style={{ fontFamily: font, fontSize: 11.5, color: C.textSecondary, margin: 0 }}>Dữ liệu hiện tại từ các tin của bạn</p>
               </div>
 
               <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: 14, display: "flex", flexDirection: "column", gap: 14 }}>
@@ -526,22 +521,18 @@ export function QuanLyPage() {
                   <div>
                     <span style={{ fontFamily: font, fontSize: 12, color: C.textSecondary }}>Tổng lượt xem</span>
                     <div style={{ display: "flex", alignItems: "baseline", gap: 6, marginTop: 2 }}>
-                      <span style={{ fontFamily: font, fontSize: 18, fontWeight: 900, color: C.textPrimary }}>18.250</span>
-                      <span style={{ fontFamily: font, fontSize: 11, color: "#4A7A34", fontWeight: 700 }}>+18.6%</span>
+                      <span style={{ fontFamily: font, fontSize: 18, fontWeight: 900, color: C.textPrimary }}>{formatVND(dbListings.reduce((sum, item) => sum + (item.views ?? 0), 0)) || "0"}</span>
                     </div>
                   </div>
-                  <Sparkline data={[12000, 13400, 12800, 14200, 15100, 16800, 18250]} color="#4A7A34" />
                 </div>
 
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
                   <div>
                     <span style={{ fontFamily: font, fontSize: 12, color: C.textSecondary }}>Tổng liên hệ</span>
                     <div style={{ display: "flex", alignItems: "baseline", gap: 6, marginTop: 2 }}>
-                      <span style={{ fontFamily: font, fontSize: 18, fontWeight: 900, color: C.textPrimary }}>124</span>
-                      <span style={{ fontFamily: font, fontSize: 11, color: "#4A7A34", fontWeight: 700 }}>+12.4%</span>
+                      <span style={{ fontFamily: font, fontSize: 18, fontWeight: 900, color: C.textPrimary }}>{formatVND(dbListings.reduce((sum, item) => sum + (item.contacts ?? 0), 0)) || "0"}</span>
                     </div>
                   </div>
-                  <Sparkline data={[90, 95, 110, 105, 115, 118, 124]} color="#8A5BB5" />
                 </div>
               </div>
             </div>
@@ -554,7 +545,7 @@ export function QuanLyPage() {
 
               <ul style={{ paddingLeft: 0, margin: 0, listStyle: "none", display: "flex", flexDirection: "column", gap: 12 }}>
                 {[
-                  { text: "Nâng cấp tin VIP để tăng hiển thị", icon: Star, color: "#EAA329" },
+                  { text: "Cập nhật thông tin và ảnh đúng hiện trạng", icon: FileText, color: "#EAA329" },
                   { text: "Cập nhật nội dung tin thường xuyên", icon: Eye, color: "#4A7A34" },
                   { text: "Thêm ảnh chất lượng cao", icon: FileText, color: "#3678C6" }
                 ].map((tip, index) => {
@@ -585,16 +576,18 @@ export function QuanLyPage() {
         />
       )}
 
-      <BoostModal
-        open={!!boostTarget}
-        title={boostTarget?.title || ""}
-        submitting={boostSubmitting}
-        errorMessage={boostError}
-        onConfirm={handleConfirmBoost}
-        onCancel={() => { setBoostTarget(null); setBoostError(null); }}
-      />
+      {deleteTarget && (
+        <DeleteListingModal
+          title={deleteTarget.title}
+          submitting={mutatingId === deleteTarget.id}
+          onCancel={() => { if (!mutatingId) setDeleteTarget(null); }}
+          onConfirm={confirmDeleteListing}
+        />
+      )}
+      {boostTarget && showBoostAction ? (
+        <BoostCheckoutModal listing={boostTarget} initialDays={boostTarget.boost_orders?.[0]?.days ?? boostTarget.boost_intent?.days} onClose={() => setBoostTarget(null)} />
+      ) : null}
       <Toast show={toast} message={toastMsg} />
-      <DemoFAB />
     </RenterShell>
   );
 }

@@ -14,7 +14,7 @@ import { ACCOUNTS, go, login, runTag, tinyPng } from "./helpers";
  * tự kiểm điều kiện đó thay vì fail với thông báo khó hiểu.
  */
 
-/** Điền hết bước 1 → bước 4 và bấm đăng. Trả về tiêu đề tin vừa tạo. */
+/** Điền đủ 4 bước nội dung, chọn loại hiển thị ở bước cuối rồi đăng. */
 async function postListing(page: Page, title: string): Promise<string> {
   await go(page, "/dang-tin-cho-thue");
 
@@ -45,6 +45,9 @@ async function postListing(page: Page, title: string): Promise<string> {
   // ── Bước 4: chi phí ──
   await page.locator('[name="electric"]').fill("3500");
   await page.locator('[name="water"]').fill("100000");
+  await page.getByTestId("listing-next-btn").click();
+  await expect(page.getByTestId("listing-plan-step")).toBeVisible();
+  await expect(page.getByTestId("listing-plan-standard")).toBeVisible();
   await page.getByTestId("listing-submit-btn").click();
 
   // Upload 3 ảnh lên Storage rồi mới gọi RPC ⇒ chờ lâu hơn mặc định.
@@ -57,7 +60,7 @@ test.describe("Đăng tin", () => {
     await login(page, ACCOUNTS.sellerA);
   });
 
-  test("đăng tin 4 bước, tin hiện trong danh sách của tôi với ảnh đã upload", async ({ page }) => {
+  test("đăng tin đủ 4 bước nội dung, chọn hiển thị thường và tin có ảnh đã upload", async ({ page }) => {
     const title = `Phòng test tự động ${runTag("tin")}`;
     await postListing(page, title);
 

@@ -22,11 +22,18 @@ import { AddPropertyModal } from "../../components/AddPropertyModal";
 import { EditRoomModal } from "../../components/EditRoomModal";
 
 const mapDbRoomToRoom = (dbRoom: any): Room => {
-  const activeContract = dbRoom.contracts?.find((c: any) => c.status === "Active" || c.status === "active") || dbRoom.contracts?.[0];
+  const activeContract = dbRoom.contracts?.find(
+    (c: any) => c.status === "Active" || c.status === "active",
+  );
   let occupant = null;
   let contract = null;
   if (activeContract) {
-    const occ = activeContract.occupancies || activeContract.occupancy;
+    // `occupancies!occupancies_contract_id_fkey` is the reverse side of a
+    // one-to-many relationship, so PostgREST returns an array here.
+    const embeddedOccupancies = activeContract.occupancies;
+    const occ = Array.isArray(embeddedOccupancies)
+      ? embeddedOccupancies[0]
+      : embeddedOccupancies || activeContract.occupancy;
     occupant = {
       name: occ?.full_name || "Người ở",
       phone: occ?.phone_number || "",
@@ -88,10 +95,12 @@ export function QuanLyPhongPage() {
   // để hiển thị. `EditRoomModal` tự đọc lại qua `getRoomById()`.
   const [editRoomId, setEditRoomId] = useState<string | null>(null);
 
-  const loadDbData = async () => {
+  const loadDbData = async (showLoading = true) => {
     if (!user) return;
     try {
-      setLoading(true);
+      // Keep the active tab mounted during background refreshes. Unmounting
+      // OccupantsView here discarded success/error toasts immediately after an RPC.
+      if (showLoading) setLoading(true);
       const props = await getPropertiesByOwner(user.id);
       const rms = await getRoomsByOwner(user.id);
 
@@ -154,6 +163,7 @@ export function QuanLyPhongPage() {
             <div style={{ position: "relative" }}>
               <button
                 type="button"
+                data-testid="property-switcher"
                 onClick={() => setSwitcherOpen(!switcherOpen)}
                 style={{
                   display: "flex",
@@ -194,6 +204,7 @@ export function QuanLyPhongPage() {
                   {properties.map((p) => (
                     <div
                       key={p.id}
+                      data-testid="property-option"
                       onClick={() => {
                         setSelectedId(p.id);
                         setSwitcherOpen(false);
@@ -248,7 +259,7 @@ export function QuanLyPhongPage() {
                 property={selectedProperty}
                 mobile={isMobile}
                 isReadOnly={isReadOnly}
-                onRefreshData={loadDbData}
+                onRefreshData={() => loadDbData(false)}
               />
             )}
 
@@ -265,7 +276,7 @@ export function QuanLyPhongPage() {
                 property={selectedProperty}
                 mobile={isMobile}
                 isReadOnly={isReadOnly}
-                onRefreshData={loadDbData}
+                onRefreshData={() => loadDbData(false)}
               />
             )}
           </>

@@ -5,7 +5,8 @@ import { toListingCard, ListingCardItem } from "./listing-mappers";
 
 export interface ListingQueryParams {
   /**
-   * Từ khóa tự do của ô tìm kiếm. Khớp TIÊU ĐỀ hoặc TÊN PHƯỜNG/XÃ (`district`),
+   * Từ khóa tự do của ô tìm kiếm. Khớp tiêu đề, tên phường/xã (`district`)
+   * hoặc địa chỉ (gồm quận/huyện cũ),
    * chấp nhận gõ không dấu. Chi tiết ở `buildKeywordFilter`.
    */
   keyword?: string;
@@ -24,6 +25,8 @@ export interface ListingQueryParams {
   districts?: string[];
   priceMin?: number;
   priceMax?: number;
+  priceMinExclusive?: number;
+  priceMaxExclusive?: number;
   areaMin?: number;
   areaMax?: number;
   propertyTypes?: string[];
@@ -48,6 +51,7 @@ export interface SearchListingsResult {
   page: number;
   pageSize: number;
   totalPages: number;
+  hasError: boolean;
 }
 
 /* ══════════════════════════════════════════════════════════════════════════
@@ -60,6 +64,7 @@ export interface SearchListingsResult {
  * nới tiếp chỉ làm loãng kết quả và phình URL PostgREST.
  */
 const KEYWORD_WARD_EXPANSION_LIMIT = 8;
+const SEARCH_REQUEST_TIMEOUT_MS = 15_000;
 
 /**
  * Bỏ hai ký tự THOÁT ĐƯỢC ra khỏi cặp nháy kép của PostgREST.
@@ -111,11 +116,10 @@ async function matchingWardNames(
 }
 
 /**
- * Điều kiện `or` cho ô từ khóa: khớp TIÊU ĐỀ **hoặc** TÊN PHƯỜNG/XÃ.
+ * Điều kiện `or` cho ô từ khóa: khớp tiêu đề, tên phường/xã hoặc địa chỉ.
  *
- * Trước đây chỉ `ilike` trên `title`, nên gõ đúng "Phường Thủ Đức" — chuỗi đang
- * hiện trên chính cái card — lại ra 0 kết quả, trái với lời hứa "Tìm khu vực,
- * phường, tên trường..." ngay trên ô tìm kiếm.
+ * `district` là tên phường theo địa giới mới, còn `address` có thể chứa quận
+ * cũ. Chỉ so title/district khiến "Quận 7" ra 0 dù địa chỉ tin RMIT có Quận 7.
  *
  * `district` là TÊN HIỂN THỊ của phường/xã tại thời điểm đăng tin (migration
  * `20260809100000`), tức đúng cột chứa địa danh mà người dùng gõ.
@@ -136,6 +140,7 @@ async function buildKeywordFilter(
   const raw = quoteOrValue(`%${cleaned}%`);
   clauses.add(`title.ilike.${raw}`);
   clauses.add(`district.ilike.${raw}`);
+  clauses.add(`address.ilike.${raw}`);
 
   // Chỉ tra danh mục khi từ khóa không có dấu: gõ có dấu thì `ilike` đã khớp
   // thẳng, tra thêm chỉ tốn một chunk 117KB mà không đổi kết quả.
@@ -150,8 +155,8 @@ async function buildKeywordFilter(
 
 /**
  * Search and filter rental listings from Supabase DB.
- * ⚠️ Enforces BR-005 ordering rule: boost_expire_at DESC NULLS LAST is applied FIRST before any secondary sort.
- * Server-side filtering using .in(), .gte(), .lte(), .ilike(), .range().
+ * Chỉ ưu tiên Boost có cờ xác nhận bởi webhook thanh toán; ngày Boost legacy
+ * tự nhập không được dùng để xếp hạng. Server-side filtering uses PostgREST.
  */
 export async function searchListings(params: ListingQueryParams = {}): Promise<SearchListingsResult> {
   try {
@@ -180,8 +185,14 @@ export async function searchListings(params: ListingQueryParams = {}): Promise<S
     if (params.priceMin != null) {
       q = q.gte("price", params.priceMin);
     }
+    if (params.priceMinExclusive != null) {
+      q = q.gt("price", params.priceMinExclusive);
+    }
     if (params.priceMax != null) {
       q = q.lte("price", params.priceMax);
+    }
+    if (params.priceMaxExclusive != null) {
+      q = q.lt("price", params.priceMaxExclusive);
     }
     if (params.areaMin != null) {
       q = q.gte("area", params.areaMin);
@@ -213,7 +224,8 @@ export async function searchListings(params: ListingQueryParams = {}): Promise<S
       const { data: amenityRows, error: amenityError } = await supabase
         .from("listing_amenities")
         .select("listing_id, amenity")
-        .or(orExpr);
+        .or(orExpr)
+        .abortSignal(AbortSignal.timeout(SEARCH_REQUEST_TIMEOUT_MS));
 
       if (amenityError) throw amenityError;
 
@@ -242,31 +254,45 @@ export async function searchListings(params: ListingQueryParams = {}): Promise<S
           page: params.page || 1,
           pageSize: emptyPageSize,
           totalPages: 1,
+          hasError: false,
         };
       }
 
       q = q.in("id", listingIds);
     }
 
-    // BR-005 — Boosted listings are sorted first
-    q = q.order("boost_expire_at", { ascending: false, nullsFirst: false });
-
     const sort = params.sort || "newest";
     if (sort === "price-asc" || sort === "priceAsc") {
-      q = q.order("price", { ascending: true });
+      // Khi người dùng yêu cầu sắp theo giá, giá phải là khóa CHÍNH. Trước đây
+      // `boost_expire_at` luôn đứng trước nên kết quả chỉ tăng/giảm trong từng
+      // nhóm boost, tạo chuỗi kiểu 4,5 → 5,5 → 4,2 triệu.
+      q = q
+        .order("price", { ascending: true })
+        .order("created_at", { ascending: false });
     } else if (sort === "price-desc" || sort === "priceDesc") {
-      q = q.order("price", { ascending: false });
+      q = q
+        .order("price", { ascending: false })
+        .order("created_at", { ascending: false });
     } else if (sort === "area-desc" || sort === "areaDesc") {
-      q = q.order("area", { ascending: false });
+      q = q
+        .order("area", { ascending: false })
+        .order("created_at", { ascending: false });
     } else {
-      q = q.order("created_at", { ascending: false });
+      if (statusFilter === "Active" && !params.sellerId) {
+        q = q
+          .order("boost_payment_verified", { ascending: false, nullsFirst: false })
+          .order("boost_expire_at", { ascending: false, nullsFirst: false })
+          .order("created_at", { ascending: false });
+      } else {
+        q = q.order("created_at", { ascending: false });
+      }
     }
 
     const page = params.page || 1;
     const pageSize = params.pageSize || 12;
     const from = (page - 1) * pageSize;
     const to = from + pageSize - 1;
-    q = q.range(from, to);
+    q = q.range(from, to).abortSignal(AbortSignal.timeout(SEARCH_REQUEST_TIMEOUT_MS));
 
     const { data, count, error } = await q;
 
@@ -293,7 +319,8 @@ export async function searchListings(params: ListingQueryParams = {}): Promise<S
       const { data: profiles } = await supabase
         .from("property_public_profiles")
         .select("id, avg_rating, review_count, public_slug")
-        .in("id", propertyIds);
+        .in("id", propertyIds)
+        .abortSignal(AbortSignal.timeout(SEARCH_REQUEST_TIMEOUT_MS));
 
       const byId = new Map((profiles || []).map((p) => [p.id, p]));
       for (let i = 0; i < mappedCards.length; i++) {
@@ -314,6 +341,7 @@ export async function searchListings(params: ListingQueryParams = {}): Promise<S
       page,
       pageSize,
       totalPages,
+      hasError: false,
     };
   } catch (err) {
     logError("listing-queries.searchListings", err);
@@ -324,6 +352,7 @@ export async function searchListings(params: ListingQueryParams = {}): Promise<S
       page: params.page || 1,
       pageSize: params.pageSize || 12,
       totalPages: 1,
+      hasError: true,
     };
   }
 }
@@ -368,8 +397,8 @@ export async function getListingById(id: string) {
  * Unsplash) trên MỌI tin, kể cả tin ở tỉnh khác. Vi phạm §11 (mock cứng trong
  * component khi đã có bảng thật) và là thứ người xem demo phát hiện ngay.
  *
- * Nới dần: hết tin cùng quận thì trả tin cùng khoảng giá ở quận khác, để khối
- * này không rỗng trên một marketplace còn ít dữ liệu.
+ * Không bù tin ở khu vực khác: UI đặt tiêu đề theo khu vực hiện tại, nên việc
+ * trộn phường khác vào cùng khối tạo một lời hứa sai cho người xem.
  */
 export async function getSimilarListings(
   currentListingId: string,
@@ -397,29 +426,9 @@ export async function getSimilarListings(
         page: 1,
       });
       const filtered = exclude(sameDistrict.data);
-      if (filtered.length >= limit) return filtered;
-
-      // Chưa đủ: bù thêm tin cùng khoảng giá ở quận khác, không trùng id.
-      const wider = await searchListings({
-        priceMin,
-        priceMax,
-        status: "Active",
-        pageSize: limit * 3,
-        page: 1,
-      });
-      const seen = new Set([currentListingId, ...filtered.map((r) => r.id)]);
-      const extra = wider.data.filter((r) => !seen.has(r.id));
-      return [...filtered, ...extra].slice(0, limit);
+      return filtered;
     }
-
-    const anyDistrict = await searchListings({
-      priceMin,
-      priceMax,
-      status: "Active",
-      pageSize: limit + 1,
-      page: 1,
-    });
-    return exclude(anyDistrict.data);
+    return [];
   } catch (err) {
     logError("listing-queries.getSimilarListings", err);
     return [];
@@ -445,17 +454,11 @@ export async function getMyListings(sellerId: string): Promise<ListingCardItem[]
  */
 export async function incrementViewCount(id: string): Promise<void> {
   try {
-    const { data } = await supabase
-      .from("rental_listings")
-      .select("view_count")
-      .eq("id", id)
-      .single();
-
-    const currentViews = data?.view_count || 0;
-    await supabase
-      .from("rental_listings")
-      .update({ view_count: currentViews + 1 })
-      .eq("id", id);
+    const { error } = await supabase.rpc(
+      "increment_listing_view" as never,
+      { p_listing_id: id } as never,
+    );
+    if (error) throw error;
   } catch (err) {
     logError("listing-queries.incrementViewCount", err);
   }

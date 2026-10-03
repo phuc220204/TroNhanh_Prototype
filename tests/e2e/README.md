@@ -3,6 +3,11 @@
 > Đọc hết mục 1 trước khi chạy lần đầu. Bộ test này **ghi dữ liệu thật lên
 > Supabase remote** — không có database test riêng.
 
+Ngoại lệ: `oc1-regression.spec.ts` là bộ **18 ca chỉ đọc**. Các thao tác lưu
+trong ca sửa tin được chặn và thay bằng mock RPC; không dùng bộ này để chứng
+minh migration đã chạy trên database. Có thể chạy riêng bằng
+`pnpm exec playwright test tests/e2e/oc1-regression.spec.ts --project=chromium`.
+
 ---
 
 ## 1. ⛔ ĐỌC TRƯỚC KHI CHẠY
@@ -20,7 +25,7 @@ khi đã có dữ liệu.
 |---|---|---|
 | **Tắt email confirmation** | Supabase → Auth → Providers → Email | `auth.spec` đăng ký tài khoản mới; còn bật thì `signUp` không trả session và test đứng ở màn "kiểm tra email" |
 | **Chế độ kiểm duyệt = Tự động** | `/quan-tri/cai-dat` | `listing.spec` chờ tin lên `/tat-ca-phong`. `moderation.spec` tự bật Thủ công rồi trả lại — nhưng nếu nó chết giữa chừng thì phải trả tay |
-| **Có dữ liệu seed** | đăng nhập `seller.a` → DemoFAB → "Seed Dữ liệu mẫu" | `review.spec` cần một đợt ở đã seed để `demo_link_me_to_seeded_occupancy` gắn vào |
+| **Có fixture review** | chạy `supabase/tests/review_fixture.sql` trong SQL Editor sau khi nạp seed SaaS | `review.spec` cần một đợt ở đủ điều kiện; production đã xóa DemoFAB/RPC `demo_*` |
 | **Dev server port 5173** | mặc định | Google Cloud Console khai redirect URI cố định theo port đó |
 
 ### 1.3 Dữ liệu rác mỗi lần chạy
@@ -109,8 +114,8 @@ pnpm exec playwright show-report
    không làm test ổn định hơn.
 
 7. **Không nới business rule cho dễ test.** Đặc biệt `can_review_contract()` —
-   cái cổng đó CHÍNH LÀ giá trị của review verified-only. Dùng
-   `demo_link_me_to_seeded_occupancy` qua DemoFAB.
+   cái cổng đó CHÍNH LÀ giá trị của review verified-only. Chuẩn bị dữ liệu bằng
+   fixture quản trị `supabase/tests/review_fixture.sql`, không mở RPC demo cho client.
 
 ---
 
@@ -120,7 +125,7 @@ pnpm exec playwright show-report
 |---|---|
 | `auth.spec` đứng ở "kiểm tra email" | Email confirmation đang BẬT |
 | `listing.spec` không thấy tin ở `/tat-ca-phong` | Chế độ kiểm duyệt đang **Thủ công** (`moderation.spec` chết giữa chừng?) |
-| `review.spec` không có `stay-card` | Chưa seed dữ liệu, hoặc `demo_link_me_to_seeded_occupancy` không còn phòng trống để gắn |
+| `review.spec` không có `stay-card` | Chưa nạp seed SaaS và `supabase/tests/review_fixture.sql` |
 | `workspace.spec` fail ngay test đầu | Gói của `seller.a` hết hạn ⇒ READ_ONLY (BR-015), mọi nút ghi bị khóa |
 | Nhiều spec cùng timeout ở bước đăng nhập | Supabase rate limit — nghỉ vài phút, đừng chạy vòng lặp |
 | Lỗi "more than one relationship was found" ở console | Embed PostgREST thiếu tên FK — giữa `occupancies` và `contracts` có HAI đường |

@@ -44,6 +44,21 @@ export async function getPropertiesByOwner(ownerId: string | undefined): Promise
   }
 }
 
+/** Strict variant for dashboards where query failure must not look like empty data. */
+export async function getPropertiesByOwnerOrThrow(ownerId: string): Promise<PropertyItem[]> {
+  const { data, error } = await supabase
+    .from("properties")
+    .select("*")
+    .eq("owner_id", ownerId)
+    .is("deleted_at", null)
+    .order("created_at", { ascending: false });
+  if (error) {
+    logError("property-service.getPropertiesByOwnerOrThrow", error);
+    throw error;
+  }
+  return (data ?? []) as PropertyItem[];
+}
+
 /**
  * Fetch a single property details by ID.
  */

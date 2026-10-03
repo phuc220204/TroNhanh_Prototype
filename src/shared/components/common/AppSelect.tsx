@@ -26,6 +26,7 @@ type AppSelectProps = {
   searchable?: boolean;
   /** Chữ hiện khi gõ mà không khớp mục nào. */
   emptyText?: string;
+  ariaLabel?: string;
   "data-testid"?: string;
 };
 
@@ -37,6 +38,7 @@ export function AppSelect({
   fontSize = 15,
   searchable,
   emptyText = "Không tìm thấy mục nào",
+  ariaLabel,
   "data-testid": testId,
 }: AppSelectProps) {
   const [open, setOpen] = useState(false);
@@ -111,6 +113,9 @@ export function AppSelect({
         ref={triggerRef}
         type="button"
         data-testid={testId}
+        aria-label={ariaLabel ?? placeholder ?? "Chọn một mục"}
+        aria-haspopup="listbox"
+        aria-expanded={open}
         onClick={() => setOpen(o => !o)}
         style={{
           display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8,
@@ -126,6 +131,8 @@ export function AppSelect({
       {open && rect && createPortal(
         <div
           ref={menuRef}
+          role="listbox"
+          aria-label={ariaLabel ?? placeholder ?? "Danh sách lựa chọn"}
           style={{
             position: "fixed",
             top: rect.bottom + 6,
@@ -149,6 +156,7 @@ export function AppSelect({
                 value={query}
                 onChange={e => setQuery(e.target.value)}
                 placeholder="Gõ để tìm…"
+                aria-label={`Tìm trong ${ariaLabel ?? placeholder ?? "danh sách"}`}
                 data-testid={testId ? `${testId}-search` : undefined}
                 onKeyDown={e => {
                   // Bàn phím là đường dùng chính khi danh sách dài: gõ vài chữ
@@ -191,11 +199,13 @@ export function AppSelect({
                 key={o.value}
                 type="button"
                 data-testid={testId ? `${testId}-option` : undefined}
+                role="option"
+                aria-selected={isSel}
                 onMouseMove={() => { if (highlight !== i) setHighlight(i); }}
                 onClick={() => { onChange(o.value); setOpen(false); }}
                 style={{
                   display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8,
-                  width: "100%", minHeight: 40, padding: "0 12px",
+                  width: "100%", minHeight: 44, padding: "0 12px",
                   border: "none", borderRadius: 8, cursor: "pointer",
                   background: isSel ? C.primary : isHot ? C.cream : "transparent",
                   color: isSel ? C.white : C.textPrimary,
