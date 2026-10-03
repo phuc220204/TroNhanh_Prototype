@@ -8,12 +8,11 @@ import { ACCOUNTS, go, login, runTag } from "./helpers";
  * ≥30 ngày (hoặc đã có ≥1 payment). BR-029: `Confirmed` không bao giờ tự động —
  * renter phải tự xác nhận.
  *
- * ⚠️ Điều kiện chạy: `renter.a` phải được gắn vào một đợt ở đã seed, qua
- * **DemoFAB → "Tôi là người ở demo"** (RPC `demo_link_me_to_seeded_occupancy`).
+ * ⚠️ Điều kiện chạy: nạp fixture bằng `supabase/tests/review_fixture.sql` từ SQL
+ * Editor trước. Production đã xóa DemoFAB và các RPC `demo_*`; test không được
+ * tái tạo backdoor chỉ để tự chuẩn bị dữ liệu.
  * TUYỆT ĐỐI KHÔNG nới `can_review_contract()` cho dễ test — cái cổng đó CHÍNH LÀ
- * giá trị của review verified-only. Nới nó ra là bỏ luôn tính năng.
- *
- * Cần dữ liệu seed sẵn: đăng nhập `seller.a` → DemoFAB → "Seed Dữ liệu mẫu".
+ * giá trị của review verified-only.
  */
 test.describe.configure({ mode: "serial" });
 
@@ -22,10 +21,6 @@ test.describe("Đánh giá khu trọ", () => {
 
   test("người ở đã xác nhận thì đánh giá được, và review hiện ở hồ sơ khu", async ({ page }) => {
     await login(page, ACCOUNTS.renterA);
-
-    // Gắn tài khoản vào một đợt ở đã seed (chỉ có ở môi trường dev).
-    await page.getByTestId("demo-fab-trigger").click();
-    await page.getByTestId("demo-fab-link-occupancy").click();
 
     await go(page, "/tai-khoan/phong-cua-toi");
     const stay = page.getByTestId("stay-card").first();

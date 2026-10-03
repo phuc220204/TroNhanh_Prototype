@@ -78,7 +78,7 @@ export interface ListingCardItem {
   loc: string;
   amenities: string[];
   type: string;
-  badge: "Nổi bật" | "Mới đăng" | null;
+  badge: "Mới đăng" | "Boost" | null;
   img: string;
   contact_phone: string;
   boost_expire_at: string | null;
@@ -113,12 +113,11 @@ export function toListingCard(row: any): ListingCardItem {
     ? row.amenities
     : [];
 
-  const isBoosted = row?.boost_expire_at && new Date(row.boost_expire_at) > new Date();
-
-  let badge: "Nổi bật" | "Mới đăng" | null = null;
-  if (isBoosted) {
-    badge = "Nổi bật";
-  } else if (row?.created_at) {
+  const hasVerifiedBoost = row?.boost_payment_verified === true
+    && typeof row?.boost_expire_at === "string"
+    && new Date(row.boost_expire_at).getTime() > Date.now();
+  let badge: "Mới đăng" | "Boost" | null = hasVerifiedBoost ? "Boost" : null;
+  if (!badge && row?.created_at) {
     const created = new Date(row.created_at);
     const now = new Date();
     const diffHours = (now.getTime() - created.getTime()) / (1000 * 60 * 60);
@@ -138,7 +137,8 @@ export function toListingCard(row: any): ListingCardItem {
     type: row.property_type || "Phòng trọ",
     badge,
     img: imgs[0] || getListingImage(row?.id ? String(row.id) : "fallback"),
-    contact_phone: row.contact_phone || "0901234567",
+    // Không bịa số liên hệ cho row thiếu dữ liệu; UI sẽ vô hiệu hóa nút gọi.
+    contact_phone: row.contact_phone || "",
     boost_expire_at: row.boost_expire_at || null,
     created_at: row.created_at || new Date().toISOString(),
     views_count: row.view_count || row.views_count || 0,

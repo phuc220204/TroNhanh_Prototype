@@ -141,7 +141,7 @@ export function PayText({ paid }: { paid: boolean | null }) {
 /* ══════════════════════════════════════════
    PROPERTY SELECTOR
    ══════════════════════════════════════════ */
-export function PropertySelector({ value, onChange, options, mobile }: { value: string; onChange: (v: string) => void; options: string[]; mobile?: boolean }) {
+export function PropertySelector({ value, onChange, options, mobile }: { value: string; onChange: (v: string) => void; options: Array<{ value: string; label: string }>; mobile?: boolean }) {
   const [open, setOpen] = useState(false);
   return (
     <div style={{ position: "relative", width: mobile ? "100%" : undefined }}>
@@ -157,7 +157,7 @@ export function PropertySelector({ value, onChange, options, mobile }: { value: 
             color: C.textPrimary, cursor: "pointer", width: mobile ? "100%" : undefined,
             minWidth: mobile ? undefined : 200, boxShadow: "0 2px 6px rgba(42,26,12,0.01)"
           }}>
-          <span style={{ display: "flex", alignItems: "center", gap: 8 }}><Building2 size={15} color={C.primary} />{value}</span>
+          <span style={{ display: "flex", alignItems: "center", gap: 8 }}><Building2 size={15} color={C.primary} />{options.find(option => option.value === value)?.label ?? value}</span>
           <ChevronDown size={16} color={C.textSecondary} style={{ transform: open ? "rotate(180deg)" : "none", transition: "transform 0.15s" }} />
         </button>
       </div>
@@ -165,11 +165,11 @@ export function PropertySelector({ value, onChange, options, mobile }: { value: 
         <>
           <div onClick={() => setOpen(false)} style={{ position: "fixed", inset: 0, zIndex: 40 }} />
           <div style={{ position: "absolute", top: "calc(100% + 6px)", left: mobile ? 0 : 80, background: C.white, border: `1px solid ${C.border}`, borderRadius: 12, boxShadow: "0 10px 30px rgba(42,26,12,0.1)", padding: 6, zIndex: 41, minWidth: 220 }}>
-            {options.map(p => (
-              <button key={p} onClick={() => { onChange(p); setOpen(false); }}
-                style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%", textAlign: "left", padding: "10px 12px", background: p === value ? C.caramelSoft : "transparent", border: "none", borderRadius: 8, fontFamily: font, fontSize: 13.5, fontWeight: p === value ? 700 : 500, color: C.textPrimary, cursor: "pointer" }}>
-                {p}
-                {p === value && <ChevronRight size={14} color={C.primary} />}
+            {options.map(option => (
+              <button key={option.value} onClick={() => { onChange(option.value); setOpen(false); }}
+                style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%", textAlign: "left", padding: "10px 12px", background: option.value === value ? C.caramelSoft : "transparent", border: "none", borderRadius: 8, fontFamily: font, fontSize: 13.5, fontWeight: option.value === value ? 700 : 500, color: C.textPrimary, cursor: "pointer" }}>
+                {option.label}
+                {option.value === value && <ChevronRight size={14} color={C.primary} />}
               </button>
             ))}
           </div>
@@ -182,12 +182,12 @@ export function PropertySelector({ value, onChange, options, mobile }: { value: 
 /* ══════════════════════════════════════════
    REUSABLE SECTIONS
    ══════════════════════════════════════════ */
-export function SegmentedBar({ rooms, property }: { rooms: any[]; property: string }) {
+export function SegmentedBar({ rooms, propertyId }: { rooms: any[]; propertyId: string }) {
   // Không có nhánh fallback: DB rỗng thì `rooms` rỗng và biểu đồ hiển thị 0 —
   // đúng sự thật. Trước T09 chỗ này rơi về PREVIEW_ROOMS (dữ liệu giả).
-  const activeRooms = property === "Tất cả khu trọ"
+  const activeRooms = propertyId === "all"
     ? rooms
-    : rooms.filter(r => r.properties?.name === property);
+    : rooms.filter(r => r.property_id === propertyId);
 
   const total = activeRooms.length;
 
@@ -278,21 +278,29 @@ export function UtilityCard({
 }
 
 export function ListingRow({ l, onClick }: { l: any; onClick: () => void }) {
+  const statusLabels: Record<string, string> = {
+    active: "Đang hiển thị",
+    hidden: "Đã ẩn",
+    PendingApproval: "Chờ duyệt",
+    Expired: "Hết hạn",
+  };
+  const date = l.createdAt ? new Date(l.createdAt) : null;
+  const formattedDate = date && !Number.isNaN(date.getTime()) ? date.toLocaleDateString("vi-VN") : "—";
   return (
     <div onClick={onClick} data-testid="dashboard-listing-row" style={{ display: "flex", alignItems: "center", gap: 14, padding: "14px 18px", background: C.white, border: `1px solid ${C.border}`, borderRadius: 12, cursor: "pointer", justifyContent: "space-between", transition: "border-color 0.15s" }}>
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 9, marginBottom: 4, flexWrap: "wrap" }}>
           <span style={{ fontFamily: font, fontSize: 14, fontWeight: 700, color: C.textPrimary }}>{l.title}</span>
-          <span style={{ fontFamily: font, fontSize: 10.5, fontWeight: 700, color: "#4F7A4A", background: "#EBF2E8", borderRadius: 6, padding: "2px 8px" }}>Đang hiển thị</span>
+          <span style={{ fontFamily: font, fontSize: 10.5, fontWeight: 700, color: l.status === "active" ? "#4F7A4A" : "#8C6A4E", background: l.status === "active" ? "#EBF2E8" : "#F5EFE6", borderRadius: 6, padding: "2px 8px" }}>{statusLabels[l.status] ?? "Chưa rõ trạng thái"}</span>
         </div>
         <p style={{ fontFamily: font, fontSize: 12.5, color: C.textSecondary, margin: 0 }}>{l.sub}</p>
       </div>
       <div style={{ display: "flex", alignItems: "center", gap: 16, flexShrink: 0 }}>
         <span style={{ display: "inline-flex", alignItems: "center", gap: 5, fontFamily: font, fontSize: 12, color: C.textSecondary }}>
-          <Eye size={14} /> {l.views || Math.floor(Math.random() * 80) + 50}
+          <Eye size={14} /> {l.views != null && l.views !== "" && Number.isFinite(Number(l.views)) ? Number(l.views) : "—"}
         </span>
         <span style={{ display: "inline-flex", alignItems: "center", gap: 5, fontFamily: font, fontSize: 12, color: C.textSecondary }}>
-          <Calendar size={14} /> 27/07/2026
+          <Calendar size={14} /> {formattedDate}
         </span>
         <div style={{ display: "flex", gap: 6 }} onClick={e => e.stopPropagation()}>
           <IconBtn><Eye size={14} /></IconBtn>

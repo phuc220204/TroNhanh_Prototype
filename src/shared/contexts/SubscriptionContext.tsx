@@ -5,7 +5,6 @@ import type { SubscriptionStatus } from "../types/status";
 import { qk } from "../query/keys";
 import {
   getMySubscription,
-  setDemoStatus as setDemoStatusApi,
   activateTrial as activateTrialApi,
   SubscriptionData,
 } from "../services/subscription-service";
@@ -19,7 +18,6 @@ export interface SubscriptionContextValue {
   canWrite: boolean;
   isLoading: boolean;
   refresh: () => void;
-  setDemoStatus: (s: SubscriptionStatus) => Promise<void>;
   activateTrial: () => Promise<void>;
 }
 
@@ -32,7 +30,6 @@ const DEFAULT_CONTEXT: SubscriptionContextValue = {
   canWrite: false,
   isLoading: false,
   refresh: () => {},
-  setDemoStatus: async () => {},
   activateTrial: async () => {},
 };
 
@@ -55,15 +52,6 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
     }
   }, [queryClient, user?.id]);
 
-  const setDemoStatus = useCallback(
-    async (s: SubscriptionStatus) => {
-      if (!user?.id) return;
-      await setDemoStatusApi(user.id, s);
-      queryClient.invalidateQueries({ queryKey: qk.subscription(user.id) });
-    },
-    [queryClient, user?.id]
-  );
-
   const activateTrial = useCallback(async () => {
     if (!user?.id) return;
     await activateTrialApi(user.id);
@@ -83,7 +71,6 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
     canWrite,
     isLoading,
     refresh,
-    setDemoStatus,
     activateTrial,
   };
 

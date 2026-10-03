@@ -33,6 +33,21 @@ const ERROR_MESSAGES: Record<string, string> = {
   LISTING_NOT_FOUND: "Không tìm thấy tin đăng.",
   REVIEW_NOT_FOUND: "Không tìm thấy đánh giá.",
 
+  // Tin đăng: cùng giới hạn với validation phía form và trigger database.
+  INVALID_LISTING_TITLE: "Tiêu đề tin đăng phải dài từ 10 đến 120 ký tự.",
+  INVALID_LISTING_ADDRESS: "Địa chỉ phải dài từ 5 đến 255 ký tự.",
+  INVALID_LISTING_DESCRIPTION: "Mô tả phải dài từ 10 đến 5.000 ký tự.",
+  INVALID_LISTING_PRICE: "Giá thuê phải từ 100.000 đến 1.000.000.000 đ.",
+  INVALID_LISTING_AREA: "Diện tích phải từ 5 đến 1.000 m².",
+  INVALID_LISTING_PHONE: "Số điện thoại liên hệ chưa hợp lệ.",
+  INVALID_ELECTRICITY_PRICE: "Tiền điện phải từ 0 đến 10.000.000 đ.",
+  INVALID_WATER_PRICE: "Tiền nước phải từ 0 đến 10.000.000 đ.",
+  INVALID_SERVICE_PRICE: "Phí dịch vụ phải từ 0 đến 100.000.000 đ.",
+  INVALID_DEPOSIT: "Tiền đặt cọc phải từ 0 đến 1.000.000.000 đ.",
+  INVALID_LISTING_COORDINATES: "Vị trí ghim trên bản đồ chưa hợp lệ.",
+  INVALID_LISTING_VISIBILITY_TRANSITION: "Chỉ tin đã được duyệt mới có thể ẩn hoặc hiện lại.",
+  INVALID_LISTING_SUBMISSION_TRANSITION: "Chỉ bản nháp mới có thể được gửi duyệt.",
+
   // Khu trọ & phòng (BR-011)
   PROPERTY_HAS_RENTED_ROOMS:
     "Không thể xóa khu trọ khi vẫn còn phòng đang cho thuê. Hãy kết thúc hợp đồng của các phòng đó trước.",
@@ -50,6 +65,8 @@ const ERROR_MESSAGES: Record<string, string> = {
     "Phòng này đã có hợp đồng còn hiệu lực trong khoảng thời gian đó.",
   INVALID_CONTRACT_PERIOD: "Ngày kết thúc hợp đồng phải sau ngày bắt đầu.",
   CONTRACT_NOT_FOUND: "Không tìm thấy hợp đồng.",
+  CONTRACT_OCCUPANCY_MISMATCH:
+    "Không thể liên kết khách ở với hợp đồng. Vui lòng kiểm tra lại phòng và khách.",
   CONTRACT_NOT_OWNED: "Hợp đồng này không thuộc quyền quản lý của bạn.",
   CONTRACT_NOT_ACTIVE:
     "Chỉ gia hạn được hợp đồng đang còn hiệu lực. Hợp đồng đã kết thúc thì cần lập hợp đồng mới.",
@@ -81,6 +98,10 @@ const ERROR_MESSAGES: Record<string, string> = {
 
   // Gói dịch vụ
   INVALID_SUBSCRIPTION_STATUS: "Trạng thái gói không hợp lệ.",
+  SUBSCRIPTION_TRIAL_UNAVAILABLE: "Tài khoản này đã dùng gói thử hoặc đang có gói dịch vụ.",
+  SAAS_SUBSCRIPTION_REQUIRED: "Hãy kích hoạt gói dùng thử để sử dụng chức năng quản lý trọ.",
+  SAAS_SUBSCRIPTION_READ_ONLY:
+    "Gói dịch vụ đã hết hạn. Dữ liệu của bạn vẫn được giữ nguyên — hãy gia hạn để tiếp tục chỉnh sửa.",
 
   // Đẩy tin nổi bật (BR-005)
   BOOST_REQUIRES_PAYMENT:
@@ -89,9 +110,6 @@ const ERROR_MESSAGES: Record<string, string> = {
   BOOST_CONFIG_MISSING:
     "Hệ thống chưa cấu hình gói đẩy tin. Vui lòng liên hệ quản trị viên.",
 
-  // Demo
-  DEMO_NO_AVAILABLE_OCCUPANCY:
-    "Chưa có phòng demo nào trống để gắn. Hãy khởi tạo dữ liệu mẫu trước.",
 };
 
 /** Mã lỗi Postgres → message tiếng Việt (khi không phải domain error của ta). */

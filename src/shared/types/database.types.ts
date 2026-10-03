@@ -14,6 +14,69 @@ export type Database = {
   }
   public: {
     Tables: {
+      boost_orders: {
+        Row: {
+          amount: number
+          checkout_url: string | null
+          created_at: string
+          days: number
+          listing_id: string
+          order_code: number
+          paid_at: string | null
+          payment_id: string | null
+          payment_link_id: string | null
+          payos_reference: string | null
+          seller_id: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          checkout_url?: string | null
+          created_at?: string
+          days: number
+          listing_id: string
+          order_code?: number
+          paid_at?: string | null
+          payment_id?: string | null
+          payment_link_id?: string | null
+          payos_reference?: string | null
+          seller_id: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          checkout_url?: string | null
+          created_at?: string
+          days?: number
+          listing_id?: string
+          order_code?: number
+          paid_at?: string | null
+          payment_id?: string | null
+          payment_link_id?: string | null
+          payos_reference?: string | null
+          seller_id?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "boost_orders_listing_id_fkey"
+            columns: ["listing_id"]
+            isOneToOne: false
+            referencedRelation: "rental_listings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "boost_orders_payment_id_fkey"
+            columns: ["payment_id"]
+            isOneToOne: true
+            referencedRelation: "payments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       contracts: {
         Row: {
           created_at: string
@@ -612,7 +675,9 @@ export type Database = {
       }
       profiles: {
         Row: {
+          contact_email: string | null
           contact_phone: string | null
+          contact_phone_verified_at: string | null
           created_at: string
           full_name: string | null
           id: string
@@ -621,7 +686,9 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          contact_email?: string | null
           contact_phone?: string | null
+          contact_phone_verified_at?: string | null
           created_at?: string
           full_name?: string | null
           id?: string
@@ -630,13 +697,72 @@ export type Database = {
           user_id: string
         }
         Update: {
+          contact_email?: string | null
           contact_phone?: string | null
+          contact_phone_verified_at?: string | null
           created_at?: string
           full_name?: string | null
           id?: string
           is_seller?: boolean | null
           updated_at?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      phone_verification_challenges: {
+        Row: {
+          attempts: number
+          created_at: string
+          expires_at: string
+          last_sent_at: string
+          otp_hash: string
+          phone_e164: string
+          send_window_started_at: string
+          sends_in_window: number
+          user_id: string
+        }
+        Insert: {
+          attempts?: number
+          created_at?: string
+          expires_at: string
+          last_sent_at?: string
+          otp_hash: string
+          phone_e164: string
+          send_window_started_at?: string
+          sends_in_window?: number
+          user_id: string
+        }
+        Update: {
+          attempts?: number
+          created_at?: string
+          expires_at?: string
+          last_sent_at?: string
+          otp_hash?: string
+          phone_e164?: string
+          send_window_started_at?: string
+          sends_in_window?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
+      phone_verification_rate_limits: {
+        Row: {
+          last_sent_at: string
+          phone_e164: string
+          sends_in_window: number
+          window_started_at: string
+        }
+        Insert: {
+          last_sent_at?: string
+          phone_e164: string
+          sends_in_window?: number
+          window_started_at?: string
+        }
+        Update: {
+          last_sent_at?: string
+          phone_e164?: string
+          sends_in_window?: number
+          window_started_at?: string
         }
         Relationships: []
       }
@@ -721,6 +847,7 @@ export type Database = {
           approved_at: string | null
           area: number
           boost_expire_at: string | null
+          boost_payment_verified: boolean
           contact_name: string | null
           contact_phone: string | null
           created_at: string
@@ -760,6 +887,7 @@ export type Database = {
           approved_at?: string | null
           area: number
           boost_expire_at?: string | null
+          boost_payment_verified?: boolean
           contact_name?: string | null
           contact_phone?: string | null
           created_at?: string
@@ -799,6 +927,7 @@ export type Database = {
           approved_at?: string | null
           area?: number
           boost_expire_at?: string | null
+          boost_payment_verified?: boolean
           contact_name?: string | null
           contact_phone?: string | null
           created_at?: string
@@ -1240,6 +1369,17 @@ export type Database = {
       }
     }
     Functions: {
+      begin_contact_phone_verification: {
+        Args: { p_otp_hash: string; p_phone_e164: string; p_user_id: string }
+        Returns: Json
+      }
+      complete_contact_phone_verification: {
+        Args: { p_otp_hash: string; p_user_id: string }
+        Returns: Json
+      }
+      current_user_has_verified_phone: { Args: never; Returns: boolean }
+      invalidate_contact_phone_verification: { Args: { p_user_id: string }; Returns: undefined }
+      activate_subscription_trial: { Args: never; Returns: undefined }
       add_occupant_to_contract: {
         Args: { p_contract_id: string; p_occupant: Json }
         Returns: string
@@ -1264,6 +1404,21 @@ export type Database = {
           user_id: string
         }[]
       }
+      attach_boost_checkout_link: {
+        Args: {
+          p_checkout_url: string
+          p_order_code: number
+          p_payment_link_id: string
+        }
+        Returns: undefined
+      }
+      begin_boost_checkout: {
+        Args: { p_days: number; p_listing_id: string; p_seller_id: string }
+        Returns: {
+          amount: number
+          order_code: number
+        }[]
+      }
       boost_listing: {
         Args: { p_days: number; p_listing_id: string }
         Returns: string
@@ -1272,11 +1427,21 @@ export type Database = {
         Args: { p_contract: string; p_user: string }
         Returns: boolean
       }
+      complete_verified_boost_payment: {
+        Args: {
+          p_amount: number
+          p_order_code: number
+          p_payment_link_id: string
+          p_reference: string
+        }
+        Returns: string
+      }
       confirm_occupancy_link: {
         Args: { p_accept: boolean; p_occupancy_id: string }
         Returns: undefined
       }
       count_rented_rooms: { Args: { p_property_id: string }; Returns: number }
+      can_write_saas: { Args: never; Returns: boolean }
       create_invoice_with_items: {
         Args: {
           p_contract_id: string
@@ -1300,11 +1465,7 @@ export type Database = {
         Args: { p_contract: Json; p_occupant: Json; p_room_id: string }
         Returns: Json
       }
-      demo_enable_public_profiles: { Args: never; Returns: number }
-      demo_link_me_to_seeded_occupancy: {
-        Args: { p_property_id?: string }
-        Returns: string
-      }
+      delete_listing: { Args: { p_listing_id: string }; Returns: undefined }
       extend_contract: {
         Args: { p_contract_id: string; p_new_end_date: string }
         Returns: undefined
@@ -1387,8 +1548,16 @@ export type Database = {
         Args: { p_reason: string; p_review_id: string }
         Returns: undefined
       }
+      increment_listing_view: {
+        Args: { p_listing_id: string }
+        Returns: undefined
+      }
       is_contract_occupant: { Args: { p_contract: string }; Returns: boolean }
       is_linked_occupant: { Args: { p_occupancy: string }; Returns: boolean }
+      is_listing_media_in_use: {
+        Args: { p_storage_path: string }
+        Returns: boolean
+      }
       is_moderator: { Args: never; Returns: boolean }
       is_property_public: { Args: { p_property: string }; Returns: boolean }
       link_listing_to_room: {
@@ -1439,6 +1608,10 @@ export type Database = {
         Args: { p_role: string; p_user_id: string }
         Returns: undefined
       }
+      set_listing_visibility: {
+        Args: { p_listing_id: string; p_visible: boolean }
+        Returns: string
+      }
       set_platform_setting: {
         Args: { p_key: string; p_value: Json }
         Returns: undefined
@@ -1446,10 +1619,6 @@ export type Database = {
       set_property_public_profile: {
         Args: { p_enabled: boolean; p_property_id: string }
         Returns: string
-      }
-      set_subscription_status: {
-        Args: { p_status: string }
-        Returns: undefined
       }
       show_limit: { Args: never; Returns: number }
       show_trgm: { Args: { "": string }; Returns: string[] }
@@ -1461,6 +1630,7 @@ export type Database = {
         Args: { p_first_message?: string; p_ref_id: string; p_ref_type: string }
         Returns: string
       }
+      submit_draft_listing: { Args: { p_listing_id: string }; Returns: string }
       terminate_contract: {
         Args: { p_contract_id: string; p_end_date?: string }
         Returns: undefined
@@ -1507,12 +1677,12 @@ export type Tables<
   DefaultSchemaTableNameOrOptions extends
     | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
         DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -1536,11 +1706,11 @@ export type TablesInsert<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -1561,11 +1731,11 @@ export type TablesUpdate<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -1586,11 +1756,11 @@ export type Enums<
   DefaultSchemaEnumNameOrOptions extends
     | keyof DefaultSchema["Enums"]
     | { schema: keyof DatabaseWithoutInternals },
-  EnumName extends DefaultSchemaEnumNameOrOptions extends {
+  EnumName extends (DefaultSchemaEnumNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaEnumNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -1603,11 +1773,11 @@ export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
     | keyof DefaultSchema["CompositeTypes"]
     | { schema: keyof DatabaseWithoutInternals },
-  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
+  CompositeTypeName extends (PublicCompositeTypeNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
-    : never = never,
+    : never) = never,
 > = PublicCompositeTypeNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }

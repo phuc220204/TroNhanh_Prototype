@@ -1,9 +1,10 @@
 import React from "react";
 import { useNavigate } from "react-router";
-import { Eye, EyeOff, Pencil, ArrowUpCircle, Trash2, MessageSquare, AlertTriangle, FileText, Plus } from "lucide-react";
+import { Eye, EyeOff, Pencil, Trash2, MessageSquare, AlertTriangle, FileText, Plus } from "lucide-react";
 import { C, font } from "../../../shared/theme";
 import { getListingImage, listingImageUrls } from "../../services/listing-mappers";
 import { formatVND } from "../../utils/listingMetadata";
+import type { BoostOrderSummary } from "../../services/boost-orders-service";
 import { StatusChip, IconAction, ListingActionGroup, RejectionNotice } from "./ListingRowActions";
 
 export type DbListing = {
@@ -26,7 +27,55 @@ export type DbListing = {
   property_type?: string;
   address?: string;
   description?: string;
+  /** A pending seller preference, not proof of payment or Boost entitlement. */
+  boost_intent?: { days: number; selected_at?: string } | null;
+  /** Seller-readable order summaries, newest first. */
+  boost_orders?: BoostOrderSummary[];
 };
+
+function BoostPaymentStatus({ listing }: { listing: DbListing }) {
+  const latest = listing.boost_orders?.[0];
+  if (latest?.status === "PAID_PENDING_APPROVAL") {
+    return (
+      <span data-testid="listing-paid-pending-approval" style={{ color: C.primary, fontSize: 11, fontWeight: 700, lineHeight: 1.45 }}>
+        Đã thanh toán {formatVND(latest.amount)} đ · Boost bắt đầu khi tin được duyệt
+      </span>
+    );
+  }
+  if (latest?.status === "PENDING" || latest?.status === "LINKED") {
+    return (
+      <span data-testid="listing-boost-pending-payment" style={{ color: C.primary, fontSize: 11, fontWeight: 700, lineHeight: 1.45 }}>
+        Đơn Boost {latest.days} ngày chưa thanh toán · có thể mở lại để tiếp tục
+      </span>
+    );
+  }
+  if (latest?.status === "NEEDS_REVIEW") {
+    return (
+      <span data-testid="listing-boost-needs-review" style={{ color: C.error, fontSize: 11, fontWeight: 700, lineHeight: 1.45 }}>
+        Thanh toán Boost cần được đối soát · hãy liên hệ hỗ trợ
+      </span>
+    );
+  }
+  if (latest?.status === "PAID" && listing.boost_expire_at && new Date(listing.boost_expire_at).getTime() > Date.now()) {
+    return (
+      <span data-testid="listing-boost-active" style={{ color: "#4A7A34", fontSize: 11, fontWeight: 700, lineHeight: 1.45 }}>
+        Boost đang hoạt động đến {new Date(listing.boost_expire_at).toLocaleDateString("vi-VN")}
+      </span>
+    );
+  }
+  if (listing.status === "PendingApproval" && Number.isInteger(listing.boost_intent?.days)) {
+    return (
+      <span data-testid="listing-boost-intent" style={{ color: C.primary, fontSize: 11, fontWeight: 700, lineHeight: 1.45 }}>
+        Đã chọn Boost {listing.boost_intent!.days} ngày · chưa tạo đơn
+      </span>
+    );
+  }
+  return null;
+}
+
+function canStartBoostPayment(listing: DbListing): boolean {
+  return !listing.boost_orders?.some((order) => order.status === "PAID_PENDING_APPROVAL");
+}
 
 interface MyListingsTableProps {
   paginatedRows: DbListing[];
@@ -40,7 +89,8 @@ interface MyListingsTableProps {
   handleToggleStatus: (id: string, currentStatus: string) => void;
   onLinkRoom: (listing: DbListing) => void;
   handleDeleteListing: (id: string) => void;
-  setBoostTarget: (listing: DbListing) => void;
+  showBoostAction: boolean;
+  onBoostListing: (listing: DbListing) => void;
 }
 
 export function MyListingsTable({
@@ -55,7 +105,8 @@ export function MyListingsTable({
   handleToggleStatus,
   onLinkRoom,
   handleDeleteListing,
-  setBoostTarget
+  showBoostAction,
+  onBoostListing
 }: MyListingsTableProps) {
   const navigate = useNavigate();
   const cellStyle: React.CSSProperties = { fontFamily: font, fontSize: 13.5, color: C.textPrimary, padding: "14px 16px", verticalAlign: "middle" };
@@ -105,7 +156,6 @@ export function MyListingsTable({
         {paginatedRows.map(l => {
           // l.img đã do toListingCard() derive từ listing_media (fallback Unsplash bên trong).
           const imageSrc = listingImageUrls(l)[0] || getListingImage(l.id);
-          const isVIP = !!(l.boost_expire_at && new Date(l.boost_expire_at) > new Date());
           const isBlocked = mutatingId === l.id;
           
           return (
@@ -128,8 +178,9 @@ export function MyListingsTable({
                 </div>
                 <div style={{ display: "flex", justifyContent: "space-between" }}>
                   <span style={{ color: C.textSecondary }}>Trạng thái</span>
-                  <StatusChip status={l.status} boostExpire={l.boost_expire_at} />
+                  <StatusChip status={l.status} />
                 </div>
+                <BoostPaymentStatus listing={l} />
                 <div style={{ display: "flex", justifyContent: "space-between" }}>
                   <span style={{ color: C.textSecondary }}>Hiệu quả</span>
                   <span style={{ color: C.textPrimary, fontWeight: 650 }}>{l.views || 0} xem / {l.contacts || 0} liên hệ</span>
@@ -137,15 +188,13 @@ export function MyListingsTable({
               </div>
               <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: 10, display: "flex", justifyContent: "flex-end", gap: 6 }}>
                 <ListingActionGroup
-                  id={l.id}
                   status={l.status}
                   isBlocked={isBlocked}
-                  isVIP={isVIP}
                   onView={() => navigate(`/phong/${l.id}`)}
                   onEdit={() => navigate(`/dang-tin-cho-thue/${l.id}`)}
                   onToggleStatus={() => handleToggleStatus(l.id, l.status)}
-                  onBoost={() => setBoostTarget(l)}
                   onDelete={() => handleDeleteListing(l.id)}
+                  onBoost={showBoostAction && canStartBoostPayment(l) ? () => onBoostListing(l) : undefined}
                 />
               </div>
               <RejectionNotice
@@ -174,7 +223,6 @@ export function MyListingsTable({
             {paginatedRows.map((l, idx) => {
               // l.img đã do toListingCard() derive từ listing_media (fallback Unsplash bên trong).
           const imageSrc = listingImageUrls(l)[0] || getListingImage(l.id);
-              const isVIP = !!(l.boost_expire_at && new Date(l.boost_expire_at) > new Date());
               const isBlocked = mutatingId === l.id;
 
               return (
@@ -192,6 +240,7 @@ export function MyListingsTable({
                       <div style={{ minWidth: 0, display: "flex", flexDirection: "column", gap: 3 }}>
                         <span style={{ fontWeight: 800, color: C.textPrimary, fontSize: 13.5, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={l.title}>{l.title}</span>
                         <span style={{ fontSize: 11, color: C.textSecondary, fontWeight: 650 }}>ID: TNH-{l.id.slice(0, 8).toUpperCase()}</span>
+                        <BoostPaymentStatus listing={l} />
                       </div>
                     </div>
                   </td>
@@ -221,7 +270,7 @@ export function MyListingsTable({
                   </td>
 
                   <td style={cellStyle}>
-                    <StatusChip status={l.status} boostExpire={l.boost_expire_at} />
+                    <StatusChip status={l.status} />
                     <RejectionNotice
                       reason={l.status === "Rejected" ? l.rejection_reason ?? null : null}
                       onEdit={() => navigate(`/dang-tin-cho-thue/${l.id}`)}
@@ -244,15 +293,13 @@ export function MyListingsTable({
 
                   <td style={cellStyle}>
                     <ListingActionGroup
-                      id={l.id}
                       status={l.status}
                       isBlocked={isBlocked}
-                      isVIP={isVIP}
                       onView={() => navigate(`/phong/${l.id}`)}
                       onEdit={() => navigate(`/dang-tin-cho-thue/${l.id}`)}
                       onToggleStatus={() => handleToggleStatus(l.id, l.status)}
-                      onBoost={() => setBoostTarget(l)}
                       onDelete={() => handleDeleteListing(l.id)}
+                      onBoost={showBoostAction && canStartBoostPayment(l) ? () => onBoostListing(l) : undefined}
                     />
                   </td>
                 </tr>

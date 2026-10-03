@@ -3,11 +3,10 @@ import { useLocation } from "react-router";
 import { ChevronRight, Lock } from "lucide-react";
 import { C, font } from "../theme";
 import { useBreakpoint } from "./useBreakpoint";
-import { DemoBanner } from "./common/DemoBanner";
 import { useSubscriptionContext } from "../contexts/SubscriptionContext";
 import { SubscriptionBanner } from "./landlord/SubscriptionBanner";
 import { Sidebar, MobileHeader, MobileTabBar, type LandlordNavId } from "./landlord/SidebarNav";
-import { TrialRegisterModal, SaaSPaymentModal } from "./landlord/TrialModal";
+import { TrialRegisterModal } from "./landlord/TrialModal";
 
 export type { LandlordNavId };
 
@@ -60,10 +59,9 @@ export function LandlordShell({
 }) {
   const { isMobile } = useBreakpoint();
   const location = useLocation();
-  const { status: subStatus, trialDaysLeft, activateTrial, setDemoStatus } = useSubscriptionContext();
+  const { status: subStatus, trialDaysLeft, activateTrial } = useSubscriptionContext();
 
   const [showTrialRegister, setShowTrialRegister] = useState(false);
-  const [showPaymentModal, setShowPaymentModal] = useState(false);
 
   const activeTab = useMemo(() => {
     try {
@@ -176,11 +174,9 @@ export function LandlordShell({
       <LandlordShellContext.Provider value={{ subStatus, activeTab }}>
         <div style={{ background: C.bg, minHeight: "100vh", display: "flex", flexDirection: "column" }}>
           <MobileHeader title={mobileTitle} />
-          <DemoBanner mobile />
           <SubscriptionBanner
             status={subStatus}
             trialDaysLeft={trialDaysLeft}
-            onUpgrade={() => setShowPaymentModal(true)}
           />
           <div style={{ flex: 1, overflowY: "auto" }}>{renderContent()}</div>
           <MobileTabBar active={activeTab} onSaaSAccess={handleSaaSAccess} />
@@ -192,11 +188,6 @@ export function LandlordShell({
               setShowTrialRegister(false);
             }}
           />
-          <SaaSPaymentModal
-            open={showPaymentModal}
-            onClose={() => setShowPaymentModal(false)}
-            onConfirm={async () => setDemoStatus("ACTIVE")}
-          />
         </div>
       </LandlordShellContext.Provider>
     );
@@ -207,11 +198,9 @@ export function LandlordShell({
       <div style={{ background: C.bg, minHeight: "100vh", display: "flex" }}>
         <Sidebar active={activeTab} onSaaSAccess={handleSaaSAccess} />
         <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column" }}>
-          <DemoBanner />
           <SubscriptionBanner
             status={subStatus}
             trialDaysLeft={trialDaysLeft}
-            onUpgrade={() => setShowPaymentModal(true)}
           />
           <main style={{ flex: 1, overflowY: "auto" }}>{renderContent()}</main>
         </div>
@@ -222,11 +211,6 @@ export function LandlordShell({
             await activateTrial();
             setShowTrialRegister(false);
           }}
-        />
-        <SaaSPaymentModal
-          open={showPaymentModal}
-          onClose={() => setShowPaymentModal(false)}
-          onConfirm={async () => setDemoStatus("ACTIVE")}
         />
       </div>
     </LandlordShellContext.Provider>

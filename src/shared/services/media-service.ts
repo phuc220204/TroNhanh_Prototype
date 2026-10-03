@@ -94,7 +94,8 @@ export async function uploadListingImages(
         .from("listing-images")
         .upload(storagePath, compressedBlob, {
           contentType: "image/webp",
-          upsert: true,
+          // Mỗi ảnh có UUID mới; không cho ghi đè đường dẫn ảnh đã qua kiểm duyệt.
+          upsert: false,
         });
 
       if (error) throw error;

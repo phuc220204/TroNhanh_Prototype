@@ -4,6 +4,7 @@ import { supabase } from "../supabaseClient";
 import { Profile } from "../types/auth";
 import { logError } from "../services/supabase-error";
 import type { Role } from "../components/RequireRole";
+import { storePostAuthRedirect } from "../utils/auth-redirect";
 
 interface AuthContextType {
   user: User | null;
@@ -13,7 +14,7 @@ interface AuthContextType {
   hasRole: (role: Role) => boolean;
   isLoading: boolean;
   signOut: () => Promise<void>;
-  signInWithGoogle: () => Promise<void>;
+  signInWithGoogle: (redirect?: string | null) => Promise<void>;
   refreshProfile: () => Promise<void>;
 }
 
@@ -143,7 +144,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
    * người dùng quay về trang chủ trong trạng thái vẫn chưa đăng nhập, không có
    * lỗi nào hiện ra.
    */
-  const signInWithGoogle = useCallback(async () => {
+  const signInWithGoogle = useCallback(async (redirect?: string | null) => {
+    storePostAuthRedirect(redirect ?? null);
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {

@@ -24,7 +24,7 @@ const FILTERS: { key: ModerationFilter; label: string }[] = [
 
 export function ListingModerationPage() {
   const [filter, setFilter] = useState<ModerationFilter>("PendingApproval");
-  const [rejectTarget, setRejectTarget] = useState<{ id: string; title: string } | null>(null);
+  const [rejectTarget, setRejectTarget] = useState<{ id: string; title: string; hasPaidPendingBoost: boolean } | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const queryClient = useQueryClient();
 
@@ -114,7 +114,14 @@ export function ListingModerationPage() {
                 onApprove={() => mutation.mutate({ id: row.id, action: "Approve" })}
                 onHide={() => mutation.mutate({ id: row.id, action: "Hide" })}
                 onRestore={() => mutation.mutate({ id: row.id, action: "Restore" })}
-                onReject={() => { setErrorMessage(null); setRejectTarget({ id: row.id, title: row.title }); }}
+                onReject={() => {
+                  setErrorMessage(null);
+                  setRejectTarget({
+                    id: row.id,
+                    title: row.title,
+                    hasPaidPendingBoost: row.boost_orders?.some((order) => order.status === "PAID_PENDING_APPROVAL") ?? false,
+                  });
+                }}
               />
             ))}
           </div>
@@ -124,6 +131,7 @@ export function ListingModerationPage() {
       {rejectTarget && (
         <RejectDialog
           listingTitle={rejectTarget.title}
+          hasPaidPendingBoost={rejectTarget.hasPaidPendingBoost}
           submitting={mutation.isPending}
           onCancel={() => setRejectTarget(null)}
           onConfirm={(reason) => mutation.mutate({ id: rejectTarget.id, action: "Reject", reason })}

@@ -4,7 +4,7 @@ import type { SubscriptionStatus } from "../../types/status";
 interface SubscriptionBannerProps {
   status: SubscriptionStatus;
   trialDaysLeft: number;
-  onUpgrade: () => void;
+  onUpgrade?: () => void;
 }
 
 export function SubscriptionBanner({ status, trialDaysLeft, onUpgrade }: SubscriptionBannerProps) {
@@ -24,7 +24,7 @@ export function SubscriptionBanner({ status, trialDaysLeft, onUpgrade }: Subscri
         <p style={{ fontFamily: font, fontSize: 13, color: C.primary, margin: 0, fontWeight: 700 }}>
           ⚡ Bạn đang sử dụng bản dùng thử SaaS. Còn {trialDaysLeft} ngày dùng thử.
         </p>
-        <button
+        {onUpgrade && <button
           onClick={onUpgrade}
           style={{
             padding: "6px 14px",
@@ -39,7 +39,7 @@ export function SubscriptionBanner({ status, trialDaysLeft, onUpgrade }: Subscri
           }}
         >
           Nâng cấp gói
-        </button>
+        </button>}
       </div>
     );
   }
@@ -60,7 +60,7 @@ export function SubscriptionBanner({ status, trialDaysLeft, onUpgrade }: Subscri
         <p style={{ fontFamily: font, fontSize: 13, color: C.repairing, margin: 0, fontWeight: 700 }}>
           ⚠️ Gói dịch vụ đã hết hạn. Hệ thống đang ở chế độ Chỉ đọc (Read-Only). Bạn không thể thực hiện lưu/xóa dữ liệu.
         </p>
-        <button
+        {onUpgrade && <button
           onClick={onUpgrade}
           style={{
             padding: "6px 14px",
@@ -75,7 +75,7 @@ export function SubscriptionBanner({ status, trialDaysLeft, onUpgrade }: Subscri
           }}
         >
           Gia hạn gói
-        </button>
+        </button>}
       </div>
     );
   }

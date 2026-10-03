@@ -3,18 +3,13 @@ import { useNavigate } from "react-router";
 import { useBreakpoint } from "./useBreakpoint";
 import {
   Search, Heart, User, ChevronDown,
-  Key, UserSearch,
-  LayoutGrid, LayoutDashboard, Building2, FileText, BookOpen, HelpCircle, X,
-  Bell, Menu, Database, MessageSquare, UserCheck
+  Key, UserSearch, FileText, Building2, Shield, LogOut,
+  X, Menu, MessageSquare
 } from "lucide-react";
 import { C, font } from "../theme";
 import { BrandLogo } from "./brand/BrandLogo";
 import { useAuth } from "../contexts/AuthContext";
-import { supabase } from "../supabaseClient";
-import { seedMockDataForUser } from "../utils/dbSeeder";
-import { logError, toUserMessage } from "../services/supabase-error";
 import { getTotalUnreadCount } from "../services/messaging-service";
-import { Toast } from "./common/Toast";
 
 /* ══════════════════════════════════════════
    ĐĂNG TIN DROPDOWN
@@ -23,7 +18,7 @@ function DangTinDropdown({ onRenter, onLandlord, onClose }: {
   onRenter: () => void; onLandlord: () => void; onClose: () => void;
 }) {
   return (
-    <div style={{
+    <div id="posting-menu" style={{
       position: "absolute", top: "calc(100% + 10px)", right: 0,
       background: C.white, border: `1px solid ${C.border}`,
       borderRadius: 16, boxShadow: "0 12px 40px rgba(92,70,50,0.16)",
@@ -34,19 +29,19 @@ function DangTinDropdown({ onRenter, onLandlord, onClose }: {
       </p>
       {[
         {
-          Icon: UserSearch,
-          title: "Đăng tin tìm phòng",
-          desc: "Dành cho người thuê muốn đăng nhu cầu tìm phòng.",
-          action: onRenter,
-        },
-        {
           Icon: Key,
           title: "Đăng tin cho thuê",
           desc: "Dành cho chủ trọ muốn đăng phòng cho thuê.",
           action: onLandlord,
         },
+        {
+          Icon: UserSearch,
+          title: "Đăng tin tìm phòng",
+          desc: "Dành cho người thuê muốn đăng nhu cầu tìm phòng.",
+          action: onRenter,
+        },
       ].map(({ Icon, title, desc, action }) => (
-        <button key={title} onClick={() => { action(); onClose(); }}
+        <button key={title} type="button" onClick={() => { action(); onClose(); }}
           style={{ display: "flex", alignItems: "flex-start", gap: 12, width: "100%", padding: "12px 12px", border: "none", background: "transparent", borderRadius: 12, cursor: "pointer", textAlign: "left", transition: "background 0.12s" }}
           onMouseEnter={e => (e.currentTarget.style.background = C.bg)}
           onMouseLeave={e => (e.currentTarget.style.background = "transparent")}>
@@ -81,47 +76,61 @@ function AccountDropdown({ onLandlord, onSignOut, onClose }: { onLandlord: () =>
    * kiểm duyệt ngoài việc tự gõ URL — mà với hash router thì gõ
    * `localhost:5173/quan-tri` còn ra trang chủ, phải là `localhost:5173/#/quan-tri`.
    */
-  const items = [
-    { label: "Hồ sơ", testId: "account-menu-profile", action: () => navigate("/tai-khoan") },
-    // Tin đăng của tôi nằm trong khu vực TÀI KHOẢN, không phải "Dashboard chủ
-    // trọ" — đăng tin miễn phí, vận hành khu trọ mới là gói trả phí.
-    { label: "Tin đăng của tôi", testId: "account-menu-listings", action: () => navigate("/tai-khoan/tin-cho-thue") },
-    { label: "Tin nhắn", testId: "account-menu-messages", action: () => navigate("/tin-nhan") },
-    // Cùng đích với nút trái tim trên navbar: "Tin đã lưu" và "Yêu thích" là một.
-    { label: "Tin đã lưu", testId: "account-menu-saved", action: () => navigate("/yeu-thich") },
-    ...(isStaff
-      ? [{ label: "Quản trị hệ thống", testId: "account-menu-admin", action: () => navigate("/quan-tri"), highlight: true }]
-      : []),
-    { label: "Dashboard chủ trọ", testId: "account-menu-landlord", action: onLandlord, highlight: true },
-    { label: "Đăng xuất", testId: "account-menu-signout", action: onSignOut, danger: true },
-    // `testId` khai ngay tại chỗ, KHÔNG suy từ `label`: nhãn tiếng Việt là copy
-    // hiển thị và sẽ đổi; selector E2E thì không được đổi theo. Bản cũ gán chung
-    // `account-menu-item` cho mọi mục nên không chọn được "Đăng xuất".
-  ] as Array<{ label: string; testId: string; action: () => void; highlight?: boolean; danger?: boolean }>;
+  const sections = [
+    {
+      label: "Tài khoản",
+      items: [
+        { label: "Hồ sơ", testId: "account-menu-profile", Icon: User, action: () => navigate("/tai-khoan") },
+        { label: "Tin đăng của tôi", testId: "account-menu-listings", Icon: FileText, action: () => navigate("/tai-khoan/tin-cho-thue") },
+        { label: "Tin nhắn", testId: "account-menu-messages", Icon: MessageSquare, action: () => navigate("/tin-nhan") },
+        { label: "Tin đã lưu", testId: "account-menu-saved", Icon: Heart, action: () => navigate("/yeu-thich") },
+      ],
+    },
+    {
+      label: "Quản lý",
+      items: [
+        { label: "Dashboard chủ trọ", testId: "account-menu-landlord", Icon: Building2, action: onLandlord },
+        ...(isStaff ? [{ label: "Quản trị hệ thống", testId: "account-menu-admin", Icon: Shield, action: () => navigate("/quan-tri") }] : []),
+      ],
+    },
+  ];
   return (
-    <div style={{
+    <div id="account-menu" aria-label="Tài khoản" style={{
       position: "absolute", top: "calc(100% + 10px)", right: 0,
       background: C.white, border: `1px solid ${C.border}`,
-      borderRadius: 14, boxShadow: "0 12px 40px rgba(92,70,50,0.16)",
-      padding: "6px 0", width: 200, zIndex: 200,
+      borderRadius: 16, boxShadow: "0 16px 44px rgba(50,34,22,0.18)",
+      padding: "8px 0", width: 252, zIndex: 200,
     }}>
-      {items.map(({ label, testId, action, highlight, danger }) => (
-        <button key={label} onClick={() => { action(); onClose(); }}
-          data-testid={testId}
-          style={{
-            display: "block", width: "100%", padding: "11px 16px",
-            border: "none", borderTop: danger ? `1px solid ${C.border}` : "none",
-            background: "transparent", cursor: "pointer", textAlign: "left", fontFamily: font,
-            // Trước đây kiểu chữ bám theo CHỈ SỐ mảng (`i === 3`, `i === length-1`),
-            // nên thêm/bớt một mục là lệch hết. Giờ bám theo cờ của chính mục đó.
-            fontSize: 14, color: danger ? C.error : C.textPrimary,
-            fontWeight: highlight ? 600 : 400, transition: "background 0.1s",
-          }}
-          onMouseEnter={e => (e.currentTarget.style.background = C.bg)}
-          onMouseLeave={e => (e.currentTarget.style.background = "transparent")}>
-          {label}
-        </button>
+      {sections.map((section, sectionIndex) => (
+        <div key={section.label} style={{ padding: sectionIndex === 0 ? "0 8px 6px" : "6px 8px" }}>
+          <p style={{ fontFamily: font, fontSize: 10.5, fontWeight: 800, color: C.textSecondary, margin: "4px 10px 5px", textTransform: "uppercase", letterSpacing: "0.08em" }}>
+            {section.label}
+          </p>
+          {section.items.map(({ label, testId, Icon, action }) => (
+            <button key={label} type="button" onClick={() => { action(); onClose(); }}
+              data-testid={testId}
+              style={{
+                display: "flex", alignItems: "center", gap: 11, width: "100%", minHeight: 42,
+                padding: "8px 10px", border: "none", borderRadius: 10,
+                background: "transparent", cursor: "pointer", textAlign: "left", fontFamily: font,
+                fontSize: 14, color: C.textPrimary, fontWeight: 550, transition: "background 0.1s",
+              }}
+              onMouseEnter={e => (e.currentTarget.style.background = C.bg)}
+              onMouseLeave={e => (e.currentTarget.style.background = "transparent")}>
+              <Icon size={17} color={C.textSecondary} strokeWidth={1.8} />
+              <span>{label}</span>
+            </button>
+          ))}
+        </div>
       ))}
+      <button type="button" onClick={() => { onSignOut(); onClose(); }}
+        data-testid="account-menu-signout"
+        style={{ display: "flex", alignItems: "center", gap: 11, width: "100%", minHeight: 46, padding: "9px 18px", marginTop: 3, border: "none", borderTop: `1px solid ${C.border}`, background: "transparent", cursor: "pointer", textAlign: "left", fontFamily: font, fontSize: 14, color: C.error, fontWeight: 600 }}
+        onMouseEnter={e => (e.currentTarget.style.background = "#FDF5F2")}
+        onMouseLeave={e => (e.currentTarget.style.background = "transparent")}>
+        <LogOut size={17} strokeWidth={1.8} />
+        <span>Đăng xuất</span>
+      </button>
     </div>
   );
 }
@@ -145,6 +154,8 @@ export function PublicNavbarDesktop({
   const [unreadCount, setUnreadCount] = useState(0);
   const dangTinRef = useRef<HTMLDivElement>(null);
   const accountRef = useRef<HTMLDivElement>(null);
+  const accountTriggerRef = useRef<HTMLButtonElement>(null);
+  const dangTinTriggerRef = useRef<HTMLButtonElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -167,6 +178,22 @@ export function PublicNavbarDesktop({
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
   }, []);
+
+  useEffect(() => {
+    const handler = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      if (accountOpen) {
+        setAccountOpen(false);
+        accountTriggerRef.current?.focus();
+      }
+      if (dangTinOpen) {
+        setDangTinOpen(false);
+        dangTinTriggerRef.current?.focus();
+      }
+    };
+    document.addEventListener("keydown", handler);
+    return () => document.removeEventListener("keydown", handler);
+  }, [accountOpen, dangTinOpen]);
 
   useEffect(() => {
     const handler = () => setScrolled(window.scrollY > 4);
@@ -218,6 +245,7 @@ export function PublicNavbarDesktop({
           <Search size={15} color={C.textSecondary} style={{ flexShrink: 0 }} />
           <input
             ref={inputRef}
+            aria-label="Tìm phòng theo khu vực, phường hoặc tên trường"
             value={localQuery}
             onChange={e => {
               setLocalQuery(e.target.value);
@@ -233,19 +261,21 @@ export function PublicNavbarDesktop({
             }}
           />
           <div style={{ width: 1, height: 16, background: C.border, flexShrink: 0 }} />
-          <div
+          <button
+            type="button"
+            aria-label="Tìm phòng"
             onClick={e => { e.stopPropagation(); goSearch(); }}
             style={{
               background: C.primary, borderRadius: 999, padding: "5px 16px",
               fontFamily: font, fontSize: 12, fontWeight: 700, color: "#fff",
               cursor: "pointer", whiteSpace: "nowrap", flexShrink: 0,
-              transition: "background 0.12s",
+              transition: "background 0.12s", border: "none", minHeight: 36,
             }}
             onMouseEnter={e => (e.currentTarget.style.background = C.primaryHover)}
             onMouseLeave={e => (e.currentTarget.style.background = C.primary)}
           >
             Tìm
-          </div>
+          </button>
         </div>
       </div>
 
@@ -290,6 +320,11 @@ export function PublicNavbarDesktop({
         {/* Đăng tin dropdown */}
         <div ref={dangTinRef} style={{ position: "relative" }}>
           <button
+            ref={dangTinTriggerRef}
+            type="button"
+            aria-haspopup="true"
+            aria-controls="posting-menu"
+            aria-expanded={dangTinOpen}
             onClick={() => { setDangTinOpen(v => !v); setAccountOpen(false); }}
             style={{
               display: "flex", alignItems: "center", gap: 6,
@@ -305,8 +340,8 @@ export function PublicNavbarDesktop({
           </button>
           {dangTinOpen && (
             <DangTinDropdown
-              onRenter={() => {}}
-              onLandlord={() => navigate("/dang-tin")}
+              onRenter={() => navigate("/dang-tin-nhu-cau")}
+              onLandlord={() => navigate("/dang-tin-cho-thue")}
               onClose={() => setDangTinOpen(false)}
             />
           )}
@@ -315,7 +350,12 @@ export function PublicNavbarDesktop({
         {/* Đăng nhập / Account */}
         <div ref={accountRef} style={{ position: "relative" }}>
           {user ? (
-            <button
+          <button
+            ref={accountTriggerRef}
+              type="button"
+              aria-haspopup="true"
+              aria-controls="account-menu"
+              aria-expanded={accountOpen}
               data-testid="account-menu-trigger"
               onClick={() => { setAccountOpen(v => !v); setDangTinOpen(false); }}
               style={{
@@ -388,6 +428,16 @@ export function PublicNavbarMobile({ onSearch }: { onSearch?: () => void }) {
   const { user, signOut, hasRole } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
   const isStaff = hasRole("Admin") || hasRole("Moderator");
+  const hasLandlordAccess = hasRole("Seller") || isStaff;
+
+  useEffect(() => {
+    if (!menuOpen) return;
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setMenuOpen(false);
+    };
+    document.addEventListener("keydown", closeOnEscape);
+    return () => document.removeEventListener("keydown", closeOnEscape);
+  }, [menuOpen]);
 
   /**
    * "Yêu thích", "Đăng tin tìm phòng" và "Tin nhắn" trước đây chỉ gọi
@@ -396,18 +446,34 @@ export function PublicNavbarMobile({ onSearch }: { onSearch?: () => void }) {
    */
   const go = (path: string) => () => { navigate(path); setMenuOpen(false); };
 
-  const menuItems = [
-    { label: "Tìm phòng", action: go("/tim-phong") },
-    { label: "Tin nhu cầu", action: go("/tin-nhu-cau") },
-    ...(user ? [{ label: "Tin đăng của tôi", action: go("/tai-khoan/tin-cho-thue") }] : []),
-    ...(user ? [{ label: "Yêu thích", action: go("/yeu-thich") }] : []),
-    { label: "Đăng tin tìm phòng", action: go("/dang-tin-nhu-cau"), sub: true },
-    { label: "Đăng tin cho thuê", action: go("/dang-tin-cho-thue"), sub: true },
-    ...(user ? [{ label: "Tin nhắn", action: go("/tin-nhan") }] : []),
-    ...(isStaff ? [{ label: "Quản trị hệ thống", action: go("/quan-tri") }] : []),
-    user
-      ? { label: "Đăng xuất", action: () => { signOut(); setMenuOpen(false); } }
-      : { label: "Đăng nhập", action: go("/dang-nhap") },
+  const menuSections = [
+    {
+      label: "Khám phá",
+      items: [
+        { label: "Tìm phòng", action: go("/tim-phong") },
+        { label: "Tin nhu cầu", action: go("/tin-nhu-cau") },
+      ],
+    },
+    {
+      label: "Đăng tin",
+      items: [
+        { label: "Đăng tin cho thuê", action: go("/dang-tin-cho-thue"), emphasized: true },
+        { label: "Đăng tin tìm phòng", action: go("/dang-tin-nhu-cau") },
+      ],
+    },
+    ...(user
+      ? [{
+          label: "Tài khoản",
+          items: [
+            { label: "Hồ sơ", action: go("/tai-khoan") },
+            { label: "Tin đăng của tôi", action: go("/tai-khoan/tin-cho-thue") },
+            { label: "Tin nhắn", action: go("/tin-nhan") },
+            { label: "Tin đã lưu", action: go("/yeu-thich") },
+            ...(hasLandlordAccess ? [{ label: "Dashboard chủ trọ", action: go("/chu-tro"), emphasized: true }] : []),
+            ...(isStaff ? [{ label: "Quản trị hệ thống", action: go("/quan-tri"), emphasized: true }] : []),
+          ],
+        }]
+      : [{ label: "Tài khoản", items: [{ label: "Đăng nhập", action: go("/dang-nhap"), emphasized: true }] }]),
   ];
 
   return (
@@ -426,14 +492,23 @@ export function PublicNavbarMobile({ onSearch }: { onSearch?: () => void }) {
 
         {/* Right actions */}
         <div style={{ display: "flex", alignItems: "center", gap: 0 }}>
-          <button onClick={onSearch} style={{ background: "none", border: "none", cursor: "pointer", padding: 8 }}>
+          <button
+            type="button"
+            aria-label="Mở tìm kiếm"
+            onClick={onSearch ?? (() => navigate("/tim-phong"))}
+            style={{ width: 44, height: 44, background: "none", border: "none", cursor: "pointer", padding: 8, display: "flex", alignItems: "center", justifyContent: "center" }}
+          >
             <Search size={21} color={C.textPrimary} strokeWidth={1.8} />
           </button>
-          <button style={{ background: "none", border: "none", cursor: "pointer", padding: 8, position: "relative" }}>
-            <Bell size={21} color={C.textPrimary} strokeWidth={1.8} />
-            <span style={{ position: "absolute", top: 6, right: 6, width: 7, height: 7, borderRadius: 999, background: C.repairing, border: `2px solid ${C.white}` }} />
-          </button>
-          <button onClick={() => setMenuOpen(v => !v)} style={{ background: "none", border: "none", cursor: "pointer", padding: 8 }}>
+          <button
+            type="button"
+            aria-label={menuOpen ? "Đóng menu" : "Mở menu"}
+            aria-expanded={menuOpen}
+            aria-controls="mobile-navigation-menu"
+            data-testid="mobile-menu-trigger"
+            onClick={() => setMenuOpen(v => !v)}
+            style={{ width: 44, height: 44, background: "none", border: "none", cursor: "pointer", padding: 8, display: "flex", alignItems: "center", justifyContent: "center" }}
+          >
             <Menu size={21} color={C.textPrimary} strokeWidth={1.8} />
           </button>
         </div>
@@ -442,33 +517,45 @@ export function PublicNavbarMobile({ onSearch }: { onSearch?: () => void }) {
       {/* Mobile slide-down menu */}
       {menuOpen && (
         <>
-          <div onClick={() => setMenuOpen(false)} style={{ position: "fixed", inset: 0, background: "rgba(20,10,4,0.4)", zIndex: 198, backdropFilter: "blur(2px)" }} />
-          <div style={{
+          <button type="button" aria-label="Đóng menu" onClick={() => setMenuOpen(false)} style={{ position: "fixed", inset: 0, background: "rgba(20,10,4,0.4)", zIndex: 198, backdropFilter: "blur(2px)", border: "none" }} />
+          <div id="mobile-navigation-menu" data-testid="mobile-navigation-menu" style={{
             position: "fixed", top: 56, left: 0, right: 0, zIndex: 199,
             background: C.white, borderBottom: `1px solid ${C.border}`,
             boxShadow: "0 8px 32px rgba(92,70,50,0.16)", padding: "8px 0 16px",
+            maxHeight: "calc(100dvh - 56px)", overflowY: "auto",
           }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 16px 12px" }}>
               <span style={{ fontFamily: font, fontSize: 12, fontWeight: 700, color: C.textSecondary, textTransform: "uppercase", letterSpacing: "0.07em" }}>Menu</span>
-              <button onClick={() => setMenuOpen(false)} style={{ background: "none", border: "none", cursor: "pointer", padding: 4 }}>
+              <button type="button" aria-label="Đóng menu" data-testid="mobile-menu-close" onClick={() => setMenuOpen(false)} style={{ width: 44, height: 44, background: "none", border: "none", cursor: "pointer", padding: 4, display: "flex", alignItems: "center", justifyContent: "center" }}>
                 <X size={18} color={C.textSecondary} />
               </button>
             </div>
-            {menuItems.map(({ label, action, sub }) => (
-              <button key={label} onClick={action}
-                style={{
-                  display: "block", padding: sub ? "11px 28px" : "12px 16px",
-                  border: "none", background: "transparent", textAlign: "left",
-                  fontFamily: font, fontSize: sub ? 13 : 15,
-                  fontWeight: sub ? 400 : 600,
-                  color: sub ? C.textSecondary : C.textPrimary, cursor: "pointer",
-                  borderLeft: sub ? `2px solid ${C.border}` : "none",
-                  marginLeft: sub ? 16 : 0,
-                  width: sub ? "calc(100% - 16px)" : "100%",
-                }}>
-                {sub && <span style={{ marginRight: 6, color: C.secondary }}>↳</span>}{label}
-              </button>
+            {menuSections.map(section => (
+              <section key={section.label} aria-label={section.label} style={{ padding: "0 12px 8px" }}>
+                <h2 style={{ fontFamily: font, fontSize: 10.5, fontWeight: 800, color: C.textSecondary, margin: "8px 8px 4px", textTransform: "uppercase", letterSpacing: "0.08em" }}>
+                  {section.label}
+                </h2>
+                {section.items.map(({ label, action, emphasized }) => (
+                  <button key={label} type="button" onClick={action}
+                    style={{
+                      display: "flex", alignItems: "center", width: "100%", minHeight: 44,
+                      padding: "10px 10px", border: "none", borderRadius: 10,
+                      background: "transparent", textAlign: "left", fontFamily: font,
+                      fontSize: 14, fontWeight: emphasized ? 700 : 500,
+                      color: emphasized ? C.primary : C.textPrimary, cursor: "pointer",
+                    }}>
+                    {label}
+                  </button>
+                ))}
+              </section>
             ))}
+            {user && (
+              <button type="button" onClick={() => { void signOut(); setMenuOpen(false); }}
+                data-testid="mobile-account-menu-signout"
+                style={{ display: "flex", alignItems: "center", width: "100%", minHeight: 48, padding: "10px 20px", border: "none", borderTop: `1px solid ${C.border}`, background: "transparent", textAlign: "left", fontFamily: font, fontSize: 14, fontWeight: 700, color: C.error, cursor: "pointer" }}>
+                Đăng xuất
+              </button>
+            )}
           </div>
         </>
       )}
@@ -476,174 +563,13 @@ export function PublicNavbarMobile({ onSearch }: { onSearch?: () => void }) {
   );
 }
 
-/**
- * Công tắc hiện nút FAB "Lối tắt nhanh".
- *
- * Đặt `false` để ẩn khỏi giao diện mà KHÔNG xóa code: nút này là công cụ nội bộ
- * (seed dữ liệu mẫu, nhảy thẳng vào dashboard, gắn tài khoản vào đợt ở demo) —
- * hữu ích lúc phát triển nhưng không nên xuất hiện trước người xem ngoài.
- *
- * ⚠️ `tests/e2e/review.spec.ts` bấm `demo-fab-trigger` và
- * `demo-fab-link-occupancy` để dựng điều kiện BR-022. Bật lại cờ này trước khi
- * chạy `pnpm test:e2e`, nếu không spec đánh giá sẽ fail vì không thấy nút.
- *
- * Khai kiểu `boolean` tường minh để TypeScript không thu hẹp về literal `false`
- * rồi coi toàn bộ thân hàm là code không tới được.
- */
-const SHOW_DEMO_FAB: boolean = false;
-
-export function DemoFAB() {
-  const navigate = useNavigate();
-  const [open, setOpen] = useState(false);
-  const [toast, setToast] = useState<{ message: string; variant: "success" | "error" } | null>(null);
-  const { isMobile } = useBreakpoint();
-  const { user, profile } = useAuth();
-
-  /* On mobile the public pages render a sticky BottomTabBar (height 60).
-     Float the FAB ~72px above the viewport bottom so it never overlaps the
-     "Tài khoản" tab; on desktop there is no tab bar, keep the original spot. */
-  const fabSize = isMobile ? 52 : 50;
-
-  const handleSeed = async () => {
-    if (!user) {
-      setToast({ message: "Vui lòng đăng nhập trước khi seed dữ liệu để tin đăng thuộc về tài khoản của bạn!", variant: "error" });
-      setTimeout(() => navigate("/dang-nhap"), 1000);
-      return;
-    }
-    
-    try {
-      const { data: existing } = await supabase
-        .from("rental_listings")
-        .select("id")
-        .eq("seller_id", user.id)
-        .limit(1);
-        
-      if (existing && existing.length > 0) {
-        const confirmClear = window.confirm("Tài khoản của bạn đã có tin đăng. Bạn có muốn tạo thêm tin mới không?");
-        if (!confirmClear) return;
-      }
-      
-      await seedMockDataForUser(user, profile);
-      
-      setToast({ message: "Đã khởi tạo dữ liệu Marketplace & 3 Khu trọ SaaS thành công! Trình duyệt sẽ tự động tải lại.", variant: "success" });
-      setTimeout(() => window.location.reload(), 1500);
-    } catch (err: any) {
-      logError("PublicNavbar.handleSeed", err);
-      // §7: không ghép `err.message` vào chuỗi hiển thị — đó là văn bản Postgres
-      // thô (tên cột, constraint, có khi cả câu SQL). `toUserMessage` là nơi duy
-      // nhất dịch lỗi sang tiếng Việt an toàn.
-      setToast({ message: toUserMessage(err), variant: "error" });
-    }
-  };
-
-  /**
-   * BR-022 đòi hợp đồng ≥30 ngày hoặc ≥1 payment mới đánh giá được. Trên dữ liệu
-   * demo mới seed thì không đợt ở nào thoả, nên luồng đánh giá không demo được.
-   *
-   * ⚠️ Cách đúng là RPC demo này (backdate hợp đồng + tạo 1 payment thật),
-   * KHÔNG phải nới `can_review_contract()` — cổng 30 ngày là toàn bộ giá trị
-   * chống gian lận của tính năng.
-   */
-  const handleLinkDemoOccupancy = async () => {
-    if (!user) {
-      navigate("/dang-nhap");
-      return;
-    }
-    try {
-      const { error } = await supabase.rpc("demo_link_me_to_seeded_occupancy", {});
-      if (error) throw error;
-      setToast({ message: "Đã gắn bạn vào một đợt ở demo. Vào 'Phòng của tôi' để xác nhận liên kết rồi đánh giá.", variant: "success" });
-      setTimeout(() => navigate("/tai-khoan/phong-cua-toi"), 1200);
-    } catch (err) {
-      logError("PublicNavbar.handleLinkDemoOccupancy", err);
-      setToast({ message: toUserMessage(err), variant: "error" });
-    }
-  };
-
-  // `testId` khai tại chỗ, không suy từ `label` — nhãn là copy hiển thị và sẽ đổi.
-  const shortcuts = [
-    { Icon: LayoutDashboard, label: "Dashboard chủ trọ",        testId: "demo-fab-dashboard",   action: () => navigate("/chu-tro") },
-    { Icon: Building2,       label: "Quản lý khu trọ & phòng",  testId: "demo-fab-rooms",       action: () => navigate("/chu-tro/quan-ly-phong") },
-    { Icon: FileText,        label: "Quản lý tin đăng",          testId: "demo-fab-listings",    action: () => navigate("/tai-khoan/tin-cho-thue") },
-    { Icon: BookOpen,        label: "Design System",              testId: "demo-fab-styleguide",  action: () => navigate("/styleguide") },
-    { Icon: Database,        label: "Seed Dữ liệu mẫu",           testId: "demo-fab-seed",        action: handleSeed },
-    { Icon: UserCheck,       label: "Tôi là người ở demo",        testId: "demo-fab-link-occupancy", action: handleLinkDemoOccupancy },
-    { Icon: HelpCircle,      label: "Trợ giúp",                  testId: "demo-fab-help",        action: () => {} },
-  ];
-
-  // Đặt SAU mọi hook, không phải đầu hàm: thứ tự hook phải giữ nguyên vô điều
-  // kiện, kể cả khi ai đó biến cờ trên thành giá trị đổi được lúc chạy.
-  if (!SHOW_DEMO_FAB) return null;
-
-  return (
-    <div style={{
-      position: "fixed",
-      right: isMobile ? 18 : 24,
-      bottom: isMobile ? "calc(72px + env(safe-area-inset-bottom))" : 24,
-      zIndex: 300, display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 10,
-    }}>
-      {toast && (
-        <div style={{ position: "fixed", top: 20, right: 20, zIndex: 1000 }}>
-          <Toast message={toast.message} variant={toast.variant} onClose={() => setToast(null)} />
-        </div>
-      )}
-
-      {/* Popup */}
-      {open && (
-        <div style={{
-          background: C.white, border: `1px solid ${C.border}`,
-          borderRadius: 18, boxShadow: "0 12px 48px rgba(92,70,50,0.18)",
-          padding: "16px 0 10px", width: 240,
-          animation: "fadeUp 0.16s ease-out",
-        }}>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 16px 12px", borderBottom: `1px solid ${C.border}`, marginBottom: 6 }}>
-            <p style={{ fontFamily: font, fontSize: 12, fontWeight: 700, color: C.textSecondary, margin: 0, textTransform: "uppercase", letterSpacing: "0.08em" }}>Lối tắt nhanh</p>
-            <button onClick={() => setOpen(false)} style={{ background: "none", border: "none", cursor: "pointer", padding: 2 }}>
-              <X size={14} color={C.textSecondary} />
-            </button>
-          </div>
-          {shortcuts.map(({ Icon, label, testId, action }) => (
-            <button key={label} data-testid={testId} onClick={() => { action(); setOpen(false); }}
-              style={{
-                display: "flex", alignItems: "center", gap: 12, width: "100%",
-                padding: "10px 16px", border: "none", background: "transparent",
-                cursor: "pointer", textAlign: "left", transition: "background 0.1s",
-              }}
-              onMouseEnter={e => (e.currentTarget.style.background = C.bg)}
-              onMouseLeave={e => (e.currentTarget.style.background = "transparent")}>
-              <div style={{ width: 30, height: 30, borderRadius: 8, background: C.caramelSoft, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                <Icon size={15} color={C.primary} strokeWidth={1.8} />
-              </div>
-              <span style={{ fontFamily: font, fontSize: 13, color: C.textPrimary, fontWeight: 500 }}>{label}</span>
-            </button>
-          ))}
-        </div>
-      )}
-
-      {/* FAB button */}
-      <button
-        data-testid="demo-fab-trigger"
-        onClick={() => setOpen(v => !v)}
-        style={{
-          width: fabSize, height: fabSize, borderRadius: "50%",
-          background: open ? C.primaryDark : C.primary,
-          border: "none", cursor: "pointer",
-          display: "flex", alignItems: "center", justifyContent: "center",
-          boxShadow: "0 4px 20px rgba(92,70,50,0.35)",
-          transition: "background 0.15s, transform 0.15s",
-          transform: open ? "rotate(45deg)" : "none",
-        }}
-        onMouseEnter={e => (e.currentTarget.style.transform = open ? "rotate(45deg) scale(1.07)" : "scale(1.07)")}
-        onMouseLeave={e => (e.currentTarget.style.transform = open ? "rotate(45deg)" : "none")}
-      >
-        <LayoutGrid size={20} color="#fff" strokeWidth={1.8} />
-      </button>
-    </div>
-  );
-}
-
 export function PublicNavbar(props: { onSearch?: () => void; searchQuery?: string; onSearchChange?: (v: string) => void }) {
-  const { isMobile } = useBreakpoint();
-  return isMobile ? <PublicNavbarMobile onSearch={props.onSearch} /> : <PublicNavbarDesktop {...props} />;
+  const { width } = useBreakpoint();
+  // Thanh desktop cần nhiều không gian cho search + các action. Ở laptop hẹp
+  // (1024–1179px), ép nó vào một hàng làm nội dung rộng hơn viewport dù breakpoint
+  // “desktop” chung đã bắt đầu từ 1024px.
+  return width < 1180
+    ? <PublicNavbarMobile onSearch={props.onSearch} />
+    : <PublicNavbarDesktop {...props} />;
 }
 

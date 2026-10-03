@@ -2,13 +2,12 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router";
 import {
   LayoutGrid, Building2, FileText, Users, Wallet, Settings, LogOut,
-  Bell, Home, MessageSquare, User, Search, Lock, X
+  Home, MessageSquare, User, Search, Lock, X
 } from "lucide-react";
 import { C, font } from "../../theme";
 import { BrandLogo } from "../brand/BrandLogo";
 import { useAuth } from "../../contexts/AuthContext";
 import { useSubscriptionContext } from "../../contexts/SubscriptionContext";
-import type { SubscriptionStatus } from "../../types/status";
 
 export type LandlordNavId = "overview" | "rooms" | "listings" | "occupants" | "payments" | "settings";
 
@@ -45,7 +44,7 @@ const NAV_SAAS: { id: LandlordNavId; icon: typeof LayoutGrid; label: string; to?
 export function Sidebar({ active, onSaaSAccess }: { active: LandlordNavId; onSaaSAccess: () => void }) {
   const navigate = useNavigate();
   const { signOut, user, profile } = useAuth();
-  const { status: subStatus, setDemoStatus } = useSubscriptionContext();
+  const { status: subStatus } = useSubscriptionContext();
 
   const displayName = profile?.full_name || user?.email?.split("@")[0] || "Chủ trọ";
   const displaySub = profile?.contact_phone || user?.email || "";
@@ -112,24 +111,6 @@ export function Sidebar({ active, onSaaSAccess }: { active: LandlordNavId; onSaa
         })}
       </nav>
 
-      {/* Plan Switcher Widget */}
-      <div style={{ padding: "10px 12px 14px", borderTop: `1px solid ${C.border}` }}>
-        <p style={{ fontFamily: font, fontSize: 11, fontWeight: 700, color: C.textSecondary, margin: "0 0 6px" }}>Giả lập gói (Reviewer)</p>
-        <select 
-          value={subStatus}
-          onChange={e => setDemoStatus(e.target.value as SubscriptionStatus)}
-          style={{ 
-            fontFamily: font, fontSize: 12.5, fontWeight: 700, 
-            color: subStatus === "ACTIVE" ? "#4A7A34" : subStatus === "TRIAL" ? C.primary : subStatus === "READ_ONLY" ? C.repairing : C.textSecondary,
-            background: C.bg, border: `1.5px solid ${C.border}`, borderRadius: 8, padding: "8px 10px", width: "100%", outline: "none", cursor: "pointer"
-          }}>
-          <option value="NONE" style={{ color: C.textSecondary }}>Chưa đăng ký (NONE)</option>
-          <option value="TRIAL" style={{ color: C.primary }}>Dùng thử (TRIAL)</option>
-          <option value="ACTIVE" style={{ color: "#4A7A34" }}>Kích hoạt (ACTIVE)</option>
-          <option value="READ_ONLY" style={{ color: C.repairing }}>Chỉ đọc (READ_ONLY)</option>
-        </select>
-      </div>
-
       <div style={{ padding: "0 12px 14px" }}>
         <button onClick={() => navigate("/")} style={{ display: "flex", alignItems: "center", gap: 11, padding: "9px 13px", borderRadius: 10, border: "none", background: "transparent", cursor: "pointer", fontFamily: font, fontSize: 13, fontWeight: 500, color: C.textSecondary, width: "100%" }}><Search size={16} /> Về trang tìm phòng</button>
         <button onClick={() => { signOut(); clearDemoAuth(); navigate("/"); }} style={{ display: "flex", alignItems: "center", gap: 11, padding: "9px 13px", borderRadius: 10, border: "none", background: "transparent", cursor: "pointer", fontFamily: font, fontSize: 13, fontWeight: 600, color: C.repairing, width: "100%" }}><LogOut size={16} /> Đăng xuất</button>
@@ -143,10 +124,6 @@ export function MobileHeader({ title }: { title: string }) {
     <div style={{ background: C.primaryDark, height: 56, display: "flex", alignItems: "center", padding: "0 16px", gap: 12, position: "sticky", top: 0, zIndex: 100, boxShadow: "0 2px 12px rgba(42,26,12,0.22)", flexShrink: 0, "--tn-brand-logo-color": C.cream } as React.CSSProperties}>
       <BrandLogo variant="full" size="sm" />
       <span style={{ fontFamily: font, fontSize: 18, fontWeight: 800, color: C.cream, flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{title}</span>
-      <button style={{ width: 36, height: 36, borderRadius: "50%", background: "rgba(255,255,255,0.12)", border: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", position: "relative" }}>
-        <Bell size={17} color={C.cream} />
-        <span style={{ position: "absolute", top: 8, right: 9, width: 7, height: 7, borderRadius: "50%", background: "#C8861A" }} />
-      </button>
     </div>
   );
 }
@@ -167,12 +144,7 @@ export function MobileTabBar({ active, onSaaSAccess }: { active: LandlordNavId; 
         else navigate("/chu-tro/quan-ly-phong");
       } 
     },
-    { 
-      Icon: MessageSquare, label: "Tin nhắn", on: "occupants", 
-      onTap: () => {
-        if (subStatus === "NONE") onSaaSAccess();
-      } 
-    },
+    { Icon: MessageSquare, label: "Tin nhắn", on: "occupants", onTap: () => navigate("/tin-nhan") },
     { Icon: User, label: "Tài khoản", on: "settings", onTap: () => setAccountOpen(true) },
   ];
 
@@ -230,7 +202,7 @@ function AccountSheet({ open, onClose, onNavigate, onLogout }: {
 
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 18px 12px" }}>
           <span style={{ fontFamily: font, fontSize: 16, fontWeight: 800, color: C.textPrimary }}>Tài khoản</span>
-          <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", padding: 4 }}>
+          <button type="button" aria-label="Đóng bảng tài khoản" onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", padding: 8, minWidth: 44, minHeight: 44, display: "flex", alignItems: "center", justifyContent: "center" }}>
             <X size={18} color={C.textSecondary} />
           </button>
         </div>

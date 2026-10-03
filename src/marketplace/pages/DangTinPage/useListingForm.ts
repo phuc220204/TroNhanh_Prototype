@@ -1,49 +1,76 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router";
 import { useFormik } from "formik";
 import * as Yup from "yup";
 import { useAuth } from "../../../shared/contexts/AuthContext";
-import { createListing, updateListing, boostListing } from "../../services/listing-mutations";
+import { createListing, submitDraftListing, updateListing } from "../../services/listing-mutations";
 import { getListingById } from "../../services/listing-queries";
+import { createBoostCheckout, getBoostCheckoutErrorMessage, redirectToBoostCheckout } from "../../services/boost-payment-service";
 import { publicUrl, uploadListingImages, type UploadedMedia } from "../../../shared/services/media-service";
-import { formatVND, cleanVND, appendMetadataToDescription, parseMetadataFromDescription, type ListingMetadata } from "../../utils/listingMetadata";
+import { formatVND, cleanVND, mergeEditedListingMetadata, parseMetadataFromDescription, type ListingCoords, type ListingMetadata } from "../../utils/listingMetadata";
 import { logError, toUserMessage } from "../../../shared/services/supabase-error";
 import { AMENITY_OPTIONS, amenityKeyToLabel } from "../../../shared/constants/amenities";
 import { NEARBY_CATEGORY_META } from "../../../shared/constants/nearby";
 import { isValidLatLng } from "../../../shared/components/common/LeafletMap";
 import type { PhotoFileItem } from "./Step3Photos";
 
-/**
- * Gói đẩy tin mặc định khi người dùng bật boost ngay lúc đăng tin.
- * Phải là một giá trị có trong `platform_settings.boost_config.days`
- * (hiện là 7 / 15 / 30), nếu không RPC raise `INVALID_BOOST_PACKAGE`.
- * Muốn chọn gói khác thì dùng nút "Đẩy tin" ở `/tai-khoan/tin-cho-thue`.
- */
-const DEFAULT_BOOST_DAYS = 7;
+export const LISTING_LIMITS = {
+  titleMin: 10,
+  titleMax: 120,
+  addressMin: 5,
+  addressMax: 255,
+  descriptionMin: 10,
+  descriptionMax: 5_000,
+  areaMin: 5,
+  areaMax: 1_000,
+  priceMin: 100_000,
+  priceMax: 1_000_000_000,
+  utilityMax: 10_000_000,
+  serviceMax: 100_000_000,
+  depositMax: 1_000_000_000,
+} as const;
+
+function numericVndSchema(label: string, min: number, max: number, isRequired = false) {
+  let schema = Yup.string().test("vnd-number", `${label} phải là số từ ${formatVND(min)} đến ${formatVND(max)} VND`, (value) => {
+    if (!value) return !isRequired;
+    if (/[-+]/.test(value) || !/\d/.test(value)) return false;
+    const amount = Number(cleanVND(value));
+    return Number.isFinite(amount) && amount >= min && amount <= max;
+  });
+  if (isRequired) schema = schema.required(`Vui lòng nhập ${label.toLowerCase()}`);
+  return schema;
+}
+
+function editableLegacyCost(value: unknown): string {
+  if (typeof value === "number" && Number.isFinite(value) && value > 0) return String(value);
+  if (typeof value !== "string" || !/^\s*[\d.,]+\s*(?:đ|vnd)?\s*$/i.test(value)) return "";
+  return cleanVND(value);
+}
 
 const step1Schema = Yup.object().shape({
-  title: Yup.string().min(10, "Tiêu đề quá ngắn (tối thiểu 10 ký tự)").required("Vui lòng nhập tiêu đề"),
-  address: Yup.string().required("Vui lòng nhập địa chỉ cụ thể"),
+  title: Yup.string().trim().min(LISTING_LIMITS.titleMin, "Tiêu đề quá ngắn (tối thiểu 10 ký tự)").max(LISTING_LIMITS.titleMax, "Tiêu đề tối đa 120 ký tự").required("Vui lòng nhập tiêu đề"),
+  address: Yup.string().trim().min(LISTING_LIMITS.addressMin, "Địa chỉ quá ngắn").max(LISTING_LIMITS.addressMax, "Địa chỉ tối đa 255 ký tự").required("Vui lòng nhập địa chỉ cụ thể"),
   district: Yup.string().required("Vui lòng chọn phường/xã"),
   wardCode: Yup.number().nullable().required("Vui lòng chọn phường/xã"),
   area: Yup.number()
     .typeError("Diện tích phải là số")
     .required("Vui lòng nhập diện tích")
-    .positive("Diện tích phải lớn hơn 0"),
-  price: Yup.string().required("Vui lòng nhập giá thuê"),
+    .min(LISTING_LIMITS.areaMin, `Diện tích tối thiểu ${LISTING_LIMITS.areaMin} m²`)
+    .max(LISTING_LIMITS.areaMax, `Diện tích tối đa ${formatVND(LISTING_LIMITS.areaMax)} m²`),
+  price: numericVndSchema("Giá thuê", LISTING_LIMITS.priceMin, LISTING_LIMITS.priceMax, true),
   phone: Yup.string()
     .required("Số điện thoại chưa hợp lệ")
     .matches(/^0\d{8,9}$/, "Số điện thoại chưa hợp lệ"),
   curfewType: Yup.string().oneOf(["free", "curfew"]).required(),
   curfewTime: Yup.string().when("curfewType", {
     is: "curfew",
-    then: (schema) => schema.required("Vui lòng nhập chi tiết giờ giới nghiêm"),
+    then: (schema) => schema.matches(/^([01]\d|2[0-3]):[0-5]\d$/, "Giờ đóng cửa chưa hợp lệ").required("Vui lòng chọn giờ đóng cửa"),
     otherwise: (schema) => schema.optional(),
   }),
 });
 
 const step2Schema = Yup.object().shape({
-  description: Yup.string().min(10, "Mô tả chi tiết nên có ít nhất 10 ký tự").required("Vui lòng viết mô tả chi tiết"),
+  description: Yup.string().trim().min(LISTING_LIMITS.descriptionMin, "Mô tả chi tiết nên có ít nhất 10 ký tự").max(LISTING_LIMITS.descriptionMax, "Mô tả tối đa 5.000 ký tự").required("Vui lòng viết mô tả chi tiết"),
 });
 
 const step3Schema = Yup.object().shape({
@@ -51,26 +78,41 @@ const step3Schema = Yup.object().shape({
 });
 
 const step4Schema = Yup.object().shape({
-  electric: Yup.string().required("Vui lòng nhập tiền điện"),
-  water: Yup.string().required("Vui lòng nhập tiền nước"),
+  electric: numericVndSchema("Tiền điện", 1, LISTING_LIMITS.utilityMax, true),
+  water: numericVndSchema("Tiền nước", 1, LISTING_LIMITS.utilityMax, true),
+  service: numericVndSchema("Phí dịch vụ", 0, LISTING_LIMITS.serviceMax),
+  deposit: numericVndSchema("Tiền đặt cọc", 0, LISTING_LIMITS.depositMax),
 });
 
-export function useListingForm(prefill: any = {}, showToast: (msg: string) => void, listingId?: string) {
+export function useListingForm(
+  prefill: any = {},
+  showToast: (msg: string) => void,
+  listingId?: string,
+  boostChoiceAvailable = false,
+) {
   const navigate = useNavigate();
   const { user } = useAuth();
 
   const [step, setStep] = useState(0);
   const [success, setSuccess] = useState(false);
-  const [isBoosted, setIsBoosted] = useState(false);
-  const [showPayment, setShowPayment] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [newRoomId, setNewRoomId] = useState("");
   const [isLoadingListing, setIsLoadingListing] = useState<boolean>(Boolean(listingId));
   const [notFound, setNotFound] = useState(false);
   const [updatedStatus, setUpdatedStatus] = useState<string>("");
+  const [listingStatus, setListingStatus] = useState<string>("");
+  const [selectedBoostDays, setSelectedBoostDays] = useState<number | null>(null);
+  const [boostCheckoutError, setBoostCheckoutError] = useState<string | null>(null);
 
   const [photos, setPhotos] = useState<PhotoFileItem[]>([]);
   const [uploadProgress, setUploadProgress] = useState<{ current: number; total: number } | null>(null);
+  const [legacyDepositCleared, setLegacyDepositCleared] = useState(false);
+  const originalMetadataRef = useRef<ListingMetadata>({});
+  const legacyDepositTextRef = useRef("");
+  // Existing approved/rejected listings are deliberately not offered a new
+  // plan during content editing. A new listing or an existing Draft can choose
+  // a plan before it enters the review queue.
+  const shouldShowBoostStep = !listingId || listingStatus === "Draft";
 
   const formik = useFormik({
     initialValues: {
@@ -88,7 +130,7 @@ export function useListingForm(prefill: any = {}, showToast: (msg: string) => vo
       phone: prefill.phone || "",
       curfewType: "free" as "free" | "curfew",
       curfewTime: "",
-      coords: { lat: 10.7712, lng: 106.6823, address: "" },
+      coords: (prefill.coords ?? null) as ListingCoords | null,
       
       amenities: [] as string[],
       description: "",
@@ -103,13 +145,7 @@ export function useListingForm(prefill: any = {}, showToast: (msg: string) => vo
     },
     validateOnBlur: true,
     validateOnChange: false,
-    onSubmit: async () => {
-      if (isBoosted) {
-        setShowPayment(true);
-      } else {
-        handlePostSubmit(false);
-      }
-    },
+    onSubmit: async () => handlePostSubmit(false, shouldShowBoostStep && boostChoiceAvailable ? selectedBoostDays : null),
   });
 
   useEffect(() => {
@@ -128,17 +164,27 @@ export function useListingForm(prefill: any = {}, showToast: (msg: string) => vo
         }
 
         const meta = (listing.metadata || {}) as ListingMetadata;
+        setListingStatus(listing.status || "");
+        if (Number.isInteger(meta.boost_intent?.days) && (meta.boost_intent?.days ?? 0) > 0) {
+          setSelectedBoostDays(meta.boost_intent!.days);
+        }
         const parsedDesc = parseMetadataFromDescription(listing.description || "");
+        const legacyMeta = parsedDesc.metadata;
+        originalMetadataRef.current = {
+          ...legacyMeta,
+          ...meta,
+          costs: { ...legacyMeta.costs, ...meta.costs },
+        };
 
         // CHECK constraint: access_policy chỉ nhận 'Free' | 'Restricted'.
         // Tin cũ (trước migration 0300) chỉ có metadata.curfew nên vẫn đọc kèm.
         const curfewType =
-          listing.access_policy === "Restricted" || meta.curfew?.type === "curfew" ? "curfew" : "free";
+          listing.access_policy === "Restricted" || meta.curfew?.type === "curfew" || legacyMeta.curfew?.type === "curfew" ? "curfew" : "free";
         const curfewTime = listing.access_close_time
-          ? listing.access_close_time
-          : meta.curfew?.time || "";
+          ? String(listing.access_close_time).slice(0, 5)
+          : meta.curfew?.time || legacyMeta.curfew?.time || "";
 
-        let coords = { lat: 10.7712, lng: 106.6823, address: listing.address || "" };
+        let coords: ListingCoords | null = null;
         if (listing.latitude != null && listing.longitude != null && isValidLatLng({ lat: Number(listing.latitude), lng: Number(listing.longitude) })) {
           coords = {
             lat: Number(listing.latitude),
@@ -151,11 +197,17 @@ export function useListingForm(prefill: any = {}, showToast: (msg: string) => vo
             lng: meta.coords.lng,
             address: listing.address || meta.coords.address || "",
           };
+        } else if (!Object.prototype.hasOwnProperty.call(meta, "coords") && legacyMeta.coords && isValidLatLng(legacyMeta.coords)) {
+          coords = {
+            lat: legacyMeta.coords.lat,
+            lng: legacyMeta.coords.lng,
+            address: listing.address || legacyMeta.coords.address || "",
+          };
         }
 
         const nearby: Array<{ category: string; name: string; dist: string }> = [];
-        if (Array.isArray(meta.nearby)) {
-          meta.nearby.forEach((cat: any) => {
+        if (Array.isArray(originalMetadataRef.current.nearby)) {
+          originalMetadataRef.current.nearby.forEach((cat: any) => {
             if (cat.places && Array.isArray(cat.places)) {
               cat.places.forEach((p: any) => {
                 if (p.name) {
@@ -181,14 +233,25 @@ export function useListingForm(prefill: any = {}, showToast: (msg: string) => vo
           });
         }
 
-        const electric = listing.electricity_price != null ? String(listing.electricity_price) : meta.costs?.electric || "";
-        const water = listing.water_price != null ? String(listing.water_price) : meta.costs?.water || "";
-        const waterUnit = (listing.water_unit || meta.costs?.waterUnit || "person") as "person" | "cubic";
-        const service = listing.service_price != null ? String(listing.service_price) : meta.costs?.service || "";
-        const deposit = listing.deposit != null ? String(listing.deposit) : meta.costs?.deposit || "";
-        const other = meta.costs?.other || "";
+        const legacyCosts = originalMetadataRef.current.costs || {};
+        const electric = listing.electricity_price != null ? String(listing.electricity_price) : editableLegacyCost(legacyCosts.electric);
+        const water = listing.water_price != null ? String(listing.water_price) : editableLegacyCost(legacyCosts.water);
+        // Các row tạo bởi client cũ có `water_unit=person` do default RPC dù metadata
+        // ghi cubic. Chỉ tin cột unit khi cột giá nước cũng đã được ghi canonical.
+        const waterUnit = (listing.water_price != null
+          ? listing.water_unit || "person"
+          : legacyCosts.waterUnit || listing.water_unit || "person") as "person" | "cubic";
+        const service = listing.service_price != null ? String(listing.service_price) : editableLegacyCost(legacyCosts.service);
+        const deposit = listing.deposit != null ? String(listing.deposit) : editableLegacyCost(legacyCosts.deposit);
+        legacyDepositTextRef.current = listing.deposit == null
+          && typeof legacyCosts.deposit === "string"
+          && !editableLegacyCost(legacyCosts.deposit)
+          ? legacyCosts.deposit.trim()
+          : "";
+        setLegacyDepositCleared(false);
+        const other = legacyCosts.other || "";
 
-        formik.setValues({
+        formik.resetForm({ values: {
           title: listing.title || "",
           roomType: listing.property_type || "Phòng trọ",
           address: listing.address || "",
@@ -197,8 +260,8 @@ export function useListingForm(prefill: any = {}, showToast: (msg: string) => vo
           wardCode: listing.ward_code ?? null,
           area: listing.area ? String(listing.area) : "",
           price: listing.price ? formatVND(listing.price) : "",
-          maxPeople: meta.costs ? (meta as any).maxPeople || "" : "",
-          floor: (meta as any).floor || "",
+          maxPeople: (meta as any).maxPeople || (legacyMeta as any).maxPeople || "",
+          floor: (meta as any).floor || (legacyMeta as any).floor || "",
           phone: listing.contact_phone || "",
           curfewType,
           curfewTime,
@@ -212,7 +275,7 @@ export function useListingForm(prefill: any = {}, showToast: (msg: string) => vo
           service,
           deposit,
           other,
-        });
+        }});
 
         if (Array.isArray(listing.listing_media) && listing.listing_media.length > 0) {
           const sortedMedia = [...listing.listing_media].sort((a: any, b: any) => (a.sort_order || 0) - (b.sort_order || 0));
@@ -275,7 +338,8 @@ export function useListingForm(prefill: any = {}, showToast: (msg: string) => vo
     } else if (step === 3) {
       try {
         await step4Schema.validate(formik.values, { abortEarly: false });
-        formik.handleSubmit();
+        if (shouldShowBoostStep) setStep(4);
+        else formik.handleSubmit();
       } catch (err: any) {
         const formikErrors: any = {};
         if (err.inner) {
@@ -285,19 +349,21 @@ export function useListingForm(prefill: any = {}, showToast: (msg: string) => vo
         }
         formik.setErrors(formikErrors);
       }
+    } else if (step === 4 && shouldShowBoostStep) {
+      formik.handleSubmit();
     }
   };
 
   const prev = () => setStep((s) => Math.max(0, s - 1));
 
-  const handlePostSubmit = async (activateBoost: boolean, isDraft?: boolean) => {
+  const handlePostSubmit = async (isDraft = false, requestedBoostDays: number | null = null) => {
     if (!user) {
       showToast("Vui lòng đăng nhập để đăng tin");
       navigate("/dang-nhap");
       return;
     }
     setIsSubmitting(true);
-    setShowPayment(false);
+    setBoostCheckoutError(null);
 
     try {
       const isEditMode = Boolean(listingId);
@@ -332,10 +398,10 @@ export function useListingForm(prefill: any = {}, showToast: (msg: string) => vo
         }
       }).filter((m) => Boolean(m.storage_path));
 
-      const metadata: ListingMetadata = {
+      const baseMetadata = mergeEditedListingMetadata(originalMetadataRef.current, {
         curfew: {
           type: formik.values.curfewType,
-          time: formik.values.curfewTime,
+          time: formik.values.curfewType === "curfew" ? formik.values.curfewTime : "",
         },
         costs: {
           electric: formik.values.electric,
@@ -345,6 +411,7 @@ export function useListingForm(prefill: any = {}, showToast: (msg: string) => vo
           deposit: formik.values.deposit,
           other: formik.values.other,
         },
+        coords: isValidLatLng(formik.values.coords) ? formik.values.coords : null,
         nearby: NEARBY_CATEGORY_META
           .map((cat) => ({
             key: cat.key,
@@ -354,10 +421,19 @@ export function useListingForm(prefill: any = {}, showToast: (msg: string) => vo
               .map((n: { name: string; dist: string }) => ({ name: n.name, dist: n.dist })),
           }))
           .filter((cat) => cat.places.length > 0),
-        coords: formik.values.coords,
-      };
+      }, legacyDepositCleared ? "" : legacyDepositTextRef.current);
+      const metadata: ListingMetadata = { ...baseMetadata };
+      if (shouldShowBoostStep) {
+        // This is a seller preference only. The checkout RPC and verified
+        // webhook independently control payment and Boost entitlement.
+        if (requestedBoostDays !== null) {
+          metadata.boost_intent = { days: requestedBoostDays, selected_at: new Date().toISOString() };
+        } else {
+          delete metadata.boost_intent;
+        }
+      }
 
-      const finalDescription = appendMetadataToDescription(formik.values.description, metadata);
+      const finalDescription = formik.values.description.trim();
       const amenityLabels = formik.values.amenities.map(amenityKeyToLabel);
 
       const electricPrice = formik.values.electric ? parseFloat(cleanVND(formik.values.electric)) : null;
@@ -366,7 +442,7 @@ export function useListingForm(prefill: any = {}, showToast: (msg: string) => vo
       const depositPrice = formik.values.deposit ? parseFloat(cleanVND(formik.values.deposit)) : null;
 
       if (isEditMode && listingId) {
-        const returnedStatus = await updateListing({
+        let returnedStatus = await updateListing({
           id: listingId,
           title: formik.values.title,
           description: finalDescription,
@@ -393,13 +469,37 @@ export function useListingForm(prefill: any = {}, showToast: (msg: string) => vo
           media: finalMedia,
         });
 
+        // `update_listing_with_details` intentionally leaves a Draft as Draft
+        // so a seller can keep editing it. The final submit explicitly moves a
+        // completed draft through the same server-side validation gate as a new
+        // listing.
+        if (!isDraft && listingStatus === "Draft") {
+          returnedStatus = await submitDraftListing(listingId);
+        }
+
         setUpdatedStatus(returnedStatus);
+        setListingStatus(returnedStatus);
         if (returnedStatus === "PendingApproval") {
           showToast("Tin của bạn đã được cập nhật và cần duyệt lại trước khi hiển thị.");
         } else {
           showToast("Cập nhật tin đăng thành công!");
         }
         setNewRoomId(listingId);
+        if (!isDraft && returnedStatus === "PendingApproval" && shouldShowBoostStep && requestedBoostDays !== null) {
+          try {
+            const checkout = await createBoostCheckout(listingId, requestedBoostDays);
+            redirectToBoostCheckout(checkout);
+            return;
+          } catch (checkoutError) {
+            const message = getBoostCheckoutErrorMessage(
+              checkoutError,
+              "Tin đã được gửi duyệt nhưng chưa mở được payOS. Bạn có thể thanh toán lại trong Quản lý tin đăng.",
+            );
+            logError("useListingForm.createBoostCheckout", checkoutError);
+            setBoostCheckoutError(message);
+            showToast(message);
+          }
+        }
         setSuccess(true);
       } else {
         const createdId = await createListing({
@@ -415,6 +515,13 @@ export function useListingForm(prefill: any = {}, showToast: (msg: string) => vo
           wardCode: formik.values.wardCode,
           contactPhone: formik.values.phone,
           contactName: user.email || "Chủ nhà",
+          electricityPrice: electricPrice,
+          waterPrice,
+          waterUnit: formik.values.waterUnit,
+          servicePrice,
+          deposit: depositPrice,
+          accessPolicy: formik.values.curfewType === "curfew" ? "Restricted" : "Free",
+          accessCloseTime: formik.values.curfewType === "curfew" ? formik.values.curfewTime : null,
           amenities: amenityLabels,
           media: finalMedia,
           latitude: isValidLatLng(formik.values.coords) ? formik.values.coords.lat : null,
@@ -423,17 +530,37 @@ export function useListingForm(prefill: any = {}, showToast: (msg: string) => vo
           submit: isDraft ? false : true,
         });
 
+        const savedListingId = createdId || targetListingId;
+        setNewRoomId(savedListingId);
+
         if (isDraft) {
           setUpdatedStatus("Draft");
+          setListingStatus("Draft");
           showToast("Đã lưu bản nháp thành công!");
         } else {
-          const boostedListingId = createdId || targetListingId;
-          if (activateBoost && boostedListingId) {
-            await boostListing(boostedListingId, DEFAULT_BOOST_DAYS);
+          // Production uses manual moderation. We retain this state in the UI
+          // immediately; the database remains the source of truth for public
+          // visibility and webhook-triggered Boost activation.
+          setUpdatedStatus("PendingApproval");
+          setListingStatus("PendingApproval");
+
+          if (boostChoiceAvailable && requestedBoostDays !== null) {
+            try {
+              const checkout = await createBoostCheckout(savedListingId, requestedBoostDays);
+              redirectToBoostCheckout(checkout);
+              return;
+            } catch (checkoutError) {
+              const message = getBoostCheckoutErrorMessage(
+                checkoutError,
+                "Tin đã được gửi duyệt nhưng chưa mở được payOS. Bạn có thể thanh toán lại trong Quản lý tin đăng.",
+              );
+              logError("useListingForm.createBoostCheckout", checkoutError);
+              setBoostCheckoutError(message);
+              showToast(message);
+            }
           }
         }
 
-        setNewRoomId(createdId || targetListingId);
         setSuccess(true);
       }
     } catch (err: any) {
@@ -454,10 +581,6 @@ export function useListingForm(prefill: any = {}, showToast: (msg: string) => vo
     photos,
     setPhotos,
     uploadProgress,
-    isBoosted,
-    setIsBoosted,
-    showPayment,
-    setShowPayment,
     isSubmitting,
     success,
     newRoomId,
@@ -465,6 +588,14 @@ export function useListingForm(prefill: any = {}, showToast: (msg: string) => vo
     isLoadingListing,
     notFound,
     updatedStatus,
+    listingStatus,
+    selectedBoostDays,
+    setSelectedBoostDays,
+    boostCheckoutError,
+    legacyDepositText: legacyDepositTextRef.current,
+    legacyDepositCleared,
+    setLegacyDepositCleared,
     isEditMode: Boolean(listingId),
+    shouldShowBoostStep,
   };
 }

@@ -23,6 +23,26 @@ const DEFAULT_NONE_SUBSCRIPTION: SubscriptionData = {
 };
 
 /**
+ * BR-015: backend expiry is authoritative even if a stale row still says
+ * TRIAL/ACTIVE. The date column is a calendar date, so compare YYYY-MM-DD
+ * values instead of parsing it as midnight UTC.
+ */
+export function effectiveSubscriptionStatus(
+  rawStatus: string | null | undefined,
+  expireDate: string | null | undefined,
+  today = new Date().toISOString().slice(0, 10),
+): SubscriptionStatus {
+  const status = toSubscriptionStatus(rawStatus);
+  if (
+    (status === "TRIAL" || status === "ACTIVE") &&
+    (!expireDate || expireDate < today)
+  ) {
+    return "READ_ONLY";
+  }
+  return status;
+}
+
+/**
  * Fetch current user's SaaS subscription from database.
  */
 export async function getMySubscription(userId: string | undefined): Promise<SubscriptionData> {
@@ -38,11 +58,12 @@ export async function getMySubscription(userId: string | undefined): Promise<Sub
     return DEFAULT_NONE_SUBSCRIPTION;
   }
 
-  const status = toSubscriptionStatus(data.status);
+  const status = effectiveSubscriptionStatus(data.status, data.expire_date);
   let trialDaysLeft = 0;
 
   if (status === "TRIAL" && data.expire_date) {
-    const exp = new Date(data.expire_date);
+    // A date-only value expires at the end of that day, not at 00:00 UTC.
+    const exp = new Date(`${data.expire_date}T23:59:59.999Z`);
     const now = new Date();
     const diffTime = exp.getTime() - now.getTime();
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
@@ -67,20 +88,11 @@ export async function getMySubscription(userId: string | undefined): Promise<Sub
 }
 
 /**
- * Activate 30-day trial for current user via RPC set_subscription_status.
+ * Kích hoạt một lần dùng thử qua RPC chuyên biệt; client không được tự chọn
+ * trạng thái gói hay ngày hết hạn.
  */
 export async function activateTrial(userId: string): Promise<void> {
   if (!userId) return;
-  const { error } = await supabase.rpc("set_subscription_status", { p_status: "TRIAL" });
-  if (error) throw error;
-}
-
-/**
- * Set demo subscription status (NONE | TRIAL | ACTIVE | READ_ONLY) via RPC set_subscription_status.
- * ⚠️ Uses RPC set_subscription_status to ensure seller_id := auth.uid() on backend.
- */
-export async function setDemoStatus(userId: string, status: SubscriptionStatus): Promise<void> {
-  if (!userId) return;
-  const { error } = await supabase.rpc("set_subscription_status", { p_status: status });
+  const { error } = await supabase.rpc("activate_subscription_trial" as any);
   if (error) throw error;
 }

@@ -3,6 +3,8 @@ import { Link, useLocation } from "react-router";
 import { User, Star, Settings, Home, Search, Heart, Building2 } from "lucide-react";
 import { C, font } from "../theme";
 import { PublicNavbar } from "./PublicNavbar";
+import { BottomTabBar } from "./common/BottomTabBar";
+import { useBreakpoint } from "./useBreakpoint";
 
 /**
  * Khu vực TÀI KHOẢN — mọi thứ thuộc về một người dùng đã đăng nhập.
@@ -70,6 +72,8 @@ function GroupLabel({ children }: { children: ReactNode }) {
 
 export function RenterShell({ active = "account", children }: RenterShellProps) {
   const location = useLocation();
+  const { isMobile, width } = useBreakpoint();
+  const isCompact = width < 900;
 
   const renderItem = (item: NavItem) => {
     const Icon = item.icon;
@@ -102,9 +106,9 @@ export function RenterShell({ active = "account", children }: RenterShellProps) 
   return (
     <div style={{ minHeight: "100vh", background: C.bg, fontFamily: font, display: "flex", flexDirection: "column" }}>
       <PublicNavbar />
-      <div style={{ flex: 1, maxWidth: 1280, margin: "0 auto", width: "100%", padding: "24px 20px 60px", boxSizing: "border-box" }}>
-        <div style={{ display: "flex", gap: 24, flexWrap: "wrap", alignItems: "flex-start" }}>
-          <aside style={{ width: 260, flexShrink: 0, background: C.white, border: `1px solid ${C.border}`, borderRadius: 16, padding: "16px 12px", boxSizing: "border-box" }}>
+      <div style={{ flex: 1, maxWidth: 1280, margin: "0 auto", width: "100%", padding: isMobile ? "16px 12px 84px" : "24px 20px 60px", boxSizing: "border-box" }}>
+        <div style={{ display: "flex", flexDirection: isCompact ? "column" : "row", gap: isCompact ? 16 : 24, alignItems: "flex-start", minWidth: 0 }}>
+          <aside style={{ width: isCompact ? "100%" : 260, flexShrink: 0, background: C.white, border: `1px solid ${C.border}`, borderRadius: 16, padding: "16px 12px", boxSizing: "border-box" }}>
             <div style={{ padding: "8px 12px 12px", borderBottom: `1px solid ${C.border}` }}>
               <h2 style={{ fontFamily: font, fontSize: 16, fontWeight: 800, color: C.textPrimary, margin: 0 }}>Tài khoản của tôi</h2>
               <p style={{ fontFamily: font, fontSize: 12, color: C.textSecondary, margin: "4px 0 0" }}>Tin đăng · Thuê trọ · Hồ sơ</p>
@@ -122,9 +126,10 @@ export function RenterShell({ active = "account", children }: RenterShellProps) 
             </nav>
           </aside>
 
-          <main style={{ flex: 1, minWidth: 320 }}>{children}</main>
+          <main style={{ flex: 1, minWidth: 0, width: "100%", maxWidth: "100%" }}>{children}</main>
         </div>
       </div>
+      {isMobile && <BottomTabBar />}
     </div>
   );
 }

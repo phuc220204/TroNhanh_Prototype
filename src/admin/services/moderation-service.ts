@@ -29,6 +29,7 @@ export interface ModerationRow {
   rejection_reason: string | null;
   moderated_at: string | null;
   listing_media?: { storage_path: string; sort_order: number }[];
+  boost_orders?: { order_code: number; days: number; amount: number; status: string; paid_at: string | null; created_at: string }[];
 }
 
 export async function listListingsForModeration(
@@ -37,7 +38,7 @@ export async function listListingsForModeration(
   try {
     let query = supabase
       .from("rental_listings")
-      .select("id, title, price, district, address, status, created_at, seller_id, rejection_reason, moderated_at, listing_media(storage_path, sort_order)")
+      .select("id, title, price, district, address, status, created_at, seller_id, rejection_reason, moderated_at, listing_media(storage_path, sort_order), boost_orders(order_code, days, amount, status, paid_at, created_at)")
       .is("deleted_at", null)
       // Tin chờ duyệt lâu nhất lên trước — hàng chờ phải vơi theo thứ tự.
       .order("created_at", { ascending: filter === "PendingApproval" });

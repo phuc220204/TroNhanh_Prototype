@@ -6,6 +6,8 @@
 export interface PriceBounds {
   priceMin?: number;
   priceMax?: number;
+  priceMinExclusive?: number;
+  priceMaxExclusive?: number;
 }
 
 export interface AreaBounds {
@@ -14,36 +16,37 @@ export interface AreaBounds {
 }
 
 /**
- * Parse price range string label into min/max numbers (VND).
- * e.g. "Dưới 2 triệu" -> { priceMax: 2_000_000 }
- *      "2 – 4 triệu" -> { priceMin: 2_000_000, priceMax: 4_000_000 }
+ * Parse price range string label into bounds (VND). Shared edges have
+ * explicit ownership so a listing at a boundary belongs to only one range.
+ * e.g. "Dưới 2 triệu" -> { priceMaxExclusive: 2_000_000 }
+ *      "2 – 4 triệu" -> { priceMin: 2_000_000, priceMaxExclusive: 4_000_000 }
  *      "4 – 6 triệu" -> { priceMin: 4_000_000, priceMax: 6_000_000 }
- *      "Trên 6 triệu" -> { priceMin: 6_000_000 }
+ *      "Trên 6 triệu" -> { priceMinExclusive: 6_000_000 }
  */
 export function parsePriceRangeLabel(label: string | undefined): PriceBounds {
   if (!label) return {};
   const normalized = label.replace(/–|-/g, "-").trim();
 
   if (normalized.includes("Dưới 2")) {
-    return { priceMax: 2_000_000 };
+    return { priceMaxExclusive: 2_000_000 };
   }
   if (normalized.includes("2 - 4")) {
-    return { priceMin: 2_000_000, priceMax: 4_000_000 };
+    return { priceMin: 2_000_000, priceMaxExclusive: 4_000_000 };
   }
   if (normalized.includes("4 - 6")) {
     return { priceMin: 4_000_000, priceMax: 6_000_000 };
   }
   if (normalized.includes("4 - 7")) {
-    return { priceMin: 4_000_000, priceMax: 7_000_000 };
+    return { priceMin: 4_000_000, priceMaxExclusive: 7_000_000 };
   }
   if (normalized.includes("7 - 10")) {
     return { priceMin: 7_000_000, priceMax: 10_000_000 };
   }
   if (normalized.includes("Trên 6")) {
-    return { priceMin: 6_000_000 };
+    return { priceMinExclusive: 6_000_000 };
   }
   if (normalized.includes("Trên 10")) {
-    return { priceMin: 10_000_000 };
+    return { priceMinExclusive: 10_000_000 };
   }
   return {};
 }

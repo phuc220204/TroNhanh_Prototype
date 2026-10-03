@@ -260,7 +260,7 @@ export function OccupantsView({
     <div style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: 16, padding: mobile ? 16 : 22 }}>
       {/* Toast Banner */}
       {toastMsg && (
-        <div style={{ background: C.cream, border: `1px solid ${C.success}`, color: C.success, padding: "10px 16px", borderRadius: 10, fontFamily: font, fontSize: 13, fontWeight: 600, marginBottom: 16, display: "flex", alignItems: "center", gap: 8 }}>
+        <div data-testid="occupancy-toast" style={{ background: C.cream, border: `1px solid ${C.success}`, color: C.success, padding: "10px 16px", borderRadius: 10, fontFamily: font, fontSize: 13, fontWeight: 600, marginBottom: 16, display: "flex", alignItems: "center", gap: 8 }}>
           <CheckCircle size={16} />
           {toastMsg}
         </div>

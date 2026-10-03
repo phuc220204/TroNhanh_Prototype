@@ -5,6 +5,7 @@ import { C, font, radius, space } from "../../../shared/theme";
 
 interface RejectDialogProps {
   listingTitle: string;
+  hasPaidPendingBoost?: boolean;
   submitting: boolean;
   onCancel: () => void;
   onConfirm: (reason: string) => void;
@@ -15,7 +16,7 @@ interface RejectDialogProps {
  * Chặn ở đây là để người kiểm duyệt biết ngay; RPC `moderate_listing` cũng raise
  * REASON_REQUIRED. Cả hai lớp đều cần — lớp UI là trải nghiệm, lớp RPC là luật.
  */
-export function RejectDialog({ listingTitle, submitting, onCancel, onConfirm }: RejectDialogProps) {
+export function RejectDialog({ listingTitle, hasPaidPendingBoost = false, submitting, onCancel, onConfirm }: RejectDialogProps) {
   const [reason, setReason] = useState("");
   const trimmed = reason.trim();
   const canSubmit = trimmed.length >= 10 && !submitting;
@@ -42,6 +43,11 @@ export function RejectDialog({ listingTitle, submitting, onCancel, onConfirm }: 
       <p style={{ fontFamily: font, fontSize: 13.5, color: C.textSecondary, margin: `0 0 ${space[3]}px` }}>
         Tin: <strong style={{ color: C.textPrimary }}>{listingTitle}</strong>
       </p>
+      {hasPaidPendingBoost ? (
+        <p data-testid="moderation-reject-paid-boost-warning" style={{ fontFamily: font, fontSize: 12.5, lineHeight: 1.55, color: C.primary, background: C.cream, border: `1px solid ${C.border}`, borderRadius: radius.sm, padding: `${space[2]}px ${space[3]}px`, margin: `0 0 ${space[3]}px` }}>
+          Người đăng đã thanh toán Boost. Từ chối sẽ không tự hoàn tiền; khoản thanh toán được giữ để dùng khi họ sửa và gửi duyệt lại.
+        </p>
+      ) : null}
       <p style={{ fontFamily: font, fontSize: 13, fontWeight: 700, color: C.textPrimary, margin: `0 0 ${space[2]}px` }}>
         Lý do từ chối <span style={{ color: C.error }}>*</span>
       </p>

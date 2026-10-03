@@ -2,31 +2,16 @@ import { useState } from "react";
 import { useNavigate, Link, useSearchParams } from "react-router";
 import { supabase } from "../../shared/supabaseClient";
 import { C, font } from "../../shared/theme";
-import { Eye, EyeOff, Mail, Lock, ArrowLeft } from "lucide-react";
+import { Eye, EyeOff, Mail, Phone, Lock, ArrowLeft } from "lucide-react";
 import { GoogleSignInButton, AuthDivider } from "../../shared/components/common";
-
-/**
- * Chỉ chấp nhận đường dẫn nội bộ cho `?redirect=`.
- * Loại "https://…" và "//host" — nếu không, một link đăng nhập giả mạo có thể
- * đẩy user sang site khác ngay sau khi họ vừa nhập mật khẩu.
- */
-function toSafeRedirect(raw: string | null): string | null {
-  if (!raw) return null;
-  let decoded: string;
-  try {
-    decoded = decodeURIComponent(raw);
-  } catch {
-    return null;
-  }
-  if (!decoded.startsWith("/") || decoded.startsWith("//")) return null;
-  return decoded;
-}
+import { clearPostAuthRedirect, toSafeRedirect, withAuthRedirect } from "../../shared/utils/auth-redirect";
+import { isEmailIdentifier, normalizeVietnamPhone } from "../../shared/utils/phone";
 
 export function LoginPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const redirectUrl = toSafeRedirect(searchParams.get("redirect"));
-  const [email, setEmail] = useState("");
+  const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -34,8 +19,15 @@ export function LoginPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email || !password) {
-      setErrorMessage("Vui lòng điền đầy đủ email và mật khẩu.");
+    if (!identifier.trim() || !password) {
+      setErrorMessage("Vui lòng nhập số điện thoại hoặc email cùng mật khẩu.");
+      return;
+    }
+
+    const loginByEmail = isEmailIdentifier(identifier.trim());
+    const phone = loginByEmail ? null : normalizeVietnamPhone(identifier);
+    if (!loginByEmail && !phone) {
+      setErrorMessage("Số điện thoại chưa đúng định dạng. Hãy nhập số di động Việt Nam.");
       return;
     }
 
@@ -43,14 +35,13 @@ export function LoginPage() {
     setErrorMessage("");
 
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
+      const { data, error } = await supabase.auth.signInWithPassword(
+        loginByEmail ? { email: identifier.trim(), password } : { phone: phone!, password },
+      );
 
       if (error) {
         if (error.message === "Invalid login credentials") {
-          setErrorMessage("Email hoặc mật khẩu không chính xác.");
+          setErrorMessage("Thông tin đăng nhập hoặc mật khẩu không chính xác.");
         } else {
           setErrorMessage(error.message || "Đã xảy ra lỗi đăng nhập.");
         }
@@ -58,6 +49,7 @@ export function LoginPage() {
       }
 
       if (data.session) {
+        clearPostAuthRedirect();
         // Redirect to target URL or default homepage
         navigate(redirectUrl ?? "/");
       }
@@ -132,6 +124,8 @@ export function LoginPage() {
         {errorMessage && (
           <div
             data-testid="login-error"
+            role="alert"
+            aria-live="assertive"
             style={{
               background: "#FDF2F0",
               border: "1px solid #F5C2B9",
@@ -149,13 +143,13 @@ export function LoginPage() {
         )}
 
         <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 18 }}>
-          {/* Email field */}
+          {/* Email cho tài khoản cũ, SĐT cho tài khoản đăng ký mới */}
           <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-            <label style={{ fontSize: 13, fontWeight: 600, color: C.textPrimary }}>
-              Địa chỉ Email
+            <label htmlFor="login-identifier" style={{ fontSize: 13, fontWeight: 600, color: C.textPrimary }}>
+              Số điện thoại hoặc email
             </label>
             <div style={{ position: "relative" }}>
-              <Mail
+              {identifier.includes("@") ? <Mail
                 size={18}
                 color={C.textSecondary}
                 style={{
@@ -164,13 +158,17 @@ export function LoginPage() {
                   top: "50%",
                   transform: "translateY(-50%)",
                 }}
-              />
+              /> : <Phone size={18} color={C.textSecondary} style={{ position: "absolute", left: 14, top: "50%", transform: "translateY(-50%)" }} />}
               <input
-                type="email"
-                data-testid="login-email"
-                placeholder="ten@example.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                type="text"
+                id="login-identifier"
+                name="identifier"
+                data-testid="login-identifier"
+                autoComplete="username"
+                required
+                placeholder="0912 345 678 hoặc ten@example.com"
+                value={identifier}
+                onChange={(e) => setIdentifier(e.target.value)}
                 style={{
                   width: "100%",
                   border: `1.5px solid ${C.border}`,
@@ -190,7 +188,7 @@ export function LoginPage() {
 
           {/* Password field */}
           <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-            <label style={{ fontSize: 13, fontWeight: 600, color: C.textPrimary }}>
+            <label htmlFor="login-password" style={{ fontSize: 13, fontWeight: 600, color: C.textPrimary }}>
               Mật khẩu
             </label>
             <div style={{ position: "relative" }}>
@@ -206,7 +204,11 @@ export function LoginPage() {
               />
               <input
                 type={showPassword ? "text" : "password"}
+                id="login-password"
+                name="password"
                 data-testid="login-password"
+                autoComplete="current-password"
+                required
                 placeholder="••••••••"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
@@ -226,6 +228,8 @@ export function LoginPage() {
               />
               <button
                 type="button"
+                aria-label={showPassword ? "Ẩn mật khẩu" : "Hiện mật khẩu"}
+                aria-pressed={showPassword}
                 onClick={() => setShowPassword(!showPassword)}
                 style={{
                   position: "absolute",
@@ -278,12 +282,12 @@ export function LoginPage() {
 
         <AuthDivider />
 
-        <GoogleSignInButton disabled={isLoading} onError={setErrorMessage} />
+        <GoogleSignInButton disabled={isLoading} onError={setErrorMessage} redirect={redirectUrl} />
 
         <div style={{ marginTop: 24, textAlign: "center", fontSize: 13, color: C.textSecondary }}>
           Chưa có tài khoản?{" "}
           <Link
-            to="/dang-ky"
+            to={withAuthRedirect("/dang-ky", redirectUrl)}
             style={{
               color: C.primary,
               fontWeight: 600,

@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate, Link } from "react-router";
 import { PublicNavbar } from "../components/PublicNavbar";
 import { EmptyState } from "../components/common/EmptyState";
+import { BottomTabBar } from "../components/common/BottomTabBar";
 import { MessageSquare, Send, ArrowLeft, ExternalLink, CheckCircle, Clock } from "lucide-react";
 import { C, font } from "../theme";
 import { useBreakpoint } from "../components/useBreakpoint";
@@ -141,7 +142,7 @@ export function InboxPage() {
     <div style={{ minHeight: "100vh", background: C.bg, fontFamily: font, display: "flex", flexDirection: "column" }}>
       <PublicNavbar />
 
-      <div style={{ flex: 1, maxWidth: 1200, margin: "0 auto", width: "100%", padding: isMobile ? 12 : "24px 20px 48px", boxSizing: "border-box", display: "flex", flexDirection: "column" }}>
+      <div style={{ flex: 1, maxWidth: 1200, margin: "0 auto", width: "100%", padding: isMobile ? "12px 12px 76px" : "24px 20px 48px", boxSizing: "border-box", display: "flex", flexDirection: "column" }}>
         <h1 style={{ fontFamily: font, fontSize: isMobile ? 20 : 24, fontWeight: 800, color: C.textPrimary, margin: "0 0 16px" }}>
           Hộp thư tin nhắn
         </h1>
@@ -344,6 +345,7 @@ export function InboxPage() {
           )}
         </div>
       </div>
+      {isMobile && <BottomTabBar />}
     </div>
   );
 }

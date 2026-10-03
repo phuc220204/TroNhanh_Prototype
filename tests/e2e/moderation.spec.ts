@@ -47,6 +47,8 @@ async function postListing(page: Page, title: string): Promise<void> {
 
   await page.locator('[name="electric"]').fill("3500");
   await page.locator('[name="water"]').fill("100000");
+  await page.getByTestId("listing-next-btn").click();
+  await expect(page.getByTestId("listing-plan-step")).toBeVisible();
   await page.getByTestId("listing-submit-btn").click();
   await expect(page.getByTestId("listing-success")).toBeVisible({ timeout: 60_000 });
 }

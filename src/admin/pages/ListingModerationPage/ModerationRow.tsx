@@ -28,12 +28,19 @@ function formatWhen(iso: string): string {
   return d.toLocaleDateString("vi-VN", { day: "2-digit", month: "2-digit", year: "numeric" });
 }
 
+function formatVnd(value: number): string {
+  return new Intl.NumberFormat("vi-VN").format(value);
+}
+
 export function ModerationRowCard({ row, busy, onApprove, onReject, onHide, onRestore }: ModerationRowProps) {
   const meta = LISTING_META[toListingStatus(row.status)];
   const cover = listingImageUrls(row)[0];
   const isPending = row.status === "PendingApproval";
   const isActive = row.status === "Active";
   const isRejectedOrHidden = row.status === "Rejected" || row.status === "Hidden";
+  const heldBoostOrders = row.boost_orders?.filter((order) => order.status === "PAID_PENDING_APPROVAL") ?? [];
+  const heldBoostDays = heldBoostOrders.reduce((sum, order) => sum + order.days, 0);
+  const heldBoostAmount = heldBoostOrders.reduce((sum, order) => sum + order.amount, 0);
 
   return (
     <div
@@ -72,6 +79,12 @@ export function ModerationRowCard({ row, busy, onApprove, onReject, onHide, onRe
         {row.rejection_reason && (
           <p style={{ fontFamily: font, fontSize: 12.5, color: C.error, margin: `${space[2]}px 0 0` }}>
             Lý do đã từ chối: {row.rejection_reason}
+          </p>
+        )}
+
+        {heldBoostOrders.length > 0 && (
+          <p data-testid="moderation-paid-boost-notice" style={{ fontFamily: font, fontSize: 12.5, color: C.primary, background: C.cream, border: `1px solid ${C.border}`, borderRadius: radius.sm, padding: `${space[2]}px ${space[3]}px`, margin: `${space[2]}px 0 0`, lineHeight: 1.5 }}>
+            <strong>Đã nhận thanh toán Boost:</strong> {formatVnd(heldBoostAmount)} đ · {heldBoostDays} ngày. Duyệt tin sẽ bắt đầu thời hạn Boost ngay; từ chối sẽ giữ khoản này để người đăng sửa và gửi duyệt lại.
           </p>
         )}
 
