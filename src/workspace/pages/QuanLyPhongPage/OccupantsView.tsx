@@ -469,7 +469,7 @@ export function OccupantsView({
                 </label>
                 <input
                   type="email"
-                  placeholder="VD: renter.a@tronhanh.demo"
+                  placeholder="VD: ten@email.com"
                   value={renterEmail}
                   onChange={(e) => setRenterEmail(e.target.value)}
                   style={{ width: "100%", padding: "10px 12px", fontFamily: font, fontSize: 14, border: `1px solid ${C.border}`, borderRadius: 8, outline: "none", boxSizing: "border-box" }}
@@ -528,7 +528,7 @@ export function OccupantsView({
                 <input
                   type="email"
                   required
-                  placeholder="VD: renter.a@tronhanh.demo"
+                  placeholder="VD: ten@email.com"
                   value={linkEmailInput}
                   onChange={(e) => setLinkEmailInput(e.target.value)}
                   style={{ width: "100%", padding: "10px 12px", fontFamily: font, fontSize: 14, border: `1px solid ${C.border}`, borderRadius: 8, outline: "none", boxSizing: "border-box" }}

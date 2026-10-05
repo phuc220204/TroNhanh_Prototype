@@ -1452,10 +1452,6 @@ export type Database = {
         Args: { p_otp_hash: string; p_phone_e164: string; p_user_id: string }
         Returns: Json
       }
-      boost_listing: {
-        Args: { p_days: number; p_listing_id: string }
-        Returns: string
-      }
       can_review_contract: {
         Args: { p_contract: string; p_user: string }
         Returns: boolean

@@ -1,5 +1,14 @@
 # Các bước cần làm bằng tay để hoàn tất OC1
 
+> **Cập nhật 06/10/2026 — thay thế các bước về biến `VITE_*` của Boost bên dưới.**
+> Frontend không còn đọc `VITE_ENABLE_BOOST_CHECKOUT`, `VITE_PAYOS_TEST_MODE`,
+> `VITE_PAYOS_TEST_SELLER_ID` (có thể xóa trên Vercel). Trang đăng tin và Quản lý
+> tin hỏi Edge Function `payos-boost-packages`; **bật/tắt Boost cho toàn hệ thống
+> chỉ bằng secret Supabase `PAYOS_CHECKOUT_ENABLED`** (`true`/khác `true`), không
+> cần build lại frontend. Chế độ test (allowlist seller, CORS localhost) đã bị gỡ.
+> Link payOS hết hạn sau 15 phút; đơn chưa trả khác gói/giá hoặc quá 10 phút tự
+> chuyển `CANCELLED` và được thay bằng đơn mới (tiền trả vào đơn cũ vẫn được ghi nhận).
+
 Cập nhật 29/09/2026. Làm theo thứ tự dưới đây trên đúng Supabase/Vercel đang phục vụ `https://tronhanh.vercel.app/`. Mã đã sửa ở nhánh `codex/fix-oc1-market-ready`; website công khai chưa tự nhận các thay đổi này. Vì migration đã siết quyền ghi DB trước khi frontend mới lên Vercel, tránh tạo/sửa tin trên site live cho tới khi deploy frontend tương thích; các thao tác ghi cũ có thể bị từ chối.
 
 ## 1. Chuẩn bị quyền và bản xem trước

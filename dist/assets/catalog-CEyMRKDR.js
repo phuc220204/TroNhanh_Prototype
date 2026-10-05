@@ -1,1 +1,0 @@
-const n=["Phòng trọ","Căn hộ mini","Căn hộ dịch vụ","Ký túc xá","Nhà nguyên căn"],t=["Dưới 2 triệu","2 – 4 triệu","4 – 6 triệu","Trên 6 triệu"],i=["Máy lạnh","Wifi","Gác lửng","Chỗ để xe","WC riêng","Giờ giấc tự do","Cho nuôi thú cưng"],c=["Dưới 20 m²","20 – 30 m²","30 – 45 m²","Trên 45 m²"],h="Tìm trọ nhanh — Quản lý gọn";export{i as A,n as P,h as T,t as a,c as b};

@@ -11,12 +11,6 @@ import { useSubscriptionContext } from "../../contexts/SubscriptionContext";
 
 export type LandlordNavId = "overview" | "rooms" | "listings" | "occupants" | "payments" | "settings";
 
-function clearDemoAuth() {
-  try {
-    localStorage.removeItem("tronhanh.demoUser");
-    sessionStorage.removeItem("tronhanh.demoUser");
-  } catch { /* storage unavailable — ignore */ }
-}
 
 // Khu vực chủ trọ giờ CHỈ còn phần vận hành. "Quản lý tin đăng" đã chuyển sang
 // `/tai-khoan/tin-cho-thue`: đăng tin là việc miễn phí ai cũng làm được, để nó
@@ -113,7 +107,7 @@ export function Sidebar({ active, onSaaSAccess }: { active: LandlordNavId; onSaa
 
       <div style={{ padding: "0 12px 14px" }}>
         <button onClick={() => navigate("/")} style={{ display: "flex", alignItems: "center", gap: 11, padding: "9px 13px", borderRadius: 10, border: "none", background: "transparent", cursor: "pointer", fontFamily: font, fontSize: 13, fontWeight: 500, color: C.textSecondary, width: "100%" }}><Search size={16} /> Về trang tìm phòng</button>
-        <button onClick={() => { signOut(); clearDemoAuth(); navigate("/"); }} style={{ display: "flex", alignItems: "center", gap: 11, padding: "9px 13px", borderRadius: 10, border: "none", background: "transparent", cursor: "pointer", fontFamily: font, fontSize: 13, fontWeight: 600, color: C.repairing, width: "100%" }}><LogOut size={16} /> Đăng xuất</button>
+        <button onClick={() => { signOut(); navigate("/"); }} style={{ display: "flex", alignItems: "center", gap: 11, padding: "9px 13px", borderRadius: 10, border: "none", background: "transparent", cursor: "pointer", fontFamily: font, fontSize: 13, fontWeight: 600, color: C.repairing, width: "100%" }}><LogOut size={16} /> Đăng xuất</button>
       </div>
     </aside>
   );
@@ -169,7 +163,6 @@ export function MobileTabBar({ active, onSaaSAccess }: { active: LandlordNavId; 
         onLogout={() => {
           setAccountOpen(false);
           signOut();
-          clearDemoAuth();
           setLoggedOut(true);
           window.setTimeout(() => navigate("/"), 650);
         }}
