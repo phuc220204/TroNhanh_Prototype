@@ -53,6 +53,17 @@ export const mapTypeToKey = (type: string): string => {
 };
 
 import { publicUrl } from "../../shared/services/media-service";
+import { getListingPostedAt, isNewlyPosted } from "../utils/posted-time";
+
+/** Nhãn trên card tin. Chuỗi hiển thị nằm ở `ListingCardMeta`, không ở đây. */
+export type ListingBadge = "featured" | "new";
+
+/** Tin đang Boost: đã thanh toán qua payOS và còn hạn (khớp `is_boost_active` ở DB). */
+export function hasActiveVerifiedBoost(row: any): boolean {
+  return row?.boost_payment_verified === true
+    && typeof row?.boost_expire_at === "string"
+    && new Date(row.boost_expire_at).getTime() > Date.now();
+}
 
 /**
  * Return listing image URLs prioritizing listing_media database table, or falling back to deterministic Unsplash images.
@@ -78,11 +89,14 @@ export interface ListingCardItem {
   loc: string;
   amenities: string[];
   type: string;
-  badge: "Mới đăng" | "Boost" | null;
+  /** "featured" = đang Boost (đã thanh toán, còn hạn); "new" = đăng ≤ 72 giờ. */
+  badge: ListingBadge | null;
   img: string;
   contact_phone: string;
   boost_expire_at: string | null;
   created_at: string;
+  /** Lúc tin bắt đầu hiển thị công khai (`approved_at`, thiếu thì `created_at`). */
+  postedAt: string | null;
   views_count?: number;
   /** BR-024 — chỉ có giá trị khi khu bật trang công khai. null = không hiện badge. */
   rating?: number | null;
@@ -113,16 +127,11 @@ export function toListingCard(row: any): ListingCardItem {
     ? row.amenities
     : [];
 
-  const hasVerifiedBoost = row?.boost_payment_verified === true
-    && typeof row?.boost_expire_at === "string"
-    && new Date(row.boost_expire_at).getTime() > Date.now();
-  let badge: "Mới đăng" | "Boost" | null = hasVerifiedBoost ? "Boost" : null;
-  if (!badge && row?.created_at) {
-    const created = new Date(row.created_at);
-    const now = new Date();
-    const diffHours = (now.getTime() - created.getTime()) / (1000 * 60 * 60);
-    if (diffHours <= 72) badge = "Mới đăng";
-  }
+  const hasVerifiedBoost = hasActiveVerifiedBoost(row);
+  const postedAt = getListingPostedAt(row ?? {});
+  const badge: ListingBadge | null = hasVerifiedBoost
+    ? "featured"
+    : isNewlyPosted(postedAt, new Date()) ? "new" : null;
 
   const imgs = listingImageUrls(row);
 
@@ -141,6 +150,7 @@ export function toListingCard(row: any): ListingCardItem {
     contact_phone: row.contact_phone || "",
     boost_expire_at: row.boost_expire_at || null,
     created_at: row.created_at || new Date().toISOString(),
+    postedAt,
     views_count: row.view_count || row.views_count || 0,
   };
 }

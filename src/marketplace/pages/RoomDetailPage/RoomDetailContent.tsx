@@ -10,6 +10,7 @@ import { nearbyCategoryMeta } from "../../../shared/constants/nearby";
 import { LeafletMap, isValidLatLng } from "../../../shared/components/common/LeafletMap";
 import { listPropertyReviews } from "../../services/review-service";
 import { getListingImage, type ListingCardItem } from "../../services/listing-mappers";
+import { ListingHeaderMeta, ListingPostedTime, ListingTag } from "../../components/ListingCardMeta";
 import { SaveListingButton } from "../../components/SaveListingButton";
 import { parseMetadataFromDescription } from "../../utils/listingMetadata";
 import { getListingCosts } from "../../utils/listingCosts";
@@ -224,6 +225,7 @@ export function TitleBlock({ listing }: { listing: any }) {
         <span style={{ background: "#E8F5E1", color: "#4A7A34", fontFamily: font, fontSize: 12, fontWeight: 700, borderRadius: 999, padding: "3px 12px" }}>
           ● Trống
         </span>
+        <ListingHeaderMeta listing={listing} />
       </div>
     </div>
   );
@@ -490,6 +492,7 @@ export function SimilarRooms({ listings, district, onOpen }: { listings: Listing
             onMouseLeave={e => (e.currentTarget.style.boxShadow = "none")}>
             <div style={{ position: "relative", height: 140 }}>
               <img src={room.img} alt={room.title} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+              <ListingTag badge={room.badge} style={{ position: "absolute", top: 8, left: 8 }} />
               <div style={{ position: "absolute", bottom: 8, right: 8, background: C.primaryDark, borderRadius: 999, padding: "3px 10px" }}>
                 <span style={{ fontFamily: font, fontSize: 12, fontWeight: 700, color: C.cream }}>{room.price}/tháng</span>
               </div>
@@ -500,6 +503,7 @@ export function SimilarRooms({ listings, district, onOpen }: { listings: Listing
                 <MapPin size={11} color={C.secondary} />
                 <span style={{ fontFamily: font, fontSize: 12, color: C.textSecondary }}>{room.loc} · {room.area} m²</span>
               </div>
+              <ListingPostedTime postedAt={room.postedAt} style={{ display: "flex", marginBottom: 8 }} />
               <div style={{ display: "flex", flexWrap: "wrap", gap: 5 }}>
                 {room.amenities.slice(0, 3).map(tag => (
                   <span key={tag} style={{ fontFamily: font, fontSize: 11, color: C.textSecondary, background: C.caramelSoft, borderRadius: 6, padding: "2px 8px" }}>{tag}</span>

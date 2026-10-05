@@ -8,6 +8,7 @@ import { useAuth } from "../../shared/contexts/AuthContext";
 import { getListingImage, listingImageUrls, type ListingCardItem } from "../services/listing-mappers";
 import { getListingById, incrementViewCount, getSimilarListings } from "../services/listing-queries";
 import { logError } from "../../shared/services/supabase-error";
+import { ListingHeaderMeta } from "../components/ListingCardMeta";
 import { startConversation } from "../../shared/services/messaging-service";
 import {
   AmenitiesGrid, CostTable, DescriptionSection, GalleryLightbox, ImageGallery,
@@ -159,6 +160,9 @@ export function RoomDetailPage() {
               <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
                 <MapPin size={13} color={C.secondary} />
                 <span style={{ fontFamily: font, fontSize: 13, color: C.textSecondary }}>{listing.district}</span>
+              </div>
+              <div style={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: 8, marginTop: 8 }}>
+                <ListingHeaderMeta listing={listing} size={12} />
               </div>
             </div>
 

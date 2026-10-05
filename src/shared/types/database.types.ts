@@ -895,6 +895,7 @@ export type Database = {
           district: string
           electricity_price: number | null
           expire_at: string | null
+          first_published_at: string | null
           id: string
           latitude: number | null
           longitude: number | null
@@ -935,6 +936,7 @@ export type Database = {
           district: string
           electricity_price?: number | null
           expire_at?: string | null
+          first_published_at?: string | null
           id?: string
           latitude?: number | null
           longitude?: number | null
@@ -975,6 +977,7 @@ export type Database = {
           district?: string
           electricity_price?: number | null
           expire_at?: string | null
+          first_published_at?: string | null
           id?: string
           latitude?: number | null
           longitude?: number | null

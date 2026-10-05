@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router";
 import {
   ArrowRight, Banknote, Bath, Building2, Car, Clock, FileText, Home,
-  Layers, MapPin, Search, Shield, ShieldCheck, SlidersHorizontal, Star,
+  Layers, MapPin, Search, Shield, ShieldCheck, SlidersHorizontal,
   UserCheck, Wifi, Wind,
 } from "lucide-react";
 import { useBreakpoint } from "../../../shared/components/useBreakpoint";
@@ -10,6 +10,8 @@ import { C, font } from "../../../shared/theme";
 import { AppSelect } from "../../../shared/components/common/AppSelect";
 import { EmptyState, Skeleton } from "../../../shared/components/common";
 import { SaveListingButton } from "../../components/SaveListingButton";
+import { FEATURED_CARD_BORDER, ListingPostedTime, ListingTag } from "../../components/ListingCardMeta";
+import type { ListingBadge } from "../../services/listing-mappers";
 import { PROPERTY_TYPES, PRICE_RANGES, TAGLINE } from "../../../shared/constants/catalog";
 
 const LOAI_PHONG = [...PROPERTY_TYPES];
@@ -32,9 +34,10 @@ const AMENITY_META: Record<string, { Icon: React.ElementType; label: string }> =
 const CHIPS = ["Tất cả", ...PROPERTY_TYPES];
 
 export function RoomCard({ room, mobile, onClick }: {
-  room: { id: any; title: string; price: string; area: number | string; loc: string; amenities: string[]; badge?: string | null; img: string }; mobile?: boolean; onClick?: () => void;
+  room: { id: any; title: string; price: string; area: number | string; loc: string; amenities: string[]; badge?: ListingBadge | null; postedAt?: string | null; img: string }; mobile?: boolean; onClick?: () => void;
 }) {
   const [hov, setHov] = useState(false);
+  const isFeatured = room.badge === "featured";
   return (
     <div onClick={onClick} role="link" tabIndex={0} aria-label={`Xem tin ${room.title}`}
       onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); onClick?.(); } }}
@@ -42,7 +45,8 @@ export function RoomCard({ room, mobile, onClick }: {
       data-listing-id={room.id}
       onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
       style={{
-        background: C.white, border: `1.5px solid ${hov ? C.secondary : C.border}`,
+        // Tin nổi bật có viền màu nhấn để nhận ra ngay cả khi lướt nhanh.
+        background: C.white, border: `1.5px solid ${isFeatured ? FEATURED_CARD_BORDER : hov ? C.secondary : C.border}`,
         borderRadius: 16, overflow: "hidden",
         boxShadow: hov ? "0 12px 30px rgba(92,70,50,0.12)" : "0 2px 12px rgba(92,70,50,0.05)",
         transform: hov ? "translateY(-4px)" : "none",
@@ -55,12 +59,7 @@ export function RoomCard({ room, mobile, onClick }: {
           style={{ width: "100%", height: mobile ? 140 : 190, objectFit: "cover", display: "block", transition: "transform 0.4s ease-in-out", transform: hov ? "scale(1.06)" : "none" }} />
         <SaveListingButton listingId={room.id} overlay size={15} />
         <span style={{ position: "absolute", top: 12, left: 12, background: C.available, color: "#fff", fontFamily: font, fontSize: 10.5, fontWeight: 700, borderRadius: 999, padding: "4px 10px", boxShadow: "0 2px 6px rgba(79,122,74,0.2)" }}>Còn trống</span>
-        {room.badge && (
-          <span style={{ position: "absolute", bottom: 12, left: 12, background: C.primary, color: "#fff", fontFamily: font, fontSize: 10, fontWeight: 700, borderRadius: 6, padding: "3px 8px", display: "inline-flex", alignItems: "center", gap: 3, boxShadow: "0 2px 6px rgba(138,74,32,0.2)" }}>
-            <Star size={9} fill="#fff" strokeWidth={0} />
-            {room.badge}
-          </span>
-        )}
+        <ListingTag badge={room.badge} style={{ position: "absolute", bottom: 12, left: 12 }} />
       </div>
       <div style={{ padding: "16px", display: "flex", flexDirection: "column", flex: 1, minWidth: 0, textAlign: "left" }}>
         <p style={{ fontFamily: font, fontSize: 14.5, fontWeight: 700, color: C.textPrimary, margin: "0 0 8px", lineHeight: 1.45, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
@@ -73,8 +72,10 @@ export function RoomCard({ room, mobile, onClick }: {
           <MapPin size={12} color={C.textSecondary} />
           <span style={{ fontFamily: font, fontSize: 12, color: C.textSecondary, fontWeight: 500 }}>{room.area} m² · {room.loc}</span>
         </div>
+        <ListingPostedTime postedAt={room.postedAt} style={{ marginTop: -8, marginBottom: 12 }} />
         <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: "auto" }}>
-          {room.amenities.slice(0, 3).map(a => {
+          {/* Lọc khóa có icon TRƯỚC khi cắt 3 — tránh card trống vì 3 tiện ích đầu không có icon. */}
+          {room.amenities.filter(a => AMENITY_META[a]).slice(0, 3).map(a => {
             const m = AMENITY_META[a]; if (!m) return null;
             const { Icon, label } = m;
             return (

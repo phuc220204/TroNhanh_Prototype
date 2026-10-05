@@ -10,6 +10,7 @@ import { useAuth } from "../../shared/contexts/AuthContext";
 import { qk } from "../../shared/query/keys";
 import { getSavedListings } from "../services/saved-listings-service";
 import { SaveListingButton } from "../components/SaveListingButton";
+import { ListingPostedTime, ListingTag } from "../components/ListingCardMeta";
 import type { ListingCardItem } from "../services/listing-mappers";
 
 /**
@@ -33,6 +34,7 @@ function SavedCard({ item, onOpen }: { item: ListingCardItem; onOpen: () => void
       <div style={{ position: "relative", height: 168 }}>
         <img src={item.img} alt={item.title} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
         <SaveListingButton listingId={item.id} overlay size={16} />
+        <ListingTag badge={item.badge} style={{ position: "absolute", bottom: 10, left: 10 }} />
       </div>
       <div style={{ padding: "13px 15px", display: "flex", flexDirection: "column", gap: 7 }}>
         <p style={{ fontFamily: font, fontSize: 14, fontWeight: 700, color: C.textPrimary, margin: 0, lineHeight: 1.4 }}>
@@ -47,6 +49,7 @@ function SavedCard({ item, onOpen }: { item: ListingCardItem; onOpen: () => void
           </span>
         </div>
         <span style={{ fontFamily: font, fontSize: 15, fontWeight: 800, color: C.primary }}>{item.price}<span style={{ fontSize: 12, fontWeight: 400, color: C.textSecondary }}>/tháng</span></span>
+        <ListingPostedTime postedAt={item.postedAt} />
       </div>
     </div>
   );
