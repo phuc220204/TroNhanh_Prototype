@@ -101,6 +101,17 @@ export function DangTinPage() {
     return () => window.removeEventListener("beforeunload", warnBeforeUnload);
   }, [hasUnsavedChanges]);
 
+  // Bản nháp có thể nhớ một gói Boost mà server không còn bán (admin đổi gói).
+  // Khi đã có danh sách gói thật thì bỏ lựa chọn cũ, để không gửi đi thanh toán.
+  useEffect(() => {
+    if (selectedBoostDays === null || boost.packages.length === 0) return;
+    if (!boost.packages.some((item) => item.days === selectedBoostDays)) setSelectedBoostDays(null);
+  }, [boost.packages, selectedBoostDays, setSelectedBoostDays]);
+
+  // Lưu nháp giữ nguyên lựa chọn Boost khi gói đang tải hoặc tải lỗi tạm thời;
+  // chỉ bỏ khi server chủ động tắt Boost.
+  const isBoostDisabledByServer = !boost.isBoostAvailable && !boost.isPending && !boost.hasLoadError;
+
   if (isLoadingListing) {
     return (
       <div style={{ minHeight: "100vh", background: C.bg, fontFamily: font, display: "flex", flexDirection: "column" }}>
@@ -282,7 +293,7 @@ export function DangTinPage() {
                   type="button"
                   data-testid="listing-draft-btn"
                   disabled={isSubmitting}
-                  onClick={() => handlePostSubmit(true, boostChoiceAvailable ? selectedBoostDays : null)}
+                  onClick={() => handlePostSubmit(true, isBoostDisabledByServer ? null : selectedBoostDays)}
                   style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "10px 18px", background: C.white, border: `1.5px solid ${C.border}`, borderRadius: 10, fontFamily: font, fontSize: 13.5, fontWeight: 600, color: C.textPrimary, cursor: isSubmitting ? "not-allowed" : "pointer" }}
                 >
                   Lưu nháp

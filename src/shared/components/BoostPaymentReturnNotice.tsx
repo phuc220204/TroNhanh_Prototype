@@ -74,7 +74,7 @@ export function BoostPaymentReturnNotice() {
   if (state.kind === "PAID") message = `Đã xác nhận thanh toán đơn ${returnOrder.orderCode}${state.amount ? ` · ${new Intl.NumberFormat("vi-VN").format(state.amount)} đ` : ""}.`;
   if (state.kind === "NEEDS_REVIEW") message = "Đã nhận thanh toán nhưng tin cần được hỗ trợ đối soát. Vui lòng liên hệ bộ phận hỗ trợ và cung cấp mã đơn.";
   // Đơn bị thay bằng đơn mới (đổi gói/giá) hoặc link quá hạn — chưa nhận tiền.
-  if (state.kind === "CANCELLED") message = `Đơn ${returnOrder.orderCode} đã hết hạn hoặc đã được thay bằng đơn mới và chưa ghi nhận thanh toán. Nếu bạn đã chuyển tiền, hệ thống vẫn ghi nhận khi payOS xác nhận — đừng thanh toán lần hai.`;
+  if (state.kind === "CANCELLED") message = `Đơn ${returnOrder.orderCode} đã hết hạn hoặc đã được thay bằng đơn mới và chưa ghi nhận thanh toán. Nếu bạn đã chuyển tiền qua link cũ, hệ thống vẫn ghi nhận khi payOS xác nhận — hãy kiểm tra lại sau ít phút trước khi thanh toán lần nữa.`;
   if (state.kind === "PENDING" || state.kind === "LINKED") {
     message = returnOrder.result === "cancel"
       ? `Đơn ${returnOrder.orderCode} chưa được xác nhận thanh toán. Nếu bạn đã chuyển tiền, hãy kiểm tra lại sau ít phút; đừng tạo giao dịch lần hai.`

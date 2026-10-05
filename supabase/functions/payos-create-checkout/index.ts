@@ -5,25 +5,11 @@ import { getPayosCorsOrigin } from "../_shared/boost-access.mjs";
 const PAYOS_API_URL = "https://api-merchant.payos.vn/v2/payment-requests";
 // Link payOS sống 15 phút. DB chỉ dùng lại đơn mở tạo chưa quá 10 phút
 // (migration 20261006100100) ⇒ link trả lại cho khách luôn còn ≥ 5 phút.
+// KHÔNG chủ động hủy link của đơn bị thay: khách có thể đang chuyển khoản dở,
+// hủy link thì payOS không gửi webhook ⇒ mất tiền mà không có Boost. Link tự hết
+// hạn theo `expiredAt`; nếu tiền vẫn về, webhook ghi nhận cả đơn CANCELLED.
 const PAYMENT_LINK_TTL_SECONDS = 15 * 60;
 
-/**
- * Hủy link payOS của đơn vừa bị thay (khác gói, đổi giá, hoặc quá hạn).
- * Best-effort: lỗi cũng không sao — link tự hết hạn theo `expiredAt`, và nếu khách
- * vẫn trả vào đơn cũ thì webhook vẫn ghi nhận và cấp Boost.
- */
-async function cancelPayosLink(orderCode: number, clientId: string, apiKey: string): Promise<void> {
-  try {
-    await fetch(`${PAYOS_API_URL}/${orderCode}/cancel`, {
-      method: "POST",
-      headers: { "content-type": "application/json", "x-client-id": clientId, "x-api-key": apiKey },
-      body: JSON.stringify({ cancellationReason: "Đã tạo đơn Boost mới" }),
-      signal: AbortSignal.timeout(5_000),
-    });
-  } catch {
-    // Bỏ qua — xem comment ở trên.
-  }
-}
 
 function json(body: object, status: number, origin: string) {
   return new Response(JSON.stringify(body), {
@@ -98,10 +84,7 @@ Deno.serve(async (request) => {
   if (orderError || !Array.isArray(orderRows) || orderRows.length !== 1) {
     return json({ error: "BOOST_ORDER_REJECTED" }, 400, corsOrigin);
   }
-  const order = orderRows[0] as { order_code: number; amount: number; replaced_order_code: number | null };
-  if (typeof order.replaced_order_code === "number") {
-    await cancelPayosLink(order.replaced_order_code, clientId, apiKey);
-  }
+  const order = orderRows[0] as { order_code: number; amount: number };
   if (!Number.isSafeInteger(order.order_code) || !Number.isInteger(order.amount)) {
     return json({ error: "BOOST_ORDER_INVALID" }, 500, corsOrigin);
   }
