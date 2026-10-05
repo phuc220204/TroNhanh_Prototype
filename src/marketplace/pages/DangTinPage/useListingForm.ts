@@ -4,8 +4,8 @@ import { useFormik } from "formik";
 import * as Yup from "yup";
 import { useAuth } from "../../../shared/contexts/AuthContext";
 import { createListing, submitDraftListing, updateListing } from "../../services/listing-mutations";
-import { getListingById } from "../../services/listing-queries";
-import { createBoostCheckout, getBoostCheckoutErrorMessage, redirectToBoostCheckout } from "../../services/boost-payment-service";
+import { getListingById, getListingStatus } from "../../services/listing-queries";
+import { canCheckoutBoostForStatus, startBoostCheckoutForListing } from "./listing-boost-checkout";
 import { publicUrl, uploadListingImages, type UploadedMedia } from "../../../shared/services/media-service";
 import { formatVND, cleanVND, mergeEditedListingMetadata, parseMetadataFromDescription, type ListingCoords, type ListingMetadata } from "../../utils/listingMetadata";
 import { logError, toUserMessage } from "../../../shared/services/supabase-error";
@@ -485,20 +485,12 @@ export function useListingForm(
           showToast("Cập nhật tin đăng thành công!");
         }
         setNewRoomId(listingId);
-        if (!isDraft && returnedStatus === "PendingApproval" && shouldShowBoostStep && requestedBoostDays !== null) {
-          try {
-            const checkout = await createBoostCheckout(listingId, requestedBoostDays);
-            redirectToBoostCheckout(checkout);
-            return;
-          } catch (checkoutError) {
-            const message = getBoostCheckoutErrorMessage(
-              checkoutError,
-              "Tin đã được gửi duyệt nhưng chưa mở được payOS. Bạn có thể thanh toán lại trong Quản lý tin đăng.",
-            );
-            logError("useListingForm.createBoostCheckout", checkoutError);
-            setBoostCheckoutError(message);
-            showToast(message);
-          }
+        // Bản nháp được tự duyệt thì về Active — vẫn phải mở thanh toán Boost.
+        if (!isDraft && canCheckoutBoostForStatus(returnedStatus) && shouldShowBoostStep && requestedBoostDays !== null) {
+          const checkoutError = await startBoostCheckoutForListing(listingId, requestedBoostDays);
+          if (checkoutError === null) return;
+          setBoostCheckoutError(checkoutError);
+          showToast(checkoutError);
         }
         setSuccess(true);
       } else {
@@ -538,26 +530,17 @@ export function useListingForm(
           setListingStatus("Draft");
           showToast("Đã lưu bản nháp thành công!");
         } else {
-          // Production uses manual moderation. We retain this state in the UI
-          // immediately; the database remains the source of truth for public
-          // visibility and webhook-triggered Boost activation.
-          setUpdatedStatus("PendingApproval");
-          setListingStatus("PendingApproval");
+          // Server quyết định status (tự duyệt → Active, kiểm duyệt tay →
+          // PendingApproval). Đọc lại để thông báo đúng; lỗi đọc thì coi như chờ duyệt.
+          const savedStatus = (await getListingStatus(savedListingId)) ?? "PendingApproval";
+          setUpdatedStatus(savedStatus);
+          setListingStatus(savedStatus);
 
-          if (boostChoiceAvailable && requestedBoostDays !== null) {
-            try {
-              const checkout = await createBoostCheckout(savedListingId, requestedBoostDays);
-              redirectToBoostCheckout(checkout);
-              return;
-            } catch (checkoutError) {
-              const message = getBoostCheckoutErrorMessage(
-                checkoutError,
-                "Tin đã được gửi duyệt nhưng chưa mở được payOS. Bạn có thể thanh toán lại trong Quản lý tin đăng.",
-              );
-              logError("useListingForm.createBoostCheckout", checkoutError);
-              setBoostCheckoutError(message);
-              showToast(message);
-            }
+          if (boostChoiceAvailable && requestedBoostDays !== null && canCheckoutBoostForStatus(savedStatus)) {
+            const checkoutError = await startBoostCheckoutForListing(savedListingId, requestedBoostDays);
+            if (checkoutError === null) return;
+            setBoostCheckoutError(checkoutError);
+            showToast(checkoutError);
           }
         }
 

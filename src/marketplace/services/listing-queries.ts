@@ -372,6 +372,21 @@ export async function getFeaturedListings(limit = 6): Promise<ListingCardItem[]>
 }
 
 /**
+ * Trạng thái thật của tin sau khi tạo. `create_listing_with_details` chỉ trả id,
+ * còn status do server quyết định (tự duyệt → Active, kiểm duyệt tay → PendingApproval).
+ */
+export async function getListingStatus(id: string): Promise<string | null> {
+  try {
+    const { data, error } = await supabase.from("rental_listings").select("status").eq("id", id).maybeSingle();
+    if (error) throw error;
+    return data?.status ?? null;
+  } catch (err) {
+    logError("listing-queries.getListingStatus", err);
+    return null;
+  }
+}
+
+/**
  * Fetch listing detail by ID with media, amenities, property details, and owner profile.
  */
 export async function getListingById(id: string) {

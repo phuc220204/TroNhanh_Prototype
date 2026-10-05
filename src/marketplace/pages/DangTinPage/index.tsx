@@ -147,21 +147,23 @@ export function DangTinPage() {
       ? "Đã lưu bản nháp thành công!"
       : isEditMode
         ? (updatedStatus === "PendingApproval" ? "Cập nhật & Đã gửi duyệt lại!" : "Cập nhật tin thành công!")
-        : "Đã tiếp nhận tin đăng!";
+        : updatedStatus === "Active" ? "Tin đã được đăng!" : "Đã tiếp nhận tin đăng!";
 
     const successDesc = updatedStatus === "Draft"
       ? "Tin đăng của bạn đã được lưu dưới dạng Bản nháp. Bạn có thể mở lại để chỉnh sửa và gửi duyệt sau từ trang Quản lý tin đăng."
       : boostCheckoutError
-        ? `${boostCheckoutError} Tin vẫn đang chờ duyệt; sau khi thanh toán thành công, Boost chỉ bắt đầu khi moderator duyệt tin.`
+        ? (updatedStatus === "Active"
+          ? `${boostCheckoutError} Tin đang hiển thị; Boost bắt đầu ngay khi thanh toán thành công.`
+          : `${boostCheckoutError} Tin đang chờ duyệt; sau khi thanh toán thành công, Boost bắt đầu khi tin được duyệt.`)
       : isEditMode
         ? (updatedStatus === "PendingApproval"
           ? "Tin của bạn đã được cập nhật và cần duyệt lại trước khi hiển thị."
           : updatedStatus === "Active"
             ? "Tin đăng của bạn đã được cập nhật thành công và đang hiển thị."
             : "Tin đăng của bạn đã được cập nhật thành công. Hãy kiểm tra trạng thái trong Quản lý tin đăng.")
-        : selectedBoostDays !== null
-          ? `Tin đã được gửi duyệt. Bạn sẽ được chuyển đến payOS để thanh toán gói Boost ${selectedBoostDays} ngày; thời hạn Boost chỉ bắt đầu khi moderator duyệt tin.`
-          : "Tin đã được lưu. Hãy kiểm tra trạng thái duyệt trong Quản lý tin đăng.";
+        : updatedStatus === "Active"
+          ? "Tin đăng của bạn đã được duyệt tự động và đang hiển thị trên Trọ Nhanh."
+          : "Tin đã được gửi duyệt. Hãy kiểm tra trạng thái duyệt trong Quản lý tin đăng.";
 
     return (
       <div style={{ minHeight: "100vh", background: C.bg, fontFamily: font, display: "flex", flexDirection: "column" }}>
