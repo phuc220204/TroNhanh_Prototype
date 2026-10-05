@@ -1,3 +1,14 @@
+import { classifyInvoiceDue, getDaysUntilDue } from "./invoice-due.ts";
+
+/** Hóa đơn cần nhắc: quá hạn hoặc sắp đến hạn và vẫn còn thiếu tiền. */
+export interface ReminderInvoice {
+  id: string;
+  roomCode: string;
+  dueDate: string;
+  remaining: number;
+  daysUntilDue: number;
+}
+
 export interface DashboardKPIs {
   totalRoomsCount: number;
   rentedRoomsCount: number;
@@ -8,6 +19,12 @@ export interface DashboardKPIs {
   collectedThisMonth: number;
   invoiceCountThisPeriod: number;
   invoiceAmountThisPeriod: number;
+  dueSoonInvoiceCount: number;
+  dueSoonInvoiceAmount: number;
+  overdueInvoiceCount: number;
+  overdueInvoiceAmount: number;
+  /** Quá hạn lâu nhất trước, rồi tới hạn gần nhất. */
+  reminderInvoices: ReminderInvoice[];
   period: string;
   periodLabel: string;
 }
@@ -23,7 +40,9 @@ export interface DashboardInvoiceMetric {
   total_amount: number;
   status: string;
   period: string;
+  due_date?: string | null;
   payments?: Array<{ amount: number; paid_at: string; purpose: string }>;
+  rooms?: { room_code?: string | null } | null;
 }
 
 const currentPeriod = (date: Date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
@@ -35,13 +54,41 @@ export function aggregateDashboardMetrics(
   now = new Date(),
 ): DashboardKPIs {
   const period = currentPeriod(now);
-  const unpaidInvoices = invoices.filter(invoice => invoice.status !== "Paid");
-  const unpaidInvoiceAmount = unpaidInvoices.reduce((total, invoice) => {
+  const remainingOf = (invoice: DashboardInvoiceMetric) => {
     const paid = (invoice.payments ?? [])
       .filter(payment => payment.purpose === "RentInvoice")
       .reduce((sum, payment) => sum + Number(payment.amount || 0), 0);
-    return total + Math.max(0, Number(invoice.total_amount || 0) - paid);
-  }, 0);
+    return Math.max(0, Number(invoice.total_amount || 0) - paid);
+  };
+  const unpaidInvoices = invoices.filter(invoice => invoice.status !== "Paid");
+  const unpaidInvoiceAmount = unpaidInvoices.reduce((total, invoice) => total + remainingOf(invoice), 0);
+
+  const reminderInvoices: ReminderInvoice[] = [];
+  let dueSoonInvoiceCount = 0;
+  let dueSoonInvoiceAmount = 0;
+  let overdueInvoiceCount = 0;
+  let overdueInvoiceAmount = 0;
+  for (const invoice of unpaidInvoices) {
+    const remaining = remainingOf(invoice);
+    const dueState = classifyInvoiceDue(invoice.due_date, remaining, now);
+    const daysUntilDue = invoice.due_date ? getDaysUntilDue(invoice.due_date, now) : null;
+    if (!dueState || daysUntilDue === null || !invoice.due_date) continue;
+    if (dueState === "overdue") {
+      overdueInvoiceCount += 1;
+      overdueInvoiceAmount += remaining;
+    } else {
+      dueSoonInvoiceCount += 1;
+      dueSoonInvoiceAmount += remaining;
+    }
+    reminderInvoices.push({
+      id: invoice.id,
+      roomCode: invoice.rooms?.room_code ?? "",
+      dueDate: invoice.due_date,
+      remaining,
+      daysUntilDue,
+    });
+  }
+  reminderInvoices.sort((a, b) => a.daysUntilDue - b.daysUntilDue);
 
   const paymentMonth = (timestamp: string) => {
     const date = new Date(timestamp);
@@ -65,6 +112,11 @@ export function aggregateDashboardMetrics(
     collectedThisMonth,
     invoiceCountThisPeriod: periodInvoices.length,
     invoiceAmountThisPeriod: periodInvoices.reduce((sum, invoice) => sum + Number(invoice.total_amount || 0), 0),
+    dueSoonInvoiceCount,
+    dueSoonInvoiceAmount,
+    overdueInvoiceCount,
+    overdueInvoiceAmount,
+    reminderInvoices,
     period,
     periodLabel: now.toLocaleDateString("vi-VN", { month: "long", year: "numeric" }),
   };

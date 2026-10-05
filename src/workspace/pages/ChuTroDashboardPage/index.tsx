@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo, useCallback } from "react";
 import { useNavigate } from "react-router";
 import {
   Building2, FileText, Plus, Zap, ChevronRight,
-  Eye, EyeOff, Lock, Home, Users, CheckSquare, AlertTriangle, TrendingUp,
+  Lock, Home, Users, CheckSquare, AlertTriangle, TrendingUp, KeyRound, CalendarClock,
 } from "lucide-react";
 import { C, font } from "../../../shared/theme";
 import { useBreakpoint } from "../../../shared/components/useBreakpoint";
@@ -15,12 +15,15 @@ import { useCanWrite } from "../../../shared/contexts/SubscriptionContext";
 import { getPropertiesByOwnerOrThrow } from "../../services/property-service";
 import { getRoomsByOwnerOrThrow } from "../../services/room-service";
 import { getDashboardMetrics, type DashboardKPIs } from "../../services/dashboard-service";
+import { DUE_SOON_DAYS } from "../../services/invoice-due";
 import { getMyListings } from "../../../marketplace/services/listing-queries";
 import {
   PrimaryBtn, GhostBtn, StatusChip, PayText, PropertySelector,
   SegmentedBar, RoomTaskBtn, UtilityCard, ListingRow, Footer,
 } from "./atoms";
 import { UtilityModal } from "./UtilityModal";
+import { KpiGrid, type DashboardKpi } from "./KpiGrid";
+import { DueInvoicesPanel } from "./DueInvoicesPanel";
 // Bản dùng chung ở `workspace/components/`, KHÔNG phải bản sao cũ trong thư mục
 // này. Bản cũ gửi `owner_id` từ client (§6.1), `insert` thẳng vào `rooms` từ
 // component thay vì qua service layer, và không có ô đơn giá riêng của phòng —
@@ -157,23 +160,29 @@ export function ChuTroDashboardPage() {
     ? `${(amount / 1_000_000).toLocaleString("vi-VN", { maximumFractionDigits: 1 })} triệu đ`
     : `${Math.round(amount).toLocaleString("vi-VN")}đ`;
 
-  // BR-012 — "Phòng trống" và "Chưa đóng tiền" LUÔN hiện (`secret: false`);
-  // "Tổng số phòng" / "Khách đang ở" / "Đã thu trong tháng" mặc định ẩn
-  // (`secret: true` + `revealKPIs` khởi tạo `false`).
-  const dynamicKPIS = [
-    { label: "Tổng số phòng", value: totalRoomsCount, unit: "Phòng", accent: C.primary, secret: true },
-    { label: "Khách đang ở", value: occupantCount, unit: "Người", hint: `${occupancyRate}% lấp đầy`, accent: "#4F7A4A", secret: true },
-    { label: "Phòng trống", value: emptyRoomsCount, unit: "Phòng", accent: C.secondary, secret: false },
-    { label: "Hóa đơn chưa thu", value: dbKpis?.unpaidInvoiceCount ?? 0, unit: "HĐ", hint: formatMoney(dbKpis?.unpaidInvoiceAmount ?? 0), accent: "#C07B4A", secret: false },
-    { label: "Đã thu trong tháng", value: formatMoney(dbKpis?.collectedThisMonth ?? 0), unit: "", accent: C.primaryDark, secret: true },
-    { label: "Hóa đơn kỳ này", value: dbKpis?.invoiceCountThisPeriod ?? 0, unit: "HĐ", hint: formatMoney(dbKpis?.invoiceAmountThisPeriod ?? 0), accent: "#4F7A4A", secret: false },
+  // BR-012 — "Phòng trống", "Hóa đơn chưa thu", "Sắp đến hạn" LUÔN hiện (`secret: false`);
+  // "Tổng số phòng" / "Phòng đã có khách" / "Khách đang ở" / "Đã thu trong tháng"
+  // mặc định ẩn (`secret: true` + `revealKPIs` khởi tạo `false`).
+  const periodLabel = dbKpis?.periodLabel ?? "kỳ hiện tại";
+  const dynamicKPIS: DashboardKpi[] = [
+    { label: "Tổng số phòng", value: totalRoomsCount, unit: "Phòng", accent: C.primary, Icon: Home, secret: true },
+    { label: "Phòng đã có khách", value: rentedRoomsCount, unit: "Phòng", hint: `${occupancyRate}% lấp đầy`, accent: C.primary, Icon: KeyRound, secret: true, testId: "dashboard-kpi-rented-rooms" },
+    { label: "Khách đang ở", value: occupantCount, unit: "Người", accent: C.available, Icon: Users, secret: true },
+    { label: "Phòng trống", value: emptyRoomsCount, unit: "Phòng", accent: C.available, Icon: CheckSquare, secret: false },
+    { label: "Hóa đơn chưa thu", value: dbKpis?.unpaidInvoiceCount ?? 0, unit: "HĐ", hint: formatMoney(dbKpis?.unpaidInvoiceAmount ?? 0), accent: C.repairing, Icon: AlertTriangle, secret: false },
+    { label: `Sắp đến hạn (${DUE_SOON_DAYS} ngày)`, value: dbKpis?.dueSoonInvoiceCount ?? 0, unit: "HĐ", hint: formatMoney(dbKpis?.dueSoonInvoiceAmount ?? 0), accent: C.warning, Icon: CalendarClock, secret: false, testId: "dashboard-kpi-due-soon" },
+    { label: "Đã thu trong tháng", value: formatMoney(dbKpis?.collectedThisMonth ?? 0), unit: "", caption: periodLabel, accent: C.primaryDark, Icon: TrendingUp, secret: true },
+    { label: "Hóa đơn kỳ này", value: dbKpis?.invoiceCountThisPeriod ?? 0, unit: "HĐ", hint: `${formatMoney(dbKpis?.invoiceAmountThisPeriod ?? 0)} · ${periodLabel}`, accent: C.available, Icon: TrendingUp, secret: false },
   ];
+  const reminderInvoices = dbKpis?.reminderInvoices ?? [];
+  const openInvoice = (invoiceId: string) => navigate(`/chu-tro/hoa-don?hoa-don=${invoiceId}`);
+  const toInvoices = () => navigate("/chu-tro/hoa-don");
 
   const handleRoomTask = (task: string) => {
     if (task === "Tạo tin đăng") {
       toPost();
     } else if (task === "Xem hóa đơn" || task === "Nhắc nợ") {
-      navigate("/chu-tro/hoa-don");
+      toInvoices();
     } else if (task === "Xem hợp đồng" || task === "Gia hạn") {
       navigate("/chu-tro/quan-ly-phong?tab=occupants");
     }
@@ -270,28 +279,9 @@ export function ChuTroDashboardPage() {
             </div>
           ) : null}
 
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-            <p style={{ fontFamily: font, fontSize: 15, fontWeight: 800, color: C.textPrimary, margin: 0 }}>Chỉ số vận hành</p>
-            <button
-              onClick={() => setRevealKPIs(!revealKPIs)}
-              data-testid="dashboard-kpi-toggle"
-              style={{ display: "flex", alignItems: "center", gap: 5, background: "none", border: "none", color: C.primary, fontFamily: font, fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
-              {revealKPIs ? <EyeOff size={14} /> : <Eye size={14} />} {revealKPIs ? "Ẩn số liệu" : "Hiện số liệu"}
-            </button>
-          </div>
+          <KpiGrid kpis={dynamicKPIS} isRevealed={revealKPIs} onToggleReveal={() => setRevealKPIs(!revealKPIs)} isMobile />
 
-          <div style={{ display: "flex", gap: 10, overflowX: "auto", paddingBottom: 6, marginBottom: 22 }}>
-            {dynamicKPIS.map(k => {
-              const isSecret = k.secret && !revealKPIs;
-              return (
-                <div key={k.label} style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: 12, padding: "13px 16px", minWidth: 120, flexShrink: 0 }}>
-                  <p style={{ fontFamily: font, fontSize: 10.5, fontWeight: 700, color: C.textSecondary, margin: "0 0 6px", textTransform: "uppercase", letterSpacing: "0.04em" }}>{k.label}</p>
-                  <span style={{ fontFamily: font, fontSize: 26, fontWeight: 900, color: k.accent, lineHeight: 1 }}>{isSecret ? "•••" : k.value}</span>
-                  {k.hint && <p style={{ fontFamily: font, fontSize: 11, color: C.textSecondary, margin: "5px 0 0" }}>{isSecret ? "••••" : k.hint}</p>}
-                </div>
-              );
-            })}
-          </div>
+          <DueInvoicesPanel invoices={reminderInvoices} onOpenInvoice={openInvoice} onViewAll={toInvoices} />
 
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
             <span style={{ fontFamily: font, fontSize: 15, fontWeight: 800, color: C.textPrimary }}>Tình trạng phòng</span>
@@ -424,64 +414,9 @@ export function ChuTroDashboardPage() {
             </div>
           ) : null}
 
-          {/* Operational Metrics (KPI Section) */}
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
-            <h2 style={{ fontFamily: font, fontSize: 13, fontWeight: 800, color: C.textSecondary, margin: 0, textTransform: "uppercase", letterSpacing: "0.05em" }}>Chỉ số vận hành</h2>
-            <button
-              onClick={() => setRevealKPIs(!revealKPIs)}
-              data-testid="dashboard-kpi-toggle"
-              style={{ display: "flex", alignItems: "center", gap: 6, background: "none", border: "none", color: C.primary, fontFamily: font, fontSize: 13, fontWeight: 700, cursor: "pointer" }}>
-              {revealKPIs ? <EyeOff size={15} /> : <Eye size={15} />} {revealKPIs ? "Ẩn số liệu nhạy cảm" : "Hiện số liệu ẩn"}
-            </button>
-          </div>
+          <KpiGrid kpis={dynamicKPIS} isRevealed={revealKPIs} onToggleReveal={() => setRevealKPIs(!revealKPIs)} />
 
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 12, marginBottom: 28 }}>
-            {dynamicKPIS.map((k, index) => {
-              const isSecret = k.secret && !revealKPIs;
-              let IconComponent = Home;
-              let iconColor = C.primary;
-              let iconBg = "rgba(138, 74, 32, 0.06)";
-
-              if (index === 0) {
-                IconComponent = Home;
-                iconColor = C.primary;
-                iconBg = "rgba(138, 74, 32, 0.06)";
-              } else if (index === 1) {
-                IconComponent = Users;
-                iconColor = "#4F7A4A";
-                iconBg = "rgba(79, 122, 74, 0.06)";
-              } else if (index === 2) {
-                IconComponent = CheckSquare;
-                iconColor = "#4F7A4A";
-                iconBg = "rgba(79, 122, 74, 0.06)";
-              } else if (index === 3) {
-                IconComponent = AlertTriangle;
-                iconColor = "#C07B4A";
-                iconBg = "rgba(192, 123, 74, 0.06)";
-              } else if (index === 4 || index === 5) {
-                IconComponent = TrendingUp;
-                iconColor = index === 4 ? C.primary : "#4F7A4A";
-                iconBg = index === 4 ? "rgba(138, 74, 32, 0.06)" : "rgba(79, 122, 74, 0.06)";
-              }
-
-              return (
-                <div key={k.label} style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: 16, padding: "16px 18px", display: "flex", justifyContent: "space-between", alignItems: "center", boxShadow: "0 2px 10px rgba(42,26,12,0.015)" }}>
-                  <div>
-                    <p style={{ fontFamily: font, fontSize: 11, fontWeight: 700, color: C.textSecondary, margin: "0 0 6px", textTransform: "uppercase", letterSpacing: "0.05em" }}>{k.label}</p>
-                    <span style={{ fontFamily: font, fontSize: 20, fontWeight: 800, color: C.textPrimary, lineHeight: 1 }}>
-                      {isSecret ? "••••••" : k.value}
-                      {!isSecret && k.unit && <span style={{ fontSize: 12, fontWeight: 500, color: C.textSecondary, marginLeft: 4 }}>{k.unit}</span>}
-                    </span>
-                    {k.hint && <p style={{ fontFamily: font, fontSize: 11, color: C.textSecondary, margin: "4px 0 0" }}>{isSecret ? "••••" : `${k.hint}${index === 5 ? ` · ${dbKpis?.periodLabel ?? "kỳ hiện tại"}` : ""}`}</p>}
-                    {index === 4 && <p style={{ fontFamily: font, fontSize: 11, color: C.textSecondary, margin: "4px 0 0" }}>{dbKpis?.periodLabel ?? "Tháng hiện tại"}</p>}
-                  </div>
-                  <div style={{ width: 36, height: 36, borderRadius: 10, background: iconBg, display: "flex", alignItems: "center", justifyContent: "center", color: iconColor }}>
-                    <IconComponent size={18} />
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+          <DueInvoicesPanel invoices={reminderInvoices} onOpenInvoice={openInvoice} onViewAll={toInvoices} />
 
           {/* Room operations */}
           <div style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: 16, padding: "20px 22px", marginBottom: 28, boxShadow: "0 2px 10px rgba(42,26,12,0.015)" }}>
@@ -564,7 +499,7 @@ export function ChuTroDashboardPage() {
             title="Thanh toán & Điện nước"
             desc="Theo dõi hóa đơn kỳ này và số tiền đang chờ thu."
             cta="Thu tiền"
-            onClick={() => navigate("/chu-tro/hoa-don")}
+            onClick={toInvoices}
             color="#C8861A"
             bgImage="/assets/card_payment_icon.png"
           />

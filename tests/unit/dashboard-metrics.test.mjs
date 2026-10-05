@@ -51,3 +51,37 @@ test("returns honest zero values for a real empty dashboard", () => {
   assert.equal(metrics.invoiceAmountThisPeriod, 0);
   assert.equal(metrics.period, "2026-01");
 });
+
+test("flags invoices due within 3 days and overdue invoices by due_date, not by status", () => {
+  const now = new Date(2026, 9, 15, 18);
+  const invoice = (id, dueDate, extra = {}) => ({
+    id, room_id: "r1", total_amount: 1000, status: "Unpaid", period: "2026-10", due_date: dueDate,
+    payments: [], rooms: { room_code: `P-${id}` }, ...extra,
+  });
+  const invoices = [
+    invoice("today", "2026-10-15"),
+    invoice("edge", "2026-10-18"),
+    invoice("tooFar", "2026-10-19"),
+    // Status DB vẫn "Unpaid" vì chưa có job Overdue — phải nhận ra là quá hạn.
+    invoice("late", "2026-10-10"),
+    invoice("paidLate", "2026-10-10", { status: "Paid", payments: [{ amount: 1000, paid_at: "2026-10-11T00:00:00Z", purpose: "RentInvoice" }] }),
+    invoice("partial", "2026-10-16", { status: "PartiallyPaid", payments: [{ amount: 400, paid_at: "2026-10-01T00:00:00Z", purpose: "RentInvoice" }] }),
+    invoice("settled", "2026-10-16", { status: "PartiallyPaid", payments: [{ amount: 1000, paid_at: "2026-10-01T00:00:00Z", purpose: "RentInvoice" }] }),
+  ];
+
+  const metrics = aggregateDashboardMetrics([], invoices, now);
+  assert.equal(metrics.dueSoonInvoiceCount, 3);
+  assert.equal(metrics.dueSoonInvoiceAmount, 1000 + 1000 + 600);
+  assert.equal(metrics.overdueInvoiceCount, 1);
+  assert.equal(metrics.overdueInvoiceAmount, 1000);
+  assert.deepEqual(metrics.reminderInvoices.map(item => item.id), ["late", "today", "partial", "edge"]);
+  assert.deepEqual(metrics.reminderInvoices.map(item => item.daysUntilDue), [-5, 0, 1, 3]);
+  assert.equal(metrics.reminderInvoices[0].roomCode, "P-late");
+});
+
+test("has no reminders when there are no unpaid invoices", () => {
+  const metrics = aggregateDashboardMetrics([], [], new Date(2026, 0, 5));
+  assert.equal(metrics.dueSoonInvoiceCount, 0);
+  assert.equal(metrics.overdueInvoiceCount, 0);
+  assert.deepEqual(metrics.reminderInvoices, []);
+});
