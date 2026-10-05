@@ -1,7 +1,10 @@
-import { AlertCircle } from "lucide-react";
-import { C, font } from "../../../shared/theme";
+import { AlertCircle, Lightbulb } from "lucide-react";
+import { C, font, radius } from "../../../shared/theme";
 import { AMENITY_OPTIONS } from "../../../shared/constants/amenities";
 import { NearbyPlacesInput, type NearbyEntry } from "./NearbyPlacesInput";
+import { DESCRIPTION_PLACEHOLDER, DESCRIPTION_TIPS } from "./listing-tips";
+
+const DESCRIPTION_MAX_LENGTH = 5000;
 
 interface Step2AmenitiesProps {
   formik: any;
@@ -9,6 +12,7 @@ interface Step2AmenitiesProps {
 
 export function Step2Amenities({ formik }: Step2AmenitiesProps) {
   const { values, errors, setFieldValue, handleBlur } = formik;
+  const descriptionLength = String(values.description ?? "").length;
 
   const toggleAmenity = (key: string) => {
     const current: string[] = values.amenities || [];
@@ -73,19 +77,31 @@ export function Step2Amenities({ formik }: Step2AmenitiesProps) {
         <label htmlFor="listing-description" style={{ display: "block", fontFamily: font, fontSize: 13, fontWeight: 700, color: C.textPrimary, margin: "0 0 6px" }}>
           Mô tả chi tiết tin đăng <span style={{ color: C.repairing }}>*</span>
         </label>
+        <div
+          data-testid="listing-description-tips"
+          style={{ margin: "0 0 10px", padding: 14, borderRadius: radius.md, background: C.cream, color: C.textSecondary, font: `13px/1.55 ${font}` }}
+        >
+          <p style={{ display: "flex", alignItems: "center", gap: 6, margin: "0 0 6px", fontWeight: 700, color: C.textPrimary }}>
+            <Lightbulb size={14} color={C.primary} /> Gợi ý viết mô tả thu hút
+          </p>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            {DESCRIPTION_TIPS.map((tip) => <li key={tip}>{tip}</li>)}
+          </ul>
+        </div>
         <textarea
           id="listing-description"
           name="description"
-          rows={6}
-          placeholder="Mô tả vị trí phòng, nội thất, tiện ích xung quanh, đối tượng phù hợp (sinh viên, người đi làm)..."
+          data-testid="listing-description-input"
+          rows={8}
+          placeholder={DESCRIPTION_PLACEHOLDER}
           value={values.description}
           onChange={(e) => setFieldValue("description", e.target.value)}
           onBlur={handleBlur}
           minLength={10}
-          maxLength={5000}
+          maxLength={DESCRIPTION_MAX_LENGTH}
           required
           aria-invalid={Boolean(errors.description)}
-          aria-describedby={errors.description ? "listing-description-error" : undefined}
+          aria-describedby={errors.description ? "listing-description-error" : "listing-description-hint"}
           style={{
             width: "100%",
             fontFamily: font,
@@ -100,6 +116,14 @@ export function Step2Amenities({ formik }: Step2AmenitiesProps) {
             lineHeight: 1.5,
           }}
         />
+        {!errors.description && (
+          <div id="listing-description-hint" style={{ display: "flex", justifyContent: "space-between", gap: 12, marginTop: 4, fontFamily: font, fontSize: 12, color: C.textSecondary }}>
+            <span>Mô tả càng cụ thể, người tìm trọ càng dễ quyết định liên hệ.</span>
+            <span data-testid="listing-description-counter" style={{ flexShrink: 0 }}>
+              {descriptionLength.toLocaleString("vi-VN")} / {DESCRIPTION_MAX_LENGTH.toLocaleString("vi-VN")}
+            </span>
+          </div>
+        )}
         {errors.description && (
           <div id="listing-description-error" role="alert" style={{ display: "flex", alignItems: "center", gap: 4, marginTop: 4, color: C.repairing }}>
             <AlertCircle size={12} />
