@@ -278,6 +278,44 @@ export type Database = {
         }
         Relationships: []
       }
+      invoice_collection_notes: {
+        Row: {
+          created_at: string
+          follow_up_date: string | null
+          id: string
+          invoice_id: string
+          owner_id: string
+          reason: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          follow_up_date?: string | null
+          id?: string
+          invoice_id: string
+          owner_id?: string
+          reason: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          follow_up_date?: string | null
+          id?: string
+          invoice_id?: string
+          owner_id?: string
+          reason?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invoice_collection_notes_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "invoices"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       invoice_items: {
         Row: {
           amount: number
@@ -655,60 +693,6 @@ export type Database = {
           },
         ]
       }
-      platform_settings: {
-        Row: {
-          key: string
-          updated_at: string
-          value: Json
-        }
-        Insert: {
-          key: string
-          updated_at?: string
-          value: Json
-        }
-        Update: {
-          key?: string
-          updated_at?: string
-          value?: Json
-        }
-        Relationships: []
-      }
-      profiles: {
-        Row: {
-          contact_email: string | null
-          contact_phone: string | null
-          contact_phone_verified_at: string | null
-          created_at: string
-          full_name: string | null
-          id: string
-          is_seller: boolean | null
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          contact_email?: string | null
-          contact_phone?: string | null
-          contact_phone_verified_at?: string | null
-          created_at?: string
-          full_name?: string | null
-          id?: string
-          is_seller?: boolean | null
-          updated_at?: string
-          user_id: string
-        }
-        Update: {
-          contact_email?: string | null
-          contact_phone?: string | null
-          contact_phone_verified_at?: string | null
-          created_at?: string
-          full_name?: string | null
-          id?: string
-          is_seller?: boolean | null
-          updated_at?: string
-          user_id?: string
-        }
-        Relationships: []
-      }
       phone_verification_challenges: {
         Row: {
           attempts: number
@@ -763,6 +747,60 @@ export type Database = {
           phone_e164?: string
           sends_in_window?: number
           window_started_at?: string
+        }
+        Relationships: []
+      }
+      platform_settings: {
+        Row: {
+          key: string
+          updated_at: string
+          value: Json
+        }
+        Insert: {
+          key: string
+          updated_at?: string
+          value: Json
+        }
+        Update: {
+          key?: string
+          updated_at?: string
+          value?: Json
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          contact_email: string | null
+          contact_phone: string | null
+          contact_phone_verified_at: string | null
+          created_at: string
+          full_name: string | null
+          id: string
+          is_seller: boolean | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          contact_email?: string | null
+          contact_phone?: string | null
+          contact_phone_verified_at?: string | null
+          created_at?: string
+          full_name?: string | null
+          id?: string
+          is_seller?: boolean | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          contact_email?: string | null
+          contact_phone?: string | null
+          contact_phone_verified_at?: string | null
+          created_at?: string
+          full_name?: string | null
+          id?: string
+          is_seller?: boolean | null
+          updated_at?: string
+          user_id?: string
         }
         Relationships: []
       }
@@ -1369,16 +1407,6 @@ export type Database = {
       }
     }
     Functions: {
-      begin_contact_phone_verification: {
-        Args: { p_otp_hash: string; p_phone_e164: string; p_user_id: string }
-        Returns: Json
-      }
-      complete_contact_phone_verification: {
-        Args: { p_otp_hash: string; p_user_id: string }
-        Returns: Json
-      }
-      current_user_has_verified_phone: { Args: never; Returns: boolean }
-      invalidate_contact_phone_verification: { Args: { p_user_id: string }; Returns: undefined }
       activate_subscription_trial: { Args: never; Returns: undefined }
       add_occupant_to_contract: {
         Args: { p_contract_id: string; p_occupant: Json }
@@ -1419,6 +1447,10 @@ export type Database = {
           order_code: number
         }[]
       }
+      begin_contact_phone_verification: {
+        Args: { p_otp_hash: string; p_phone_e164: string; p_user_id: string }
+        Returns: Json
+      }
       boost_listing: {
         Args: { p_days: number; p_listing_id: string }
         Returns: string
@@ -1426,6 +1458,11 @@ export type Database = {
       can_review_contract: {
         Args: { p_contract: string; p_user: string }
         Returns: boolean
+      }
+      can_write_saas: { Args: never; Returns: boolean }
+      complete_contact_phone_verification: {
+        Args: { p_otp_hash: string; p_user_id: string }
+        Returns: Json
       }
       complete_verified_boost_payment: {
         Args: {
@@ -1441,7 +1478,6 @@ export type Database = {
         Returns: undefined
       }
       count_rented_rooms: { Args: { p_property_id: string }; Returns: number }
-      can_write_saas: { Args: never; Returns: boolean }
       create_invoice_with_items: {
         Args: {
           p_contract_id: string
@@ -1550,6 +1586,10 @@ export type Database = {
       }
       increment_listing_view: {
         Args: { p_listing_id: string }
+        Returns: undefined
+      }
+      invalidate_contact_phone_verification: {
+        Args: { p_user_id: string }
         Returns: undefined
       }
       is_contract_occupant: { Args: { p_contract: string }; Returns: boolean }

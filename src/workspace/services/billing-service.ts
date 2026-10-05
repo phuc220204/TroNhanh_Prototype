@@ -31,6 +31,17 @@ export interface InvoiceItem {
   } | null;
   /** Các khoản đã thu của hóa đơn này (embed từ `getInvoices`). */
   payments?: { amount: number }[] | null;
+  /** Nhật ký thu tiền (embed từ `getInvoices`) — để bảng hiện ghi chú gần nhất. */
+  invoice_collection_notes?: { reason: string; follow_up_date: string | null; created_at: string }[] | null;
+}
+
+/** Lần ghi nhật ký thu tiền mới nhất của hóa đơn, nếu có. */
+export function getLatestCollectionNote(invoice: InvoiceItem) {
+  const notes = invoice.invoice_collection_notes ?? [];
+  return notes.reduce<(typeof notes)[number] | null>(
+    (latest, note) => (!latest || note.created_at > latest.created_at ? note : latest),
+    null,
+  );
 }
 
 /** Tổng đã thu của một hóa đơn, từ phần `payments` đã embed. */
@@ -124,7 +135,7 @@ export async function getInvoices(params: GetInvoicesParams): Promise<InvoiceIte
   try {
     let q = supabase
       .from("invoices")
-      .select("*, rooms!inner(room_code, property_id, properties(name)), invoice_items(*), payments(amount)")
+      .select("*, rooms!inner(room_code, property_id, properties(name)), invoice_items(*), payments(amount), invoice_collection_notes(reason, follow_up_date, created_at)")
       .eq("owner_id", ownerId)
       .is("deleted_at", null)
       .order("created_at", { ascending: false });

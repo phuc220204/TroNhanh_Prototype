@@ -1,4 +1,5 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
+import { useSearchParams } from "react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { FileText } from "lucide-react";
 import { LandlordShell } from "../../shared/components/LandlordShell";
@@ -11,6 +12,7 @@ import {
   recordPayment,
   getPaidAmount,
   getRemainingAmount,
+  getLatestCollectionNote,
   type InvoiceStatusFilter,
   type InvoiceItem,
 } from "../services/billing-service";
@@ -26,6 +28,8 @@ import {
   VietQRBlock,
 } from "../../shared/components/common";
 import { INVOICE_STATUS_META } from "../../shared/utils/statusMaps";
+import { classifyInvoiceDue, formatDueLabel, getDaysUntilDue } from "../services/invoice-due";
+import { CollectionLogSection } from "../components/CollectionLogSection";
 
 function toInvoiceStatusKey(status: string): keyof typeof INVOICE_STATUS_META {
   const map: Record<string, keyof typeof INVOICE_STATUS_META> = {
@@ -40,6 +44,20 @@ function toInvoiceStatusKey(status: string): keyof typeof INVOICE_STATUS_META {
   };
   return map[status] || "unpaid";
 }
+
+/**
+ * Trạng thái để HIỂN THỊ: hóa đơn đã quá `due_date` mà còn thiếu tiền thì hiện
+ * "Quá hạn" dù DB vẫn ghi `Unpaid` (chưa có job chuyển Overdue — BR-004).
+ */
+function toDisplayStatusKey(invoice: InvoiceItem): keyof typeof INVOICE_STATUS_META {
+  const dueState = classifyInvoiceDue(invoice.due_date, getRemainingAmount(invoice), new Date());
+  return dueState === "overdue" ? "overdue" : toInvoiceStatusKey(invoice.status);
+}
+
+const formatShortDate = (value: string) => {
+  const [, month, day] = value.slice(0, 10).split("-");
+  return day && month ? `${day}/${month}` : value;
+};
 
 const STATUS_OPTIONS = [
   { label: "Tất cả trạng thái", value: "" },
@@ -60,6 +78,7 @@ const ITEM_TYPE_LABELS: Record<string, string> = {
 export function LandlordBillingPage() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
+  const [searchParams, setSearchParams] = useSearchParams();
 
   const [selectedPeriod, setSelectedPeriod] = useState<string>("all");
   const [selectedStatus, setSelectedStatus] = useState<string>("");
@@ -100,6 +119,18 @@ export function LandlordBillingPage() {
       }),
     enabled: !!user?.id,
   });
+
+  // Link từ dashboard ("Hóa đơn cần nhắc"): /chu-tro/hoa-don?hoa-don=<id> mở sẵn modal.
+  const linkedInvoiceId = searchParams.get("hoa-don");
+  useEffect(() => {
+    if (!linkedInvoiceId || isPending) return;
+    const linkedInvoice = invoices.find((inv) => inv.id === linkedInvoiceId);
+    if (linkedInvoice) setSelectedInvoice(linkedInvoice);
+    setSearchParams((params) => {
+      params.delete("hoa-don");
+      return params;
+    }, { replace: true });
+  }, [linkedInvoiceId, isPending, invoices, setSearchParams]);
 
   const invoiceProperty = useMemo(() => {
     if (!selectedInvoice?.rooms?.property_id) return null;
@@ -216,7 +247,11 @@ export function LandlordBillingPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {invoices.map((inv) => (
+                  {invoices.map((inv) => {
+                    const latestNote = getLatestCollectionNote(inv);
+                    const daysUntilDue = inv.due_date ? getDaysUntilDue(inv.due_date, new Date()) : null;
+                    const isDueSoon = classifyInvoiceDue(inv.due_date, getRemainingAmount(inv), new Date()) === "dueSoon";
+                    return (
                     <tr
                       key={inv.id}
                       data-testid="invoice-row"
@@ -240,12 +275,25 @@ export function LandlordBillingPage() {
                       </td>
                       <td style={{ padding: "14px 16px", textAlign: "center", color: C.textSecondary, fontSize: 13 }}>
                         {inv.due_date ? new Date(inv.due_date).toLocaleDateString("vi-VN") : "-"}
+                        {isDueSoon && daysUntilDue !== null && (
+                          <div style={{ fontSize: 11.5, fontWeight: 700, color: C.warning, marginTop: 2 }}>{formatDueLabel(daysUntilDue)}</div>
+                        )}
                       </td>
                       <td style={{ padding: "14px 16px", textAlign: "center" }}>
-                        <Badge kind="invoice" status={toInvoiceStatusKey(inv.status)} />
+                        <Badge kind="invoice" status={toDisplayStatusKey(inv)} />
+                        {latestNote && (
+                          <div
+                            data-testid="invoice-latest-note"
+                            title={latestNote.reason}
+                            style={{ fontSize: 11.5, color: C.textSecondary, marginTop: 4, maxWidth: 200, marginInline: "auto", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}
+                          >
+                            {latestNote.follow_up_date ? `Hẹn thu lại ${formatShortDate(latestNote.follow_up_date)}` : latestNote.reason}
+                          </div>
+                        )}
                       </td>
                     </tr>
-                  ))}
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -261,7 +309,7 @@ export function LandlordBillingPage() {
             }}
             footer={
               <div style={{ display: "flex", width: "100%", justifyContent: "space-between", alignItems: "center" }}>
-                <Badge kind="invoice" status={toInvoiceStatusKey(selectedInvoice.status)} />
+                <Badge kind="invoice" status={toDisplayStatusKey(selectedInvoice)} />
                 <div style={{ display: "flex", gap: 10 }}>
                   <Button
                     variant="outline"
@@ -341,6 +389,8 @@ export function LandlordBillingPage() {
                   </>
                 )}
               </div>
+
+              <CollectionLogSection invoiceId={selectedInvoice.id} isSettled={remainingAmount <= 0} />
 
               <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: 14 }}>
                 <h4 style={{ fontFamily: font, fontSize: 14, fontWeight: 700, margin: "0 0 10px", color: C.textPrimary }}>
