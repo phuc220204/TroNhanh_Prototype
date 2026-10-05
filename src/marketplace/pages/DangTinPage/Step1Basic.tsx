@@ -4,6 +4,7 @@ import { PROPERTY_TYPES } from "../../../shared/constants/catalog";
 import { AreaSelect } from "../../../shared/components/common";
 import { formatVND, cleanVND } from "../../utils/listingMetadata";
 import { LocationPicker } from "./LocationPicker";
+import { TITLE_HINT } from "./listing-tips";
 import { useBreakpoint } from "../../../shared/components/useBreakpoint";
 
 interface Step1BasicProps {
@@ -26,7 +27,7 @@ export function Step1Basic({ formik }: Step1BasicProps) {
       </div>
 
       {/* Title */}
-      <FieldGroup label="Tiêu đề tin đăng" htmlFor="listing-title" required error={errors.title} errorId="listing-title-error">
+      <FieldGroup label="Tiêu đề tin đăng" htmlFor="listing-title" required error={errors.title} errorId="listing-title-error" hint={TITLE_HINT}>
         <input
           id="listing-title"
           name="title"
@@ -38,7 +39,7 @@ export function Step1Basic({ formik }: Step1BasicProps) {
           maxLength={120}
           required
           aria-invalid={Boolean(errors.title)}
-          aria-describedby={errors.title ? "listing-title-error" : undefined}
+          aria-describedby={errors.title ? "listing-title-error" : "listing-title-hint"}
           style={{
             width: "100%",
             fontFamily: font,

@@ -3,8 +3,7 @@ import { C, font, radius } from "../../../shared/theme";
 import { AMENITY_OPTIONS } from "../../../shared/constants/amenities";
 import { NearbyPlacesInput, type NearbyEntry } from "./NearbyPlacesInput";
 import { DESCRIPTION_PLACEHOLDER, DESCRIPTION_TIPS } from "./listing-tips";
-
-const DESCRIPTION_MAX_LENGTH = 5000;
+import { LISTING_LIMITS } from "./useListingForm";
 
 interface Step2AmenitiesProps {
   formik: any;
@@ -98,7 +97,7 @@ export function Step2Amenities({ formik }: Step2AmenitiesProps) {
           onChange={(e) => setFieldValue("description", e.target.value)}
           onBlur={handleBlur}
           minLength={10}
-          maxLength={DESCRIPTION_MAX_LENGTH}
+          maxLength={LISTING_LIMITS.descriptionMax}
           required
           aria-invalid={Boolean(errors.description)}
           aria-describedby={errors.description ? "listing-description-error" : "listing-description-hint"}
@@ -120,7 +119,7 @@ export function Step2Amenities({ formik }: Step2AmenitiesProps) {
           <div id="listing-description-hint" style={{ display: "flex", justifyContent: "space-between", gap: 12, marginTop: 4, fontFamily: font, fontSize: 12, color: C.textSecondary }}>
             <span>Mô tả càng cụ thể, người tìm trọ càng dễ quyết định liên hệ.</span>
             <span data-testid="listing-description-counter" style={{ flexShrink: 0 }}>
-              {descriptionLength.toLocaleString("vi-VN")} / {DESCRIPTION_MAX_LENGTH.toLocaleString("vi-VN")}
+              {descriptionLength.toLocaleString("vi-VN")} / {LISTING_LIMITS.descriptionMax.toLocaleString("vi-VN")}
             </span>
           </div>
         )}
