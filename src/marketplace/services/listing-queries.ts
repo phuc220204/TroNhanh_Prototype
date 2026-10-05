@@ -279,9 +279,11 @@ export async function searchListings(params: ListingQueryParams = {}): Promise<S
         .order("created_at", { ascending: false });
     } else {
       if (statusFilter === "Active" && !params.sellerId) {
+        // BR-005: chỉ tin CÒN HẠN Boost (đã thanh toán) đứng trước. `is_boost_active`
+        // là computed field (migration 20261006100000) — sắp theo
+        // `boost_payment_verified` thì tin hết hạn vẫn đứng đầu mãi.
         q = q
-          .order("boost_payment_verified", { ascending: false, nullsFirst: false })
-          .order("boost_expire_at", { ascending: false, nullsFirst: false })
+          .order("is_boost_active", { ascending: false })
           .order("created_at", { ascending: false });
       } else {
         q = q.order("created_at", { ascending: false });

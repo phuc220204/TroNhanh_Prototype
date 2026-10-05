@@ -1592,6 +1592,12 @@ export type Database = {
         Args: { p_user_id: string }
         Returns: undefined
       }
+      is_boost_active: {
+        Args: {
+          listing: Database["public"]["Tables"]["rental_listings"]["Row"]
+        }
+        Returns: boolean
+      }
       is_contract_occupant: { Args: { p_contract: string }; Returns: boolean }
       is_linked_occupant: { Args: { p_occupancy: string }; Returns: boolean }
       is_listing_media_in_use: {
