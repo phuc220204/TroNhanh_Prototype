@@ -26,7 +26,7 @@ Deno.serve(async (request) => {
     return new Response("Payment is not configured", { status: 503 });
   }
   const requestOrigin = request.headers.get("origin");
-  const corsOrigin = getPayosCorsOrigin(requestOrigin, siteOrigin, Deno.env.get("PAYOS_TEST_MODE")) ?? siteOrigin;
+  const corsOrigin = getPayosCorsOrigin(requestOrigin, siteOrigin) ?? siteOrigin;
   if (requestOrigin && corsOrigin !== requestOrigin) return new Response("Forbidden origin", { status: 403 });
   if (request.method === "OPTIONS") return json({}, 200, corsOrigin);
   if (request.method !== "POST") return json({ error: "METHOD_NOT_ALLOWED" }, 405, corsOrigin);

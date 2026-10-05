@@ -72,10 +72,7 @@ export function redirectToBoostCheckout(checkout: BoostCheckout): void {
 
 export function getBoostCheckoutErrorMessage(error: unknown, fallback = "Không tạo được liên kết thanh toán. Vui lòng thử lại."): string {
   const message = error instanceof Error ? error.message : String(error ?? "");
-  if (message.includes("PAYMENT_NOT_AVAILABLE")) return "Thanh toán Boost hiện chưa được mở.";
-  if (message.includes("TEST_SELLER_ONLY")) return "Tài khoản này không nằm trong danh sách kiểm thử thanh toán.";
-  if (message.includes("PAYMENT_MODE_NOT_CONFIGURED")) return "Chế độ thanh toán chưa được cấu hình an toàn.";
-  if (message.includes("TEST_SELLER_NOT_CONFIGURED")) return "Tài khoản thử nghiệm chưa được cấu hình trên máy chủ.";
+  if (message.includes("PAYMENT_NOT_AVAILABLE")) return "Gói nổi bật đang tạm đóng. Vui lòng thử lại sau.";
   if (message.includes("BOOST_ALREADY_PAID_PENDING_APPROVAL")) return "Gói Boost này đã được thanh toán và đang chờ tin được duyệt.";
   if (message.includes("BOOST_ORDER_ALREADY_PAID")) return "Đơn Boost này đã được thanh toán. Kiểm tra trạng thái tin trong Quản lý tin đăng.";
   if (message.includes("BOOST_ORDER_NEEDS_REVIEW")) return "Đơn Boost đã được chuyển sang đối soát. Vui lòng liên hệ hỗ trợ với mã đơn.";

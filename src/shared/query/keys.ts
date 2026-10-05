@@ -112,6 +112,11 @@ export const qk = {
     collectionNotes: (invoiceId: string) => ["billing", "collectionNotes", invoiceId] as const,
   },
 
+  boost: {
+    /** Gói Boost + giá từ server. Lỗi PAYMENT_NOT_AVAILABLE = Boost đang tắt toàn hệ thống. */
+    packages: (userId: string | undefined) => ["boost", "packages", userId] as const,
+  },
+
   dashboard: {
     summary: (ownerId: string | undefined) => ["dashboard", "summary", ownerId] as const,
   },

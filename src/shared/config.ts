@@ -27,14 +27,6 @@ export const configError: string | null =
     : null;
 
 export const config = {
-  payments: {
-    // Feature is opt-in per Vercel environment; backend has its own separate kill switch.
-    boostCheckoutEnabled: import.meta.env.VITE_ENABLE_BOOST_CHECKOUT === "true",
-    // Public user ID used only to hide the temporary test CTA from other sellers.
-    // The Edge Functions enforce the matching server secret independently.
-    boostTestSellerId: import.meta.env.VITE_PAYOS_TEST_SELLER_ID?.trim() || null,
-    boostTestMode: import.meta.env.VITE_PAYOS_TEST_MODE,
-  },
   supabase: {
     // Chuỗi rỗng khi thiếu — an toàn vì App.tsx đã chặn ở configError trước khi
     // bất kỳ query nào chạy. Giữ kiểu string để createClient không cần cast.

@@ -5,8 +5,7 @@ import { C, font } from "../../../shared/theme";
 import { useBreakpoint } from "../../../shared/components/useBreakpoint";
 import { PublicNavbar } from "../../../shared/components/PublicNavbar";
 import { useAuth } from "../../../shared/contexts/AuthContext";
-import { config } from "../../../shared/config";
-import { canShowBoostAction } from "../../../../supabase/functions/_shared/boost-access.mjs";
+import { useBoostAvailability } from "../../hooks/useBoostAvailability";
 import { Step1Basic } from "./Step1Basic";
 import { Step2Amenities } from "./Step2Amenities";
 import { Step3Photos } from "./Step3Photos";
@@ -35,14 +34,9 @@ export function DangTinPage() {
   const location = useLocation();
   const { id } = useParams<{ id?: string }>();
   const { isMobile } = useBreakpoint();
-  const { profile, user } = useAuth();
-  const boostChoiceAvailable = canShowBoostAction(
-    config.payments.boostCheckoutEnabled,
-    config.payments.boostTestMode,
-    config.payments.boostTestSellerId,
-    user?.id,
-  );
-  const isPayosTestMode = config.payments.boostTestMode === "true";
+  const { profile } = useAuth();
+  const boost = useBoostAvailability();
+  const boostChoiceAvailable = boost.isBoostAvailable;
   const prefill = (location.state as { prefill?: any } | null)?.prefill ?? {};
 
   const [toast, setToast] = useState(false);
@@ -262,8 +256,7 @@ export function DangTinPage() {
           )}
           {step === 4 && shouldShowBoostStep && (
             <Step5Visibility
-              boostAvailable={boostChoiceAvailable}
-              isTestMode={isPayosTestMode}
+              boost={boost}
               selectedBoostDays={selectedBoostDays}
               onSelectBoostDays={setSelectedBoostDays}
             />

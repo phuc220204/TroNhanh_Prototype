@@ -1,6 +1,6 @@
 import { createClient } from "npm:@supabase/supabase-js@2.110.0";
 import { signPaymentLinkRequest, verifyPayosData } from "../_shared/payos-signature.mjs";
-import { canPayosSellerCheckout, getPayosCorsOrigin } from "../_shared/boost-access.mjs";
+import { getPayosCorsOrigin } from "../_shared/boost-access.mjs";
 
 const PAYOS_API_URL = "https://api-merchant.payos.vn/v2/payment-requests";
 
@@ -29,7 +29,7 @@ Deno.serve(async (request) => {
     return new Response("Payment is not configured", { status: 503 });
   }
   const requestOrigin = request.headers.get("origin");
-  const corsOrigin = getPayosCorsOrigin(requestOrigin, siteOrigin, Deno.env.get("PAYOS_TEST_MODE")) ?? siteOrigin;
+  const corsOrigin = getPayosCorsOrigin(requestOrigin, siteOrigin) ?? siteOrigin;
   if (requestOrigin && corsOrigin !== requestOrigin) {
     return new Response("Forbidden origin", { status: 403 });
   }
@@ -67,17 +67,6 @@ Deno.serve(async (request) => {
   const userClient = createClient(supabaseUrl, anonKey, { auth: { persistSession: false } });
   const { data: userData, error: userError } = await userClient.auth.getUser(token);
   if (userError || !userData.user) return json({ error: "AUTH_REQUIRED" }, 401, corsOrigin);
-  const testMode = Deno.env.get("PAYOS_TEST_MODE");
-  const testSellerId = Deno.env.get("PAYOS_TEST_SELLER_ID");
-  if (testMode !== "true" && testMode !== "false") {
-    return json({ error: "PAYMENT_MODE_NOT_CONFIGURED" }, 503, corsOrigin);
-  }
-  if (testMode === "true" && !testSellerId) {
-    return json({ error: "TEST_SELLER_NOT_CONFIGURED" }, 503, corsOrigin);
-  }
-  if (!canPayosSellerCheckout(testMode, testSellerId, userData.user.id)) {
-    return json({ error: "TEST_SELLER_ONLY" }, 403, corsOrigin);
-  }
 
   const adminClient = createClient(supabaseUrl, serviceKey, { auth: { persistSession: false } });
   const { data: orderRows, error: orderError } = await adminClient.rpc("begin_boost_checkout", {
