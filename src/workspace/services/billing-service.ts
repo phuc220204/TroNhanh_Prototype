@@ -61,6 +61,11 @@ export function getRemainingAmount(invoice: InvoiceItem): number {
   return Math.max(0, Number(invoice.total_amount || 0) - getPaidAmount(invoice));
 }
 
+/** "YYYY-MM-DD" theo giờ địa phương — so với cột `due_date` kiểu date. */
+function toLocalDateString(date: Date): string {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+}
+
 /** BR-004 — đúng 4 trạng thái hóa đơn. Không có giá trị nào khác. */
 export type InvoiceStatusFilter = "Unpaid" | "PartiallyPaid" | "Paid" | "Overdue";
 
@@ -146,7 +151,15 @@ export async function getInvoices(params: GetInvoicesParams): Promise<InvoiceIte
     if (period && period !== "all") {
       q = q.eq("period", period);
     }
-    if (status) {
+    // "Quá hạn" theo due_date, không theo cột status: chưa có job chuyển
+    // Unpaid → Overdue (BR-004) nên lọc theo status sẽ bỏ sót hóa đơn quá hạn.
+    // Hai lọc "chưa thu" loại hóa đơn đã quá hạn để khớp badge hiển thị.
+    const today = toLocalDateString(new Date());
+    if (status === "Overdue") {
+      q = q.neq("status", "Paid").lt("due_date", today);
+    } else if (status === "Unpaid" || status === "PartiallyPaid") {
+      q = q.eq("status", status).gte("due_date", today);
+    } else if (status) {
       q = q.eq("status", status);
     }
 
@@ -155,8 +168,9 @@ export async function getInvoices(params: GetInvoicesParams): Promise<InvoiceIte
     if (error) throw error;
     return (data || []) as unknown as InvoiceItem[];
   } catch (err) {
+    // Ném lỗi để trang phân biệt "lỗi tải" với "chưa có hóa đơn" (PRD AC#1).
     logError("billing-service.getInvoices", err);
-    return [];
+    throw err;
   }
 }
 
