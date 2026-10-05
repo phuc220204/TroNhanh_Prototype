@@ -5,7 +5,7 @@ import { Button } from "../../../shared/components/common";
 import type { Property } from "../../types/room";
 import { useAuth } from "../../../shared/contexts/AuthContext";
 import { getInvoices, type InvoiceItem } from "../../services/billing-service";
-import { recordPayment } from "../../services/billing-service";
+import { recordPayment, getRemainingAmount } from "../../services/billing-service";
 import { toUserMessage } from "../../../shared/services/supabase-error";
 
 interface PaymentsViewProps {
@@ -125,12 +125,13 @@ export function PaymentsView({ property, mobile, isReadOnly }: PaymentsViewProps
                     )}
                   </td>
                   <td style={{ padding: "12px" }}>
-                    {inv.status !== "Paid" && (
+                    {getRemainingAmount(inv) > 0 && (
                       <Button
                         variant="primary"
                         size="sm"
                         requiresWrite
-                        onClick={() => handleConfirmPayment(inv.id, inv.total_amount || 0)}
+                        // Gửi số CÒN THIẾU, không phải `total_amount` — xem getRemainingAmount().
+                        onClick={() => handleConfirmPayment(inv.id, getRemainingAmount(inv))}
                         data-testid="confirm-payment-btn"
                       >
                         Xác nhận đã nhận tiền
