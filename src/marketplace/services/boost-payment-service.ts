@@ -76,7 +76,6 @@ export function getBoostCheckoutErrorMessage(error: unknown, fallback = "Không 
   if (message.includes("BOOST_ALREADY_PAID_PENDING_APPROVAL")) return "Gói Boost này đã được thanh toán và đang chờ tin được duyệt.";
   if (message.includes("BOOST_ORDER_ALREADY_PAID")) return "Đơn Boost này đã được thanh toán. Kiểm tra trạng thái tin trong Quản lý tin đăng.";
   if (message.includes("BOOST_ORDER_NEEDS_REVIEW")) return "Đơn Boost đã được chuyển sang đối soát. Vui lòng liên hệ hỗ trợ với mã đơn.";
-  if (message.includes("BOOST_OPEN_ORDER_PACKAGE_MISMATCH")) return "Tin này đã có đơn Boost chưa thanh toán cho gói khác. Hãy chọn lại gói cũ để tiếp tục thanh toán.";
   if (message.includes("BOOST_ORDER_REJECTED")) return "Tin này chưa đủ điều kiện tạo đơn Boost.";
   if (message.includes("PAYOS_INVALID_CHECKOUT_URL")) return "Liên kết thanh toán không hợp lệ. Vui lòng liên hệ hỗ trợ.";
   return fallback;

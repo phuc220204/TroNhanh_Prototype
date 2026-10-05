@@ -1445,6 +1445,7 @@ export type Database = {
         Returns: {
           amount: number
           order_code: number
+          replaced_order_code: number
         }[]
       }
       begin_contact_phone_verification: {

@@ -3,6 +3,27 @@ import { signPaymentLinkRequest, verifyPayosData } from "../_shared/payos-signat
 import { getPayosCorsOrigin } from "../_shared/boost-access.mjs";
 
 const PAYOS_API_URL = "https://api-merchant.payos.vn/v2/payment-requests";
+// Link payOS sống 15 phút. DB chỉ dùng lại đơn mở tạo chưa quá 10 phút
+// (migration 20261006100100) ⇒ link trả lại cho khách luôn còn ≥ 5 phút.
+const PAYMENT_LINK_TTL_SECONDS = 15 * 60;
+
+/**
+ * Hủy link payOS của đơn vừa bị thay (khác gói, đổi giá, hoặc quá hạn).
+ * Best-effort: lỗi cũng không sao — link tự hết hạn theo `expiredAt`, và nếu khách
+ * vẫn trả vào đơn cũ thì webhook vẫn ghi nhận và cấp Boost.
+ */
+async function cancelPayosLink(orderCode: number, clientId: string, apiKey: string): Promise<void> {
+  try {
+    await fetch(`${PAYOS_API_URL}/${orderCode}/cancel`, {
+      method: "POST",
+      headers: { "content-type": "application/json", "x-client-id": clientId, "x-api-key": apiKey },
+      body: JSON.stringify({ cancellationReason: "Đã tạo đơn Boost mới" }),
+      signal: AbortSignal.timeout(5_000),
+    });
+  } catch {
+    // Bỏ qua — xem comment ở trên.
+  }
+}
 
 function json(body: object, status: number, origin: string) {
   return new Response(JSON.stringify(body), {
@@ -77,7 +98,10 @@ Deno.serve(async (request) => {
   if (orderError || !Array.isArray(orderRows) || orderRows.length !== 1) {
     return json({ error: "BOOST_ORDER_REJECTED" }, 400, corsOrigin);
   }
-  const order = orderRows[0] as { order_code: number; amount: number };
+  const order = orderRows[0] as { order_code: number; amount: number; replaced_order_code: number | null };
+  if (typeof order.replaced_order_code === "number") {
+    await cancelPayosLink(order.replaced_order_code, clientId, apiKey);
+  }
   if (!Number.isSafeInteger(order.order_code) || !Number.isInteger(order.amount)) {
     return json({ error: "BOOST_ORDER_INVALID" }, 500, corsOrigin);
   }
@@ -102,13 +126,6 @@ Deno.serve(async (request) => {
   if (savedOrder.status === "NEEDS_REVIEW") {
     return json({ error: "BOOST_ORDER_NEEDS_REVIEW" }, 409, corsOrigin);
   }
-  // The database deliberately reuses one open order for a listing so a retry
-  // cannot create two payable payOS links. Do not silently return a checkout
-  // for a different package if the seller changes the radio selection later.
-  if ((savedOrder.status === "PENDING" || savedOrder.status === "LINKED")
-      && savedOrder.days !== input.days) {
-    return json({ error: "BOOST_OPEN_ORDER_PACKAGE_MISMATCH" }, 409, corsOrigin);
-  }
   if (savedOrder.status === "LINKED" && typeof savedOrder.checkout_url === "string") {
     try {
       const storedUrl = new URL(savedOrder.checkout_url);
@@ -132,13 +149,15 @@ Deno.serve(async (request) => {
     returnUrl: `${siteOrigin}/?boost=return&orderCode=${order.order_code}`,
     cancelUrl: `${siteOrigin}/?boost=cancel&orderCode=${order.order_code}`,
   };
+  // `expiredAt` không nằm trong chữ ký (payOS chỉ ký 5 trường ở paymentRequest).
+  const expiredAt = Math.floor(Date.now() / 1000) + PAYMENT_LINK_TTL_SECONDS;
   const signature = await signPaymentLinkRequest(paymentRequest, checksumKey);
   let payosResponse: Response;
   try {
     payosResponse = await fetch(PAYOS_API_URL, {
       method: "POST",
       headers: { "content-type": "application/json", "x-client-id": clientId, "x-api-key": apiKey },
-      body: JSON.stringify({ ...paymentRequest, signature }),
+      body: JSON.stringify({ ...paymentRequest, expiredAt, signature }),
       signal: AbortSignal.timeout(15_000),
     });
   } catch {
