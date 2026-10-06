@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Plus, AlertCircle, X } from "lucide-react";
 import { useToast } from "../../../shared/contexts/ToastContext";
 import { C, font, radius } from "../../../shared/theme";
@@ -51,7 +51,11 @@ export function OccupantsView({ property, mobile, isReadOnly, onRefreshData }: O
 
   const showToast = (msg: string) => showGlobalToast(msg, { testId: "occupancy-toast" });
 
+  // Đổi khu nhanh: chỉ nhận kết quả của lần tải mới nhất (khu cũ về sau không ghi đè).
+  const latestRequest = useRef(0);
+
   const fetchOccupanciesData = async () => {
+    const requestId = ++latestRequest.current;
     if (!property || !property.rooms || property.rooms.length === 0) {
       setOccupancies([]);
       setLoadError("");
@@ -63,11 +67,12 @@ export function OccupantsView({ property, mobile, isReadOnly, onRefreshData }: O
       // KHÔNG `.catch(() => [])` từng phòng: một phòng lỗi sẽ bị nuốt và danh sách
       // hiện thiếu người mà không ai biết. Lỗi thì báo lỗi, cho thử lại.
       const allResults = await Promise.all(property.rooms.map((r) => listOccupancies(r.id)));
+      if (requestId !== latestRequest.current) return;
       setOccupancies(allResults.flat());
     } catch (err: unknown) {
-      setLoadError(toUserMessage(err));
+      if (requestId === latestRequest.current) setLoadError(toUserMessage(err));
     } finally {
-      setLoading(false);
+      if (requestId === latestRequest.current) setLoading(false);
     }
   };
 

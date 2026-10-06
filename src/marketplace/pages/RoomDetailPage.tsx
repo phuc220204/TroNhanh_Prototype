@@ -38,25 +38,30 @@ export function RoomDetailPage() {
 
   useEffect(() => {
     if (!id) return;
+    // Bấm "phòng tương tự" đổi `id` khi tin cũ chưa tải xong: kết quả cũ về sau
+    // không được ghi đè tin mới.
+    let cancelled = false;
     const fetchListing = async () => {
       setIsLoading(true);
       try {
         const data = await getListingById(id);
+        if (cancelled) return;
         setListing(data);
         if (data) {
           incrementViewCount(id);
           // Tin tương tự tải sau, không chặn render trang chính.
           getSimilarListings(id, data.district, Number(data.price))
-            .then(setSimilarListings)
+            .then((items) => { if (!cancelled) setSimilarListings(items); })
             .catch((err) => logError("RoomDetailPage.fetchSimilar", err));
         }
       } catch (err) {
         logError("RoomDetailPage.fetchListing", err);
       } finally {
-        setIsLoading(false);
+        if (!cancelled) setIsLoading(false);
       }
     };
-    fetchListing();
+    void fetchListing();
+    return () => { cancelled = true; };
   }, [id]);
 
   const openSimilar = (similarId: string) => {
