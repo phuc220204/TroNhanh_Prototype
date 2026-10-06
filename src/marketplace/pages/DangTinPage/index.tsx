@@ -12,6 +12,7 @@ import { Step3Photos } from "./Step3Photos";
 import { Step4Costs } from "./Step4Costs";
 import { Step5Visibility } from "./Step5Visibility";
 import { useListingForm } from "./useListingForm";
+import { Button, ModalShell } from "../../../shared/components/common";
 
 const LISTING_STEPS = [
   "Thông tin cơ bản",
@@ -82,14 +83,25 @@ export function DangTinPage() {
     hasUnsavedChanges && currentLocation.pathname !== nextLocation.pathname
   );
 
-  useEffect(() => {
-    if (blocker.state !== "blocked") return;
-    if (window.confirm("Bạn có thay đổi chưa lưu. Rời trang sẽ làm mất dữ liệu vừa nhập.")) {
-      blocker.proceed();
-    } else {
-      blocker.reset();
-    }
-  }, [blocker]);
+  // Rời trang trong app khi còn thay đổi chưa lưu ⇒ hộp thoại xác nhận (render bên dưới).
+  // Đóng tab / tải lại vẫn do `beforeunload` của trình duyệt cảnh báo.
+  const leaveConfirm = blocker.state === "blocked" ? (
+    <ModalShell
+      title="Rời trang khi chưa lưu?"
+      size="sm"
+      onClose={() => blocker.reset?.()}
+      footer={
+        <>
+          <Button variant="ghost" onClick={() => blocker.reset?.()} data-testid="listing-leave-cancel">Ở lại</Button>
+          <Button variant="danger" onClick={() => blocker.proceed?.()} data-testid="listing-leave-confirm">Rời trang</Button>
+        </>
+      }
+    >
+      <p style={{ fontFamily: font, fontSize: 14, color: C.textPrimary, margin: 0 }}>
+        Bạn có thay đổi chưa lưu. Rời trang sẽ làm mất dữ liệu vừa nhập.
+      </p>
+    </ModalShell>
+  ) : null;
 
   useEffect(() => {
     const warnBeforeUnload = (event: BeforeUnloadEvent) => {
@@ -217,6 +229,7 @@ export function DangTinPage() {
   return (
     <div style={{ minHeight: "100vh", background: C.bg, fontFamily: font, display: "flex", flexDirection: "column" }}>
       <PublicNavbar />
+      {leaveConfirm}
 
       <div style={{ flex: 1, maxWidth: 960, margin: "0 auto", width: "100%", padding: isMobile ? "16px 16px 80px" : "32px 24px 80px", boxSizing: "border-box" }}>
         {/* Top Stepper Bar */}
