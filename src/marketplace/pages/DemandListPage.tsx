@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router";
 import { PublicNavbar } from "../../shared/components/PublicNavbar";
 import { EmptyState } from "../../shared/components/common/EmptyState";
@@ -9,7 +9,9 @@ import { useBreakpoint } from "../../shared/components/useBreakpoint";
 import { useAuth } from "../../shared/contexts/AuthContext";
 import { listActiveDemandPosts, type DemandPostItem } from "../services/demand-post-service";
 import { startConversation } from "../../shared/services/messaging-service";
-import { AreaSelect } from "../../shared/components/common";
+import { AreaSelect, Button } from "../../shared/components/common";
+import { useToast } from "../../shared/contexts/ToastContext";
+import { toUserMessage } from "../../shared/services/supabase-error";
 
 export function DemandListPage() {
   const navigate = useNavigate();
@@ -23,10 +25,16 @@ export function DemandListPage() {
   });
   const [posts, setPosts] = useState<DemandPostItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  // Đổi lọc nhanh: chỉ nhận kết quả của lần gọi mới nhất (lần cũ về sau không ghi đè).
+  const latestRequest = useRef(0);
+  const { showToast } = useToast();
 
   const fetchPosts = async () => {
+    const requestId = ++latestRequest.current;
     try {
       setLoading(true);
+      setLoadError(null);
       // Lọc hoàn toàn ở SERVER. Bản cũ gọi service rồi lọc lại y hệt ở client —
       // hai tầng lọc cho cùng một điều kiện, và cái ở client chạy SAU phân
       // trang nên số đếm không khớp danh sách.
@@ -36,13 +44,13 @@ export function DemandListPage() {
         wardCode: area.wardCode,
       });
 
-      const filtered = data;
-
-      setPosts(filtered);
-    } catch (_) {
-      setPosts([]);
+      if (requestId !== latestRequest.current) return;
+      setPosts(data);
+    } catch (err) {
+      if (requestId !== latestRequest.current) return;
+      setLoadError(toUserMessage(err));
     } finally {
-      setLoading(false);
+      if (requestId === latestRequest.current) setLoading(false);
     }
   };
 
@@ -59,8 +67,8 @@ export function DemandListPage() {
     try {
       const convId = await startConversation("DemandPost", post.id);
       navigate(`/tin-nhan/${convId}`);
-    } catch (_) {
-      // Handled in service
+    } catch (err) {
+      showToast(`Chưa mở được cuộc trò chuyện: ${toUserMessage(err)}`, { variant: "error" });
     }
   };
 
@@ -158,6 +166,14 @@ export function DemandListPage() {
           <p style={{ fontFamily: font, fontSize: 14, color: C.textSecondary, textAlign: "center", padding: "48px 0" }}>
             Đang tải danh sách tin nhu cầu...
           </p>
+        ) : loadError ? (
+          <div role="alert" style={{ background: C.white, border: `1px solid ${C.errorBorder}`, borderRadius: 16, padding: "48px 24px" }}>
+            <EmptyState
+              title="Chưa tải được danh sách tin nhu cầu"
+              description={loadError}
+              action={<Button variant="outline" onClick={() => void fetchPosts()}>Thử lại</Button>}
+            />
+          </div>
         ) : posts.length === 0 ? (
           <div style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: 16, padding: "48px 24px" }}>
             <EmptyState

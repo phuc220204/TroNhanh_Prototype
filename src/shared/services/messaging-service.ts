@@ -99,7 +99,7 @@ export async function listMyConversations(): Promise<ConversationSummary[]> {
     });
   } catch (err) {
     logError("messaging-service.listMyConversations", err);
-    return [];
+    throw err;
   }
 }
 
@@ -119,7 +119,7 @@ export async function listMessages(conversationId: string): Promise<Message[]> {
     return (data || []) as Message[];
   } catch (err) {
     logError("messaging-service.listMessages", err);
-    return [];
+    throw err;
   }
 }
 

@@ -17,6 +17,9 @@ import {
   type Message,
 } from "../services/messaging-service";
 import { USE_REALTIME_MESSAGING, MESSAGING_POLL_INTERVAL_MS } from "../query/queryClient";
+import { Button } from "../components/common";
+import { useToast } from "../contexts/ToastContext";
+import { toUserMessage } from "../services/supabase-error";
 
 export function InboxPage() {
   const { conversationId } = useParams<{ conversationId?: string }>();
@@ -30,6 +33,9 @@ export function InboxPage() {
   const [inputText, setInputText] = useState("");
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
+  // Lỗi tải danh sách — trước đây bị nuốt và hiện "Chưa có tin nhắn".
+  const [listError, setListError] = useState<string | null>(null);
+  const { showToast } = useToast();
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -40,14 +46,15 @@ export function InboxPage() {
 
   const fetchConversations = async () => {
     try {
+      setListError(null);
       const list = await listMyConversations();
       setConversations(list);
       if (conversationId) {
         const found = list.find((c) => c.id === conversationId);
         if (found) setActiveConv(found);
       }
-    } catch (_) {
-      // Error handling
+    } catch (err) {
+      setListError(toUserMessage(err));
     } finally {
       setLoading(false);
     }
@@ -64,17 +71,20 @@ export function InboxPage() {
       return;
     }
 
+    // Đổi hội thoại nhanh: kết quả của hội thoại cũ về sau không được ghi đè hội thoại mới.
+    let cancelled = false;
     const loadThread = async () => {
       try {
         const msgs = await listMessages(activeConv.id);
+        if (cancelled) return;
         setMessages(msgs);
         await markConversationRead(activeConv.id);
         setConversations((prev) =>
           prev.map((c) => (c.id === activeConv.id ? { ...c, unreadCount: 0 } : c))
         );
         setTimeout(scrollToBottom, 100);
-      } catch (_) {
-        // Error handling
+      } catch (err) {
+        if (!cancelled) showToast(`Chưa tải được tin nhắn: ${toUserMessage(err)}`, { variant: "error" });
       }
     };
 
@@ -93,13 +103,18 @@ export function InboxPage() {
       });
     } else {
       const interval = setInterval(async () => {
-        const msgs = await listMessages(activeConv.id);
-        setMessages(msgs);
+        try {
+          const msgs = await listMessages(activeConv.id);
+          if (!cancelled) setMessages(msgs);
+        } catch {
+          // Lỗi một lần poll: giữ tin đang hiện, lần poll sau thử lại.
+        }
       }, MESSAGING_POLL_INTERVAL_MS);
       cleanup = () => clearInterval(interval);
     }
 
     return () => {
+      cancelled = true;
       if (cleanup) cleanup();
     };
   }, [activeConv?.id]);
@@ -128,8 +143,9 @@ export function InboxPage() {
         )
       );
       setTimeout(scrollToBottom, 100);
-    } catch (_) {
+    } catch (err) {
       setInputText(content);
+      showToast(`Chưa gửi được tin nhắn: ${toUserMessage(err)}`, { variant: "error" });
     } finally {
       setSending(false);
     }
@@ -160,6 +176,14 @@ export function InboxPage() {
               <div style={{ flex: 1, overflowY: "auto" }}>
                 {loading ? (
                   <p style={{ fontFamily: font, fontSize: 13, color: C.textSecondary, textAlign: "center", padding: 24 }}>Đang tải tin nhắn...</p>
+                ) : listError ? (
+                  <div role="alert" style={{ padding: "40px 16px" }}>
+                    <EmptyState
+                      title="Chưa tải được tin nhắn"
+                      description={listError}
+                      action={<Button variant="outline" size="sm" onClick={() => { setLoading(true); void fetchConversations(); }}>Thử lại</Button>}
+                    />
+                  </div>
                 ) : conversations.length === 0 ? (
                   <div style={{ padding: "40px 16px" }}>
                     <EmptyState

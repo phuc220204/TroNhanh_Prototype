@@ -91,7 +91,8 @@ export function PostDemandPage() {
           }
         }
       } catch (err) {
-        // Error handling
+        // Không im lặng để form trống: người dùng tưởng tin đã mất nội dung.
+        setErrorMsg(`Chưa tải được tin để sửa: ${toUserMessage(err)}`);
       } finally {
         setLoading(false);
       }

@@ -46,11 +46,16 @@ export function HomePage() {
     const loadHomeData = async () => {
       setIsLoadingHome(true);
       try {
-        const [featuredCards, demandData] = await Promise.all([
+        // allSettled: lỗi tin nhu cầu không được kéo mất khối phòng nổi bật (và ngược lại).
+        const [featuredResult, demandResult] = await Promise.allSettled([
           getFeaturedListings(4),
           listActiveDemandPosts(),
         ]);
         if (!isCurrent) return;
+        if (demandResult.status === "rejected") logError("HomePage.listActiveDemandPosts", demandResult.reason);
+        if (featuredResult.status === "rejected") throw featuredResult.reason;
+        const featuredCards = featuredResult.value;
+        const demandData = demandResult.status === "fulfilled" ? demandResult.value : [];
         const formatted = featuredCards.map(l => ({
             id: l.id,
             title: l.title,

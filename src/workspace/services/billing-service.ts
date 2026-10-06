@@ -195,7 +195,7 @@ export async function getInvoicePeriods(ownerId: string | undefined): Promise<st
     return Array.from(new Set((data || []).map((row) => row.period)));
   } catch (err) {
     logError("billing-service.getInvoicePeriods", err);
-    return [];
+    throw err;
   }
 }
 

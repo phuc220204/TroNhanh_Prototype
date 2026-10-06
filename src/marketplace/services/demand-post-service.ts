@@ -103,7 +103,7 @@ export async function listActiveDemandPosts(filter?: DemandPostFilter): Promise<
     return ((data || []) as any[]).map(formatDemandPostItem);
   } catch (err) {
     logError("demand-post-service.listActiveDemandPosts", err);
-    return [];
+    throw err;
   }
 }
 
@@ -123,7 +123,7 @@ export async function getDemandPostById(id: string): Promise<DemandPostItem | nu
     return formatDemandPostItem(data);
   } catch (err) {
     logError("demand-post-service.getDemandPostById", err);
-    return null;
+    throw err;
   }
 }
 
@@ -147,7 +147,7 @@ export async function listMyDemandPosts(): Promise<DemandPostItem[]> {
     return ((data || []) as any[]).map(formatDemandPostItem);
   } catch (err) {
     logError("demand-post-service.listMyDemandPosts", err);
-    return [];
+    throw err;
   }
 }
 
