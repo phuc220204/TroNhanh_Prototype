@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { CalendarClock, NotebookPen } from "lucide-react";
 import { C, font, radius } from "../../shared/theme";
@@ -210,7 +211,15 @@ export function CollectionLogSection({ invoiceId, isSettled }: CollectionLogSect
         <p role="alert" style={{ fontSize: 12.5, color: C.error, margin: "0 0 8px" }}>{errorMessage}</p>
       )}
 
-      {!isSettled && (
+      {/* Hết gói (READ_ONLY): vẫn xem nhật ký nhưng không hiện ô nhập để gõ rồi mới biết không lưu được. */}
+      {!isSettled && !canWrite && (
+        <p data-testid="collection-log-read-only" style={{ background: C.bg, borderRadius: radius.md, padding: "10px 12px", margin: "0 0 10px", fontSize: 12.5, color: C.textSecondary }}>
+          Gói đã hết hạn — chỉ xem được nhật ký.{" "}
+          <Link to="/chu-tro/goi-dich-vu" style={{ color: C.primary, fontWeight: 700 }}>Gia hạn gói</Link>
+        </p>
+      )}
+
+      {!isSettled && canWrite && (
         <div style={{ background: C.bg, borderRadius: radius.md, padding: 12, marginBottom: 10 }}>
           <NoteForm
             key={formKey}
