@@ -59,7 +59,7 @@ export function LandlordReviewsPage() {
   const reviews = reviewsQuery.data ?? [];
 
   return (
-    <LandlordShell active="overview" mobileTitle="Đánh giá khu trọ">
+    <LandlordShell active="reviews" mobileTitle="Đánh giá khu trọ">
       <div style={{ maxWidth: 900, margin: "0 auto", padding: `${space[8]}px ${space[4]}px` }}>
         <h1 style={{ fontFamily: font, fontSize: 24, fontWeight: 800, color: C.textPrimary, margin: `0 0 ${space[5]}px` }}>
           Quản lý &amp; phản hồi đánh giá

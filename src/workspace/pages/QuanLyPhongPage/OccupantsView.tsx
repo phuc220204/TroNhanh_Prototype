@@ -334,7 +334,7 @@ export function OccupantsView({
         occupancies={occupancies}
         property={property}
         contractById={contractById}
-        isReadOnly={isReadOnly}
+        mobile={mobile}
         onOpenLinkModal={(occ) => { setLinkModalOpen(occ); setLinkEmailInput(""); setErrorMsg(""); }}
         onAddCoOccupant={setCoOccupantTarget}
         onEndContract={handleEndContract}

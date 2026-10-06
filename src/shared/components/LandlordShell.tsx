@@ -1,11 +1,11 @@
 import { useState, useMemo, createContext, useContext, ReactNode, Children, isValidElement, cloneElement, ReactElement } from "react";
-import { useLocation } from "react-router";
+import { useLocation, useNavigate } from "react-router";
 import { ChevronRight, Lock } from "lucide-react";
 import { C, font } from "../theme";
 import { useBreakpoint } from "./useBreakpoint";
 import { useSubscriptionContext } from "../contexts/SubscriptionContext";
 import { SubscriptionBanner } from "./landlord/SubscriptionBanner";
-import { Sidebar, MobileHeader, MobileTabBar, type LandlordNavId } from "./landlord/SidebarNav";
+import { Sidebar, MobileHeader, MobileTabBar, SAAS_NAV_IDS, ROOM_PAGE_TABS, type LandlordNavId } from "./landlord/SidebarNav";
 import { TrialRegisterModal } from "./landlord/TrialModal";
 
 export type { LandlordNavId };
@@ -59,6 +59,7 @@ export function LandlordShell({
 }) {
   const { isMobile } = useBreakpoint();
   const location = useLocation();
+  const navigate = useNavigate();
   const { status: subStatus, trialDaysLeft, activateTrial, isLoading: isSubscriptionLoading } = useSubscriptionContext();
 
   const [showTrialRegister, setShowTrialRegister] = useState(false);
@@ -66,8 +67,10 @@ export function LandlordShell({
   const activeTab = useMemo(() => {
     try {
       const params = new URLSearchParams(location.search);
-      const tab = params.get("tab");
-      if (tab) return tab as LandlordNavId;
+      // Chỉ nhận tab hợp lệ của trang quản lý phòng; giá trị lạ thì giữ `active`
+      // (trước đây ép kiểu thẳng ⇒ menu không sáng mục nào và bỏ qua màn khóa).
+      const tab = params.get("tab") as LandlordNavId | null;
+      if (tab && ROOM_PAGE_TABS.includes(tab)) return tab;
     } catch {
       // ignore search param parse failure
     }
@@ -91,7 +94,7 @@ export function LandlordShell({
   // năng miễn phí nào — nó thuần là module SaaS. Để dashboard mở tự do thì
   // người chưa có gói vào chỉ thấy một trang số liệu rỗng, không hiểu vì sao;
   // màn khóa dưới đây giải thích và mời dùng thử.
-  const isSaaSTab = ["overview", "rooms", "occupants", "payments", "settings"].includes(activeTab);
+  const isSaaSTab = SAAS_NAV_IDS.includes(activeTab);
   const isSaaSBlocked = subStatus === "NONE" && isSaaSTab;
 
   const renderContent = () => {
@@ -182,7 +185,7 @@ export function LandlordShell({
     return (
       <LandlordShellContext.Provider value={{ subStatus, activeTab }}>
         <div style={{ background: C.bg, minHeight: "100vh", display: "flex", flexDirection: "column" }}>
-          <MobileHeader title={mobileTitle} />
+          <MobileHeader title={mobileTitle} onBack={activeTab === "overview" ? undefined : () => navigate("/chu-tro")} />
           <SubscriptionBanner
             status={subStatus}
             trialDaysLeft={trialDaysLeft}

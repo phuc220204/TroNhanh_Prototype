@@ -20,7 +20,7 @@ export async function getDashboardMetrics(ownerId: string, propertyId?: string) 
 
     let invoicesQuery = supabase
       .from("invoices")
-      .select("id,room_id,total_amount,status,period,due_date,payments(amount,paid_at,purpose),rooms!inner(property_id,room_code)")
+      .select("id,room_id,total_amount,status,period,due_date,payments(amount,paid_at,purpose),rooms!inner(property_id,room_code,properties(name))")
       .eq("owner_id", ownerId)
       .is("deleted_at", null);
     if (propertyId) invoicesQuery = invoicesQuery.eq("rooms.property_id", propertyId);

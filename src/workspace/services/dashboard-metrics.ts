@@ -4,6 +4,8 @@ import { classifyInvoiceDue, getDaysUntilDue } from "./invoice-due.ts";
 export interface ReminderInvoice {
   id: string;
   roomCode: string;
+  /** Tên khu — nhiều khu cùng có "P101" thì mã phòng thôi không đủ để biết phòng nào. */
+  propertyName: string;
   dueDate: string;
   remaining: number;
   daysUntilDue: number;
@@ -42,7 +44,7 @@ export interface DashboardInvoiceMetric {
   period: string;
   due_date?: string | null;
   payments?: Array<{ amount: number; paid_at: string; purpose: string }>;
-  rooms?: { room_code?: string | null } | null;
+  rooms?: { room_code?: string | null; properties?: { name?: string | null } | null } | null;
 }
 
 const currentPeriod = (date: Date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
@@ -83,6 +85,7 @@ export function aggregateDashboardMetrics(
     reminderInvoices.push({
       id: invoice.id,
       roomCode: invoice.rooms?.room_code ?? "",
+      propertyName: invoice.rooms?.properties?.name ?? "",
       dueDate: invoice.due_date,
       remaining,
       daysUntilDue,

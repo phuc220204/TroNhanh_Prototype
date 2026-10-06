@@ -4,6 +4,7 @@ import { Plus, Building2, ChevronDown, RefreshCw } from "lucide-react";
 import { C, font } from "../../../shared/theme";
 import { useBreakpoint } from "../../../shared/components/useBreakpoint";
 import { LandlordShell, LandlordBreadcrumb, type LandlordNavId } from "../../../shared/components/LandlordShell";
+import { ROOM_PAGE_TABS } from "../../../shared/components/landlord/SidebarNav";
 import type { Room, Property } from "../../types/room";
 import type { RoomStatus } from "../../../shared/types/status";
 import { useAuth } from "../../../shared/contexts/AuthContext";
@@ -14,7 +15,6 @@ import { logError } from "../../../shared/services/supabase-error";
 import { Button } from "../../../shared/components/common";
 import { RoomsView } from "./RoomsView";
 import { OccupantsView } from "./OccupantsView";
-import { PaymentsView } from "./PaymentsView";
 import { SettingsView } from "./SettingsView";
 import { RoomDetailModal } from "./RoomDetailModal";
 import { UtilityReadingForm } from "./UtilityReadingForm";
@@ -65,6 +65,12 @@ const mapDbRoomToRoom = (dbRoom: any): Room => {
   };
 };
 
+const ROOM_TABS: { id: LandlordNavId; label: string }[] = [
+  { id: "rooms", label: "Phòng" },
+  { id: "occupants", label: "Người ở" },
+  { id: "settings", label: "Cài đặt khu" },
+];
+
 export function QuanLyPhongPage() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -77,10 +83,15 @@ export function QuanLyPhongPage() {
   const canWrite = useCanWrite();
   const isReadOnly = !canWrite;
 
-  const activeTab = useMemo(() => {
-    const params = new URLSearchParams(location.search);
-    return (params.get("tab") || "rooms") as LandlordNavId;
-  }, [location.search]);
+  const rawTab = new URLSearchParams(location.search).get("tab");
+  // Tab hóa đơn cũ đã gộp về /chu-tro/hoa-don (một màn hóa đơn duy nhất).
+  useEffect(() => {
+    if (rawTab === "payments") navigate("/chu-tro/hoa-don", { replace: true });
+  }, [rawTab, navigate]);
+  const activeTab: LandlordNavId = rawTab && (ROOM_PAGE_TABS as readonly string[]).includes(rawTab)
+    ? (rawTab as LandlordNavId)
+    : "rooms";
+  const goToTab = (tab: LandlordNavId) => navigate(`/chu-tro/quan-ly-phong?tab=${tab}`);
 
   const [properties, setProperties] = useState<Property[]>([]);
   const [selectedId, setSelectedId] = useState<string>("");
@@ -241,6 +252,28 @@ export function QuanLyPhongPage() {
           )}
         </div>
 
+        {/* Điện thoại không có sidebar: thanh tab để vào Người ở / Cài đặt (trước đây không có lối vào). */}
+        {isMobile && (
+          <div role="tablist" aria-label="Mục quản lý" data-testid="rooms-mobile-tabs" style={{ display: "flex", gap: 4, padding: 4, background: C.cream, borderRadius: 12 }}>
+            {ROOM_TABS.map((tab) => {
+              const isSelected = activeTab === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  type="button"
+                  role="tab"
+                  aria-selected={isSelected}
+                  data-testid={`rooms-tab-${tab.id}`}
+                  onClick={() => goToTab(tab.id)}
+                  style={{ flex: 1, minHeight: 40, border: "none", borderRadius: 9, cursor: "pointer", fontFamily: font, fontSize: 13, fontWeight: isSelected ? 800 : 600, background: isSelected ? C.white : "transparent", color: isSelected ? C.primary : C.textSecondary }}
+                >
+                  {tab.label}
+                </button>
+              );
+            })}
+          </div>
+        )}
+
         {/* View Component by Tab */}
         {loading ? (
           <p style={{ fontFamily: font, fontSize: 14, color: C.textSecondary, textAlign: "center", padding: "48px 0" }}>
@@ -279,14 +312,6 @@ export function QuanLyPhongPage() {
                 mobile={isMobile}
                 isReadOnly={isReadOnly}
                 onRefreshData={() => loadDbData(false)}
-              />
-            )}
-
-            {activeTab === "payments" && (
-              <PaymentsView
-                property={selectedProperty}
-                mobile={isMobile}
-                isReadOnly={isReadOnly}
               />
             )}
 

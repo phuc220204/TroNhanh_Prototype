@@ -112,7 +112,7 @@ export function FindRenterPage() {
   // Lỗi tải KHÔNG được trông như "chưa có phòng trống" — người dùng sẽ tưởng mất dữ liệu.
   if (loadError) {
     return (
-      <LandlordShell active="overview" mobileTitle="Tìm người thuê">
+      <LandlordShell active="find-renter" mobileTitle="Tìm người thuê">
         <div style={{ maxWidth: 1200, margin: "0 auto", padding: `${space[8]}px ${space[4]}px` }}>
           <h1 style={{ fontFamily: font, fontSize: 24, fontWeight: 800, color: C.textPrimary, marginBottom: space[5] }}>
             Tìm người thuê phù hợp
@@ -139,7 +139,7 @@ export function FindRenterPage() {
 
   if (!isLoading && vacantRooms.length === 0) {
     return (
-      <LandlordShell active="overview" mobileTitle="Tìm người thuê">
+      <LandlordShell active="find-renter" mobileTitle="Tìm người thuê">
         <div style={{ maxWidth: 1200, margin: "0 auto", padding: `${space[8]}px ${space[4]}px` }}>
           <h1 style={{ fontFamily: font, fontSize: 24, fontWeight: 800, color: C.textPrimary, marginBottom: space[5] }}>
             Tìm người thuê phù hợp
@@ -185,7 +185,7 @@ export function FindRenterPage() {
   }
 
   return (
-    <LandlordShell active="overview" mobileTitle="Tìm người thuê">
+    <LandlordShell active="find-renter" mobileTitle="Tìm người thuê">
       <div style={{ maxWidth: 1200, margin: "0 auto", padding: `${space[8]}px ${space[4]}px` }}>
         {/* Page Header */}
         <div style={{ marginBottom: space[6] }}>

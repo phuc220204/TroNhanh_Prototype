@@ -2,14 +2,24 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router";
 import {
   LayoutGrid, Building2, FileText, Users, Wallet, Settings, LogOut,
-  Home, MessageSquare, User, Search, Lock, X
+  Home, MessageSquare, User, Search, Lock, X, ChevronLeft, Star, UserSearch
 } from "lucide-react";
 import { C, font } from "../../theme";
 import { BrandLogo } from "../brand/BrandLogo";
 import { useAuth } from "../../contexts/AuthContext";
 import { useSubscriptionContext } from "../../contexts/SubscriptionContext";
 
-export type LandlordNavId = "overview" | "rooms" | "listings" | "occupants" | "payments" | "settings";
+export type LandlordNavId =
+  | "overview" | "rooms" | "listings" | "occupants" | "billing" | "settings"
+  | "find-renter" | "reviews";
+
+/** Các trang thuộc module SaaS (bị khóa khi chưa có gói). Một chỗ duy nhất — LandlordShell dùng lại. */
+export const SAAS_NAV_IDS: readonly LandlordNavId[] = [
+  "overview", "rooms", "occupants", "billing", "settings", "find-renter", "reviews",
+];
+
+/** Giá trị hợp lệ của `?tab=` trong /chu-tro/quan-ly-phong. */
+export const ROOM_PAGE_TABS: readonly LandlordNavId[] = ["rooms", "occupants", "settings"];
 
 
 // Khu vực chủ trọ giờ CHỈ còn phần vận hành. "Quản lý tin đăng" đã chuyển sang
@@ -21,7 +31,7 @@ export type LandlordNavId = "overview" | "rooms" | "listings" | "occupants" | "p
 // dùng được không cần gói.
 const NAV_FREE: { id: LandlordNavId | "messages"; icon: typeof LayoutGrid; label: string; to?: string }[] = [
   { id: "listings", icon: FileText, label: "Tin đăng của tôi", to: "/tai-khoan/tin-cho-thue" },
-  { id: "messages", icon: MessageSquare, label: "Tin nhắn in-app", to: "/tin-nhan" },
+  { id: "messages", icon: MessageSquare, label: "Tin nhắn", to: "/tin-nhan" },
 ];
 
 // "Tổng quan" chuyển xuống đây: sau khi quản lý tin đăng dọn sang khu tài
@@ -31,8 +41,11 @@ const NAV_SAAS: { id: LandlordNavId; icon: typeof LayoutGrid; label: string; to?
   { id: "overview", icon: LayoutGrid, label: "Tổng quan", to: "/chu-tro" },
   { id: "rooms", icon: Building2, label: "Khu trọ & Phòng", to: "/chu-tro/quan-ly-phong?tab=rooms" },
   { id: "occupants", icon: Users, label: "Người ở & Hợp đồng", to: "/chu-tro/quan-ly-phong?tab=occupants" },
-  { id: "payments", icon: Wallet, label: "Hóa đơn & Thanh toán", to: "/chu-tro/quan-ly-phong?tab=payments" },
+  // Một màn hóa đơn duy nhất: /chu-tro/hoa-don (có nhật ký thu tiền, ghi nhận đã thu).
+  { id: "billing", icon: Wallet, label: "Hóa đơn & Thanh toán", to: "/chu-tro/hoa-don" },
   { id: "settings", icon: Settings, label: "Cài đặt khu trọ", to: "/chu-tro/quan-ly-phong?tab=settings" },
+  { id: "find-renter", icon: UserSearch, label: "Tìm người thuê", to: "/chu-tro/tim-nguoi-thue" },
+  { id: "reviews", icon: Star, label: "Đánh giá khu trọ", to: "/chu-tro/danh-gia" },
 ];
 
 export function Sidebar({ active, onSaaSAccess }: { active: LandlordNavId; onSaaSAccess: () => void }) {
@@ -46,10 +59,10 @@ export function Sidebar({ active, onSaaSAccess }: { active: LandlordNavId; onSaa
   return (
     <aside style={{ width: 248, background: C.white, borderRight: `1px solid ${C.border}`, display: "flex", flexDirection: "column", position: "sticky", top: 0, height: "100vh", flexShrink: 0 }}>
       <div style={{ padding: "22px 20px 18px", borderBottom: `1px solid ${C.border}` }}>
-        <button onClick={() => navigate("/chu-tro")} aria-label="Trọ Nhanh Landlord Hub" style={{ display: "flex", background: "none", border: "none", padding: 0, cursor: "pointer" }}>
+        <button onClick={() => navigate("/chu-tro")} aria-label="Về tổng quan chủ trọ" style={{ display: "flex", background: "none", border: "none", padding: 0, cursor: "pointer" }}>
           <BrandLogo variant="full" size="sm" />
         </button>
-        <p style={{ fontFamily: font, fontSize: 13, fontWeight: 700, color: C.textPrimary, margin: "8px 0 1px" }}>Landlord Hub</p>
+        <p style={{ fontFamily: font, fontSize: 13, fontWeight: 700, color: C.textPrimary, margin: "8px 0 1px" }}>Khu chủ trọ</p>
         <p style={{ fontFamily: font, fontSize: 11.5, color: C.textSecondary, margin: 0 }}>Quản lý phòng trọ chuyên nghiệp</p>
       </div>
 
@@ -99,7 +112,7 @@ export function Sidebar({ active, onSaaSAccess }: { active: LandlordNavId; onSaa
               <span style={{ display: "flex", alignItems: "center", gap: 11 }}>
                 <Icon size={17} /> {label}
               </span>
-              {isLocked && <Lock size={14} color="#9B8C78" />}
+              {isLocked && <Lock size={14} color={C.rented} />}
             </button>
           );
         })}
@@ -113,10 +126,16 @@ export function Sidebar({ active, onSaaSAccess }: { active: LandlordNavId; onSaa
   );
 }
 
-export function MobileHeader({ title }: { title: string }) {
+export function MobileHeader({ title, onBack }: { title: string; onBack?: () => void }) {
   return (
     <div style={{ background: C.primaryDark, height: 56, display: "flex", alignItems: "center", padding: "0 16px", gap: 12, position: "sticky", top: 0, zIndex: 100, boxShadow: "0 2px 12px rgba(42,26,12,0.22)", flexShrink: 0, "--tn-brand-logo-color": C.cream } as React.CSSProperties}>
-      <BrandLogo variant="full" size="sm" />
+      {onBack ? (
+        <button type="button" onClick={onBack} aria-label="Quay lại tổng quan" data-testid="landlord-mobile-back" style={{ background: "none", border: "none", padding: 0, minWidth: 44, minHeight: 44, display: "flex", alignItems: "center", justifyContent: "flex-start", cursor: "pointer", color: C.cream }}>
+          <ChevronLeft size={24} />
+        </button>
+      ) : (
+        <BrandLogo variant="full" size="sm" />
+      )}
       <span style={{ fontFamily: font, fontSize: 18, fontWeight: 800, color: C.cream, flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{title}</span>
     </div>
   );
@@ -129,28 +148,29 @@ export function MobileTabBar({ active, onSaaSAccess }: { active: LandlordNavId; 
   const [accountOpen, setAccountOpen] = useState(false);
   const [loggedOut, setLoggedOut] = useState(false);
 
-  const tabs: { Icon: typeof Home; label: string; on: LandlordNavId; onTap: () => void }[] = [
-    { Icon: Home, label: "Trang chủ", on: "overview", onTap: () => navigate("/chu-tro") },
-    { 
-      Icon: Building2, label: "Phòng", on: "rooms", 
-      onTap: () => {
-        if (subStatus === "NONE") onSaaSAccess();
-        else navigate("/chu-tro/quan-ly-phong");
-      } 
-    },
-    { Icon: MessageSquare, label: "Tin nhắn", on: "occupants", onTap: () => navigate("/tin-nhan") },
-    { Icon: User, label: "Tài khoản", on: "settings", onTap: () => setAccountOpen(true) },
+  const openSaaS = (to: string) => () => {
+    if (subStatus === "NONE") onSaaSAccess();
+    else navigate(to);
+  };
+  // `on`: các trang làm tab sáng. "Tin nhắn"/"Tài khoản" là lối ra ngoài, không
+  // ứng với trang nào ở đây (trước đây gán nhầm occupants/settings nên sáng sai).
+  const tabs: { Icon: typeof Home; label: string; on: LandlordNavId[]; onTap: () => void }[] = [
+    { Icon: Home, label: "Tổng quan", on: ["overview"], onTap: () => navigate("/chu-tro") },
+    { Icon: Building2, label: "Phòng", on: ["rooms", "occupants", "settings"], onTap: openSaaS("/chu-tro/quan-ly-phong") },
+    { Icon: Wallet, label: "Hóa đơn", on: ["billing"], onTap: openSaaS("/chu-tro/hoa-don") },
+    { Icon: MessageSquare, label: "Tin nhắn", on: [], onTap: () => navigate("/tin-nhan") },
+    { Icon: User, label: "Tài khoản", on: [], onTap: () => setAccountOpen(true) },
   ];
 
   return (
     <>
       <nav style={{ background: C.white, borderTop: `1px solid ${C.border}`, height: 60, display: "flex", boxShadow: "0 -2px 12px rgba(92,70,50,0.08)", flexShrink: 0, position: "sticky", bottom: 0, zIndex: 80 }}>
         {tabs.map(({ Icon, label, on, onTap }) => {
-          const isActive = on === active || (label === "Tài khoản" && accountOpen);
+          const isActive = on.includes(active) || (label === "Tài khoản" && accountOpen);
           return (
             <button key={label} onClick={onTap} style={{ flex: 1, minHeight: 44, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 3, background: "none", border: "none", cursor: "pointer" }}>
-              <Icon size={22} color={isActive ? C.primary : "#9B8C78"} strokeWidth={isActive ? 2.5 : 1.8} />
-              <span style={{ fontFamily: font, fontSize: 10, fontWeight: isActive ? 700 : 400, color: isActive ? C.primary : "#9B8C78" }}>{label}</span>
+              <Icon size={22} color={isActive ? C.primary : C.rented} strokeWidth={isActive ? 2.5 : 1.8} />
+              <span style={{ fontFamily: font, fontSize: 10, fontWeight: isActive ? 700 : 400, color: isActive ? C.primary : C.rented }}>{label}</span>
             </button>
           );
         })}
@@ -184,7 +204,7 @@ function AccountSheet({ open, onClose, onNavigate, onLogout }: {
     { Icon: User, label: "Hồ sơ", action: () => onNavigate("/tai-khoan") },
     { Icon: FileText, label: "Tin đăng của tôi", action: () => onNavigate("/tai-khoan/tin-cho-thue") },
     { Icon: MessageSquare, label: "Tin nhắn", action: () => onNavigate("/tin-nhan") },
-    { Icon: LayoutGrid, label: "Dashboard chủ trọ", action: () => onNavigate("/chu-tro") },
+    { Icon: LayoutGrid, label: "Tổng quan chủ trọ", action: () => onNavigate("/chu-tro") },
     { Icon: Search, label: "Về trang tìm phòng", action: () => onNavigate("/") },
     { Icon: Settings, label: "Cài đặt", action: () => onNavigate("/tai-khoan/cai-dat") },
   ];

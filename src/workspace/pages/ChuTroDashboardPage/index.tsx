@@ -40,7 +40,7 @@ const SUPPORT_EMAIL_HREF = `mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent
 
 export function ChuTroDashboardPage() {
   const navigate = useNavigate();
-  const { isMobile } = useBreakpoint();
+  const { isMobile, isTablet } = useBreakpoint();
   const { user, profile } = useAuth();
   const displayName = profile?.full_name || user?.email?.split("@")[0] || "Chủ trọ";
 
@@ -308,7 +308,17 @@ export function ChuTroDashboardPage() {
           </div>
 
           <p style={{ fontFamily: font, fontSize: 15, fontWeight: 800, color: C.textPrimary, margin: "0 0 12px" }}>Quản lý nhanh</p>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 10, marginBottom: 22 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10, marginBottom: 22 }}>
+            {/* Ghi điện nước là việc chính khi đi từng phòng — trước đây chỉ có ở desktop. */}
+            <button
+              onClick={() => handleQuickToolClick("utility")}
+              disabled={!canWrite}
+              data-testid="dashboard-mobile-utility-btn"
+              style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: 12, padding: "14px 8px", display: "flex", flexDirection: "column", alignItems: "center", gap: 7, cursor: canWrite ? "pointer" : "not-allowed", opacity: canWrite ? 1 : 0.5 }}
+            >
+              <Zap size={20} color={C.primary} />
+              <span style={{ fontFamily: font, fontSize: 12, fontWeight: 600, color: C.textPrimary }}>Ghi điện nước</span>
+            </button>
             <button onClick={toRooms} style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: 12, padding: "14px 8px", display: "flex", flexDirection: "column", alignItems: "center", gap: 7, cursor: "pointer" }}>
               <Building2 size={20} color={C.primary} />
               <span style={{ fontFamily: font, fontSize: 12, fontWeight: 600, color: C.textPrimary }}>Khu trọ & Phòng</span>
@@ -467,7 +477,8 @@ export function ChuTroDashboardPage() {
         </main>
 
         {/* RIGHT COLUMN */}
-        <aside style={{ width: 300, flexShrink: 0, display: "flex", flexDirection: "column", gap: 14, paddingTop: 2 }}>
+        {/* Máy tính bảng: cột phụ 300px làm hẹp cột chính — chỉ hiện từ desktop. */}
+        {!isTablet && <aside style={{ width: 300, flexShrink: 0, display: "flex", flexDirection: "column", gap: 14, paddingTop: 2 }}>
           <span style={{ fontFamily: font, fontSize: 12.5, fontWeight: 800, color: C.textSecondary, textTransform: "uppercase", letterSpacing: "0.05em" }}>Công cụ quản lý</span>
           <UtilityCard
             title="Khu trọ & Phòng"
@@ -501,7 +512,7 @@ export function ChuTroDashboardPage() {
             color="#6B8E5A"
             bgImage="/assets/card_support_icon.png"
           />
-        </aside>
+        </aside>}
       </div>
       {Modals}
     </LandlordShell>

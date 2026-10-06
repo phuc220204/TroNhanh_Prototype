@@ -66,6 +66,7 @@ export function DueInvoicesPanel({ invoices, onOpenInvoice, onViewAll }: DueInvo
               >
                 <div style={{ minWidth: 0 }}>
                   <span style={{ fontSize: 14, fontWeight: 800, color: C.textPrimary }}>{invoice.roomCode || "Phòng"}</span>
+                  {invoice.propertyName && <span style={{ fontSize: 12.5, color: C.textSecondary, marginLeft: 6 }}>· {invoice.propertyName}</span>}
                   <span style={{ fontSize: 12.5, color: C.textSecondary, marginLeft: 8 }}>Hạn {formatDueDate(invoice.dueDate)}</span>
                 </div>
                 <div style={{ display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
