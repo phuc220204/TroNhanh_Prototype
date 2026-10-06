@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { qk } from "../../shared/query/keys";
 import { Star, TriangleAlert, Globe, ExternalLink } from "lucide-react";
 import { Link } from "react-router";
 import { LandlordShell } from "../../shared/components/LandlordShell";
@@ -23,7 +24,7 @@ export function LandlordReviewsPage() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const propertiesQuery = useQuery({
-    queryKey: ["marketplace", "myPropertyReviews", user?.id],
+    queryKey: qk.reviews.myPropertiesSummary(user?.id),
     queryFn: getMyPropertiesReviewSummary,
     enabled: Boolean(user?.id),
   });
@@ -33,7 +34,7 @@ export function LandlordReviewsPage() {
   const activeProperty = properties.find((p) => p.property_id === activeId);
 
   const reviewsQuery = useQuery({
-    queryKey: ["marketplace", "propertyReviews", activeId],
+    queryKey: qk.reviews.byProperty(activeId),
     queryFn: () => listPropertyReviews(activeId),
     enabled: Boolean(activeId),
   });
@@ -42,7 +43,7 @@ export function LandlordReviewsPage() {
     mutationFn: ({ id, enabled }: { id: string; enabled: boolean }) => setPublicProfile(id, enabled),
     onSuccess: () => {
       setErrorMessage(null);
-      queryClient.invalidateQueries({ queryKey: ["marketplace", "myPropertyReviews"] });
+      queryClient.invalidateQueries({ queryKey: qk.reviews.myPropertiesSummary(user?.id) });
     },
     onError: (err) => setErrorMessage(toUserMessage(err)),
   });
@@ -51,7 +52,7 @@ export function LandlordReviewsPage() {
     mutationFn: ({ reviewId, reply }: { reviewId: string; reply: string }) => replyToReview(reviewId, reply),
     onSuccess: () => {
       setErrorMessage(null);
-      queryClient.invalidateQueries({ queryKey: ["marketplace", "propertyReviews"] });
+      queryClient.invalidateQueries({ queryKey: qk.reviews.all });
     },
     onError: (err) => setErrorMessage(toUserMessage(err)),
   });

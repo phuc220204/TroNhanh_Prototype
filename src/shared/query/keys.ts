@@ -68,6 +68,8 @@ export const qk = {
     mine: (userId: string | undefined) => ["reviews", "mine", userId] as const,
     /** Các đợt ở đủ điều kiện đánh giá (BR-022) */
     reviewableStays: (userId: string | undefined) => ["reviews", "reviewable", userId] as const,
+    /** Tóm tắt đánh giá theo từng khu của chủ trọ (/chu-tro/danh-gia). */
+    myPropertiesSummary: (ownerId: string | undefined) => ["reviews", "myPropertiesSummary", ownerId] as const,
     publicProfile: (slug: string) => ["reviews", "publicProfile", slug] as const,
   },
 
@@ -140,6 +142,8 @@ export const qk = {
   subscription: (userId: string | undefined) => ["subscription", userId] as const,
   saasPlans: {
     list: ["saasPlans", "list"] as const,
+    /** Trạng thái đơn mua gói khi quay về từ payOS. */
+    orderStatus: (orderCode: number) => ["saasPlans", "orderStatus", orderCode] as const,
     /** Gói đã từng trả tiền ⇒ hiển thị giá gia hạn. */
     paidPlanIds: (userId: string | undefined) => ["saasPlans", "paid", userId] as const,
   },
@@ -151,7 +155,12 @@ export const qk = {
 
   // ── Admin ─────────────────────────────────────────────────────────────────
   admin: {
+    dashboardStats: ["admin", "dashboardStats"] as const,
+    /** Prefix của mọi hàng đợi kiểm duyệt (mọi bộ lọc trạng thái). */
+    moderationQueueAll: ["admin", "moderationQueue"] as const,
     moderationQueue: (status: string) => ["admin", "moderationQueue", status] as const,
+    /** Prefix của mọi kết quả tìm người dùng. */
+    usersAll: ["admin", "users"] as const,
     reportedReviews: ["admin", "reportedReviews"] as const,
     users: (search: string) => ["admin", "users", search] as const,
     settings: ["admin", "settings"] as const,

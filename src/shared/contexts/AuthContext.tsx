@@ -5,6 +5,7 @@ import { Profile } from "../types/auth";
 import { logError } from "../services/supabase-error";
 import type { Role } from "../components/RequireRole";
 import { storePostAuthRedirect } from "../utils/auth-redirect";
+import { queryClient } from "../query/queryClient";
 
 interface AuthContextType {
   user: User | null;
@@ -165,6 +166,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } catch (err) {
       logError("AuthContext.signOut", err);
     } finally {
+      // Cache React Query giữ dữ liệu riêng của tài khoản vừa thoát — người đăng
+      // nhập kế tiếp trên cùng tab không được thấy lại.
+      queryClient.clear();
       setUser(null);
       setProfile(null);
       setRoles([]);

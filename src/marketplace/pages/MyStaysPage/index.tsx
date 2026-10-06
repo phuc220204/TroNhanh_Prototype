@@ -1,5 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { qk } from "../../../shared/query/keys";
+import { useAuth } from "../../../shared/contexts/AuthContext";
 import { Home, TriangleAlert, UserCheck } from "lucide-react";
 import { RenterShell } from "../../../shared/components/RenterShell";
 import { EmptyState, Skeleton, Button } from "../../../shared/components/common";
@@ -14,21 +16,22 @@ import {
 import { ReviewModal } from "../../components/ReviewModal";
 import { StayCard } from "./StayCard";
 
-const STAYS_KEY = ["renter", "myStays"] as const;
 
 export function MyStaysPage() {
   const queryClient = useQueryClient();
+  const { user } = useAuth();
+  const staysKey = qk.occupancies.mine(user?.id);
   const [reviewTarget, setReviewTarget] = useState<ReviewableStay | null>(null);
   const [reviewError, setReviewError] = useState<string | null>(null);
   const [linkError, setLinkError] = useState<string | null>(null);
 
-  const staysQuery = useQuery({ queryKey: STAYS_KEY, queryFn: getMyStays });
+  const staysQuery = useQuery({ queryKey: staysKey, queryFn: getMyStays });
 
   const linkMutation = useMutation({
     mutationFn: ({ id, accept }: { id: string; accept: boolean }) => confirmOccupancyLink(id, accept),
     onSuccess: () => {
       setLinkError(null);
-      queryClient.invalidateQueries({ queryKey: STAYS_KEY });
+      queryClient.invalidateQueries({ queryKey: staysKey });
     },
     onError: (err) => setLinkError(toUserMessage(err)),
   });
@@ -39,7 +42,9 @@ export function MyStaysPage() {
     onSuccess: () => {
       setReviewError(null);
       setReviewTarget(null);
-      queryClient.invalidateQueries({ queryKey: STAYS_KEY });
+      queryClient.invalidateQueries({ queryKey: staysKey });
+      // "Đánh giá của tôi" và đánh giá công khai của khu cũng phải thấy bài mới.
+      queryClient.invalidateQueries({ queryKey: qk.reviews.all });
     },
     onError: (err) => setReviewError(toUserMessage(err)),
   });

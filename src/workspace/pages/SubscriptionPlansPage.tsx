@@ -38,7 +38,7 @@ function PaymentReturnNotice({ orderCode, result, onPaid, onDismiss }: {
   onDismiss: () => void;
 }) {
   const { data, isError, refetch, isFetching } = useQuery({
-    queryKey: ["saasOrderStatus", orderCode],
+    queryKey: qk.saasPlans.orderStatus(orderCode),
     queryFn: () => getSaasOrderStatus(orderCode),
     // Webhook có thể về sau trình duyệt vài giây: hỏi lại tới khi có kết quả cuối.
     refetchInterval: (query) => {

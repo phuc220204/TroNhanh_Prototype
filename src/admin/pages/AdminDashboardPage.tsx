@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { qk } from "../../shared/query/keys";
 import { Link } from "react-router";
 import {
   ArrowRight,
@@ -75,7 +76,7 @@ export function AdminDashboardPage() {
   const { isMobile, isTablet, width } = useBreakpoint();
   const useTwoColumns = isTablet || width < 1280;
   const statsQuery = useQuery({
-    queryKey: ["admin", "dashboardStats"],
+    queryKey: qk.admin.dashboardStats,
     queryFn: getDashboardStats,
   });
   const stats = statsQuery.data;
