@@ -1,6 +1,7 @@
 import { supabase } from "../supabaseClient";
 import type { SubscriptionStatus } from "../types/status";
 import { toSubscriptionStatus } from "../types/status";
+import { toLocalISODate } from "../utils/format";
 
 export interface SubscriptionData {
   status: SubscriptionStatus;
@@ -30,7 +31,7 @@ const DEFAULT_NONE_SUBSCRIPTION: SubscriptionData = {
 export function effectiveSubscriptionStatus(
   rawStatus: string | null | undefined,
   expireDate: string | null | undefined,
-  today = new Date().toISOString().slice(0, 10),
+  today = toLocalISODate(),
 ): SubscriptionStatus {
   const status = toSubscriptionStatus(rawStatus);
   if (

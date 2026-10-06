@@ -64,6 +64,7 @@ export const router = createHashRouter([
           { path: "chu-tro/quan-ly-phong", lazy: async () => ({ Component: (await import("../workspace/pages/QuanLyPhongPage")).QuanLyPhongPage }) },
           { path: "chu-tro/tim-nguoi-thue", lazy: async () => ({ Component: (await import("../marketplace/pages/FindRenterPage")).FindRenterPage }) },
           { path: "chu-tro/danh-gia", lazy: async () => ({ Component: (await import("../marketplace/pages/LandlordReviewsPage")).LandlordReviewsPage }) },
+          { path: "chu-tro/goi-dich-vu", lazy: async () => ({ Component: (await import("../workspace/pages/SubscriptionPlansPage")).SubscriptionPlansPage }) },
           { path: "chu-tro/hoa-don", lazy: async () => ({ Component: (await import("../workspace/pages/LandlordBillingPage")).LandlordBillingPage }) },
 
           // Tin đã lưu / yêu thích — MỘT trang cho cả hai nhãn.

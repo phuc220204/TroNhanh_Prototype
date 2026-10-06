@@ -14,6 +14,8 @@ export interface SubscriptionContextValue {
   trialDaysLeft: number;
   plan: any | null;
   limits: { maxProperties: number; maxRooms: number };
+  /** "YYYY-MM-DD" — ngày hết hạn gói hiện tại (null = chưa có gói). */
+  expireDate: string | null;
   isReadOnly: boolean;
   canWrite: boolean;
   isLoading: boolean;
@@ -26,6 +28,7 @@ const DEFAULT_CONTEXT: SubscriptionContextValue = {
   trialDaysLeft: 0,
   plan: null,
   limits: { maxProperties: 1, maxRooms: 5 },
+  expireDate: null,
   isReadOnly: false,
   canWrite: false,
   isLoading: false,
@@ -67,6 +70,7 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
     trialDaysLeft: data?.trialDaysLeft || 0,
     plan: data?.plan || null,
     limits: data?.limits || { maxProperties: 1, maxRooms: 5 },
+    expireDate: data?.expireDate ?? null,
     isReadOnly,
     canWrite,
     isLoading,

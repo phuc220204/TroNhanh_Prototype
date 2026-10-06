@@ -133,6 +133,11 @@ export const qk = {
   },
 
   subscription: (userId: string | undefined) => ["subscription", userId] as const,
+  saasPlans: {
+    list: ["saasPlans", "list"] as const,
+    /** Gói đã từng trả tiền ⇒ hiển thị giá gia hạn. */
+    paidPlanIds: (userId: string | undefined) => ["saasPlans", "paid", userId] as const,
+  },
 
   profile: (userId: string | undefined) => ["profile", userId] as const,
   roles: (userId: string | undefined) => ["roles", userId] as const,

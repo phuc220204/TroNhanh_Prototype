@@ -1163,6 +1163,72 @@ export type Database = {
           },
         ]
       }
+      saas_orders: {
+        Row: {
+          amount: number
+          checkout_url: string | null
+          created_at: string
+          id: string
+          is_renewal: boolean
+          order_code: number
+          paid_at: string | null
+          payment_id: string | null
+          payment_link_id: string | null
+          payos_reference: string | null
+          plan_id: string
+          seller_id: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          checkout_url?: string | null
+          created_at?: string
+          id?: string
+          is_renewal?: boolean
+          order_code?: never
+          paid_at?: string | null
+          payment_id?: string | null
+          payment_link_id?: string | null
+          payos_reference?: string | null
+          plan_id: string
+          seller_id: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          checkout_url?: string | null
+          created_at?: string
+          id?: string
+          is_renewal?: boolean
+          order_code?: never
+          paid_at?: string | null
+          payment_id?: string | null
+          payment_link_id?: string | null
+          payos_reference?: string | null
+          plan_id?: string
+          seller_id?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "saas_orders_payment_id_fkey"
+            columns: ["payment_id"]
+            isOneToOne: false
+            referencedRelation: "payments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "saas_orders_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "subscription_plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       saved_listings: {
         Row: {
           created_at: string
@@ -1443,6 +1509,14 @@ export type Database = {
         }
         Returns: undefined
       }
+      attach_saas_checkout_link: {
+        Args: {
+          p_checkout_url: string
+          p_order_code: number
+          p_payment_link_id: string
+        }
+        Returns: undefined
+      }
       begin_boost_checkout: {
         Args: { p_days: number; p_listing_id: string; p_seller_id: string }
         Returns: {
@@ -1454,6 +1528,14 @@ export type Database = {
       begin_contact_phone_verification: {
         Args: { p_otp_hash: string; p_phone_e164: string; p_user_id: string }
         Returns: Json
+      }
+      begin_saas_checkout: {
+        Args: { p_plan_id: string; p_seller_id: string }
+        Returns: {
+          amount: number
+          is_renewal: boolean
+          order_code: number
+        }[]
       }
       can_review_contract: {
         Args: { p_contract: string; p_user: string }
@@ -1469,6 +1551,15 @@ export type Database = {
         Returns: Json
       }
       complete_verified_boost_payment: {
+        Args: {
+          p_amount: number
+          p_order_code: number
+          p_payment_link_id: string
+          p_reference: string
+        }
+        Returns: string
+      }
+      complete_verified_saas_payment: {
         Args: {
           p_amount: number
           p_order_code: number

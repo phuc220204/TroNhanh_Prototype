@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router";
 import {
   LayoutGrid, Building2, FileText, Users, Wallet, Settings, LogOut,
-  Home, MessageSquare, User, Search, Lock, X, ChevronLeft, Star, UserSearch
+  Home, MessageSquare, User, Search, Lock, X, ChevronLeft, Star, UserSearch, Crown
 } from "lucide-react";
 import { C, font, shadow } from "../../theme";
 import { BrandLogo } from "../brand/BrandLogo";
@@ -11,7 +11,9 @@ import { useSubscriptionContext } from "../../contexts/SubscriptionContext";
 
 export type LandlordNavId =
   | "overview" | "rooms" | "listings" | "occupants" | "billing" | "settings"
-  | "find-renter" | "reviews";
+  | "find-renter" | "reviews"
+  /** Trang mua/gia hạn gói — KHÔNG thuộc SAAS_NAV_IDS: người chưa có gói phải vào được để mua. */
+  | "plans";
 
 /** Các trang thuộc module SaaS (bị khóa khi chưa có gói). Một chỗ duy nhất — LandlordShell dùng lại. */
 export const SAAS_NAV_IDS: readonly LandlordNavId[] = [
@@ -119,6 +121,7 @@ export function Sidebar({ active, onSaaSAccess }: { active: LandlordNavId; onSaa
       </nav>
 
       <div style={{ padding: "0 12px 14px" }}>
+        <button onClick={() => navigate("/chu-tro/goi-dich-vu")} data-testid="sidebar-plans-link" style={{ display: "flex", alignItems: "center", gap: 11, padding: "9px 13px", borderRadius: 10, border: "none", background: active === "plans" ? C.caramelSoft : "transparent", cursor: "pointer", fontFamily: font, fontSize: 13, fontWeight: active === "plans" ? 700 : 600, color: C.primary, width: "100%" }}><Crown size={16} /> Gói dịch vụ</button>
         <button onClick={() => navigate("/")} style={{ display: "flex", alignItems: "center", gap: 11, padding: "9px 13px", borderRadius: 10, border: "none", background: "transparent", cursor: "pointer", fontFamily: font, fontSize: 13, fontWeight: 500, color: C.textSecondary, width: "100%" }}><Search size={16} /> Về trang tìm phòng</button>
         <button onClick={() => { signOut(); navigate("/"); }} style={{ display: "flex", alignItems: "center", gap: 11, padding: "9px 13px", borderRadius: 10, border: "none", background: "transparent", cursor: "pointer", fontFamily: font, fontSize: 13, fontWeight: 600, color: C.repairing, width: "100%" }}><LogOut size={16} /> Đăng xuất</button>
       </div>
@@ -202,6 +205,7 @@ function AccountSheet({ open, onClose, onNavigate, onLogout }: {
   // bấm chỉ đóng sheet chứ không đi đâu. Cả ba đều đã có trang thật.
   const items: { Icon: typeof User; label: string; action: () => void }[] = [
     { Icon: User, label: "Hồ sơ", action: () => onNavigate("/tai-khoan") },
+    { Icon: Crown, label: "Gói dịch vụ", action: () => onNavigate("/chu-tro/goi-dich-vu") },
     { Icon: FileText, label: "Tin đăng của tôi", action: () => onNavigate("/tai-khoan/tin-cho-thue") },
     { Icon: MessageSquare, label: "Tin nhắn", action: () => onNavigate("/tin-nhan") },
     { Icon: LayoutGrid, label: "Tổng quan chủ trọ", action: () => onNavigate("/chu-tro") },

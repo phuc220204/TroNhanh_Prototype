@@ -9,6 +9,14 @@
 > Link payOS hết hạn sau 15 phút; đơn chưa trả khác gói/giá hoặc quá 10 phút tự
 > chuyển `CANCELLED` và được thay bằng đơn mới (tiền trả vào đơn cũ vẫn được ghi nhận).
 
+> **Cập nhật 07/10/2026 — Mua/gia hạn gói SaaS qua payOS.** Bảng `saas_orders`
+> (dải orderCode 300000000000+), RPC `begin_saas_checkout` / `attach_saas_checkout_link` /
+> `complete_verified_saas_payment` (chỉ service_role), Edge Function
+> `payos-create-saas-checkout`; `payos-webhook` xử lý cả đơn Boost lẫn đơn gói, `payos-check-status`
+> trả `kind: "boost" | "saas"`. Giá lấy từ `subscription_plans` (mua lại cùng gói ⇒ `renewal_price`);
+> gia hạn sớm cộng dồn từ ngày hết hạn. Trang người dùng: `/chu-tro/goi-dich-vu`. Dùng chung công tắc
+> `PAYOS_CHECKOUT_ENABLED`. Cần 1 giao dịch thật để xác nhận webhook kích hoạt gói.
+
 Cập nhật 01/10/2026. File này dành cho lần phát hành công khai đầu tiên, không
 chứa khóa PayOS hoặc khóa Supabase.
 

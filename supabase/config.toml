@@ -395,6 +395,10 @@ deno_version = 2
 [functions.payos-create-checkout]
 verify_jwt = false
 
+# Mua/gia hạn gói SaaS — tự kiểm Bearer token bằng auth.getUser như payos-create-checkout.
+[functions.payos-create-saas-checkout]
+verify_jwt = false
+
 [functions.payos-webhook]
 verify_jwt = false
 

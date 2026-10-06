@@ -7,6 +7,7 @@ import { useSubscriptionContext } from "../contexts/SubscriptionContext";
 import { SubscriptionBanner } from "./landlord/SubscriptionBanner";
 import { Sidebar, MobileHeader, MobileTabBar, SAAS_NAV_IDS, ROOM_PAGE_TABS, type LandlordNavId } from "./landlord/SidebarNav";
 import { TrialRegisterModal } from "./landlord/TrialModal";
+import { Button } from "./common";
 
 export type { LandlordNavId };
 
@@ -158,23 +159,10 @@ export function LandlordShell({
             Quản lý khu trọ, ghi nhận chỉ số điện nước, và tự động tạo hóa đơn thanh toán qua VietQR.
             Đăng ký dùng thử 30 ngày hoàn toàn miễn phí ngay!
           </p>
-          <button
-            onClick={handleSaaSAccess}
-            style={{
-              padding: "12px 24px",
-              background: C.primary,
-              color: C.white,
-              border: "none",
-              borderRadius: 12,
-              fontFamily: font,
-              fontSize: 14,
-              fontWeight: 700,
-              cursor: "pointer",
-              boxShadow: "0 4px 16px rgba(138,106,69,0.3)",
-            }}
-          >
-            Bắt đầu dùng thử miễn phí
-          </button>
+          <div style={{ display: "flex", gap: 10, flexWrap: "wrap", justifyContent: "center" }}>
+            <Button variant="primary" onClick={handleSaaSAccess} data-testid="paywall-trial-btn">Bắt đầu dùng thử miễn phí</Button>
+            <Button variant="outline" onClick={() => navigate("/chu-tro/goi-dich-vu")} data-testid="paywall-plans-btn">Xem các gói</Button>
+          </div>
         </div>
       );
     }
@@ -189,6 +177,7 @@ export function LandlordShell({
           <SubscriptionBanner
             status={subStatus}
             trialDaysLeft={trialDaysLeft}
+            onUpgrade={activeTab === "plans" ? undefined : () => navigate("/chu-tro/goi-dich-vu")}
           />
           <div style={{ flex: 1, overflowY: "auto" }}>{renderContent()}</div>
           <MobileTabBar active={activeTab} onSaaSAccess={handleSaaSAccess} />
@@ -213,6 +202,7 @@ export function LandlordShell({
           <SubscriptionBanner
             status={subStatus}
             trialDaysLeft={trialDaysLeft}
+            onUpgrade={activeTab === "plans" ? undefined : () => navigate("/chu-tro/goi-dich-vu")}
           />
           <main style={{ flex: 1, overflowY: "auto" }}>{renderContent()}</main>
         </div>
