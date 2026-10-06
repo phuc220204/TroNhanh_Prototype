@@ -31,13 +31,3 @@ canvas {
   max-width: 100%;
 }
 
-/* Vùng scroll ngang có chủ đích (chips, KPI carousel):
-   ẩn scrollbar cho gọn nhưng vẫn scroll được trong vùng đó. */
-.tn-scroll-x {
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
-  scrollbar-width: none;
-}
-.tn-scroll-x::-webkit-scrollbar {
-  display: none;
-}

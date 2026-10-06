@@ -1,3 +1,6 @@
+import { C, font } from "../theme";
+
+/** Một mục trong trang StyleGuide (chỉ có ở bản dev). */
 export function StyleSection({
   title,
   children,
@@ -8,14 +11,14 @@ export function StyleSection({
   id?: string;
 }) {
   return (
-    <section id={id} className="mb-12">
+    <section id={id} style={{ marginBottom: 48 }}>
       <h2
         style={{
-          fontFamily: "'Be Vietnam Pro', Inter, system-ui, sans-serif",
+          fontFamily: font,
           fontSize: 22,
           fontWeight: 700,
-          color: "#5C4632",
-          borderBottom: "2px solid #DDD0BC",
+          color: C.primaryDark,
+          borderBottom: `2px solid ${C.border}`,
           paddingBottom: 8,
           marginBottom: 24,
           letterSpacing: "-0.01em",

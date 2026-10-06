@@ -18,11 +18,9 @@ const SIZES: Record<BrandLogoSize, { icon: number; text: number; gap: number }> 
 export function BrandLogo({
   variant = "full",
   size = "md",
-  className,
 }: {
   variant?: BrandLogoVariant;
   size?: BrandLogoSize;
-  className?: string;
 }) {
   const [assetIndex, setAssetIndex] = useState(0);
   const [imageFailed, setImageFailed] = useState(false);
@@ -38,7 +36,6 @@ export function BrandLogo({
 
   return (
     <span
-      className={className}
       style={{
         display: "inline-flex",
         alignItems: "center",
