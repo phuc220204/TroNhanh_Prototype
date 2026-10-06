@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { useNavigate, useLocation } from "react-router";
 import { Plus, Building2, ChevronDown, RefreshCw } from "lucide-react";
-import { C, font } from "../../../shared/theme";
+import { C, font, shadow } from "../../../shared/theme";
 import { useBreakpoint } from "../../../shared/components/useBreakpoint";
 import { LandlordShell, LandlordBreadcrumb, type LandlordNavId } from "../../../shared/components/LandlordShell";
 import { ROOM_PAGE_TABS } from "../../../shared/components/landlord/SidebarNav";
@@ -219,7 +219,7 @@ export function QuanLyPhongPage() {
                     background: C.white,
                     border: `1px solid ${C.border}`,
                     borderRadius: 12,
-                    boxShadow: "0 8px 24px rgba(0,0,0,0.12)",
+                    boxShadow: shadow.md,
                     zIndex: 100,
                     minWidth: 220,
                     overflow: "hidden",

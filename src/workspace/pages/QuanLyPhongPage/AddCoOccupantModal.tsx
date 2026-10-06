@@ -98,8 +98,8 @@ export function AddCoOccupantModal({
       </div>
 
       <p style={{ fontFamily: font, fontSize: 12, color: C.textSecondary, margin: `${space[3]}px 0 0`, lineHeight: 1.5 }}>
-        Gắn tài khoản Renter cho người này ở cột "Tài khoản Renter" sau khi thêm. Họ vẫn phải tự xác nhận
-        liên kết mới có hiệu lực (BR-029).
+        Sau khi thêm, bạn có thể gắn tài khoản Trọ Nhanh cho người này ở cột "Tài khoản người ở". Họ cần
+        tự xác nhận thì liên kết mới có hiệu lực.
       </p>
 
       {errorMessage && (

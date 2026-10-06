@@ -2,7 +2,7 @@ import { useState, useMemo } from "react";
 import { useNavigate } from "react-router";
 import { useQuery } from "@tanstack/react-query";
 import { Users, Filter, Sparkles, Building2, TriangleAlert } from "lucide-react";
-import { C, font, radius, space } from "../../shared/theme";
+import { C, font, radius, space, shadow } from "../../shared/theme";
 import { LandlordShell } from "../../shared/components/LandlordShell";
 import { getMyVacantRoomSummaries, scoreDemandMatch } from "../../shared/services/vacancy-service";
 import { listActiveDemandPosts } from "../services/demand-post-service";
@@ -150,7 +150,7 @@ export function FindRenterPage() {
               border: `1px solid ${C.border}`,
               borderRadius: radius.xl,
               padding: `${space[10]}px ${space[6]}px`,
-              boxShadow: "0 4px 20px rgba(42,26,12,0.02)",
+              boxShadow: shadow.sm,
             }}
           >
             <EmptyState
@@ -171,7 +171,7 @@ export function FindRenterPage() {
                     fontSize: 13.5,
                     fontWeight: 700,
                     cursor: "pointer",
-                    boxShadow: "0 2px 8px rgba(138,74,32,0.2)",
+                    boxShadow: shadow.sm,
                   }}
                 >
                   Quản lý phòng trọ
@@ -234,7 +234,7 @@ export function FindRenterPage() {
             flexWrap: "wrap",
             gap: 14,
             alignItems: "center",
-            boxShadow: "0 2px 10px rgba(42,26,12,0.02)",
+            boxShadow: shadow.sm,
           }}
         >
           <div style={{ display: "flex", alignItems: "center", gap: 6, color: C.textPrimary, fontFamily: font, fontSize: 13, fontWeight: 700 }}>
@@ -327,7 +327,7 @@ export function FindRenterPage() {
                   display: "flex",
                   flexDirection: "column",
                   gap: 12,
-                  boxShadow: "0 3px 12px rgba(42,26,12,0.02)",
+                  boxShadow: shadow.sm,
                   position: "relative",
                 }}
               >
@@ -353,7 +353,7 @@ export function FindRenterPage() {
                       background: C.white,
                       padding: "3px 9px",
                       borderRadius: radius.pill,
-                      boxShadow: "0 1px 4px rgba(0,0,0,0.06)",
+                      boxShadow: shadow.sm,
                     }}
                   >
                     Khớp {score}%

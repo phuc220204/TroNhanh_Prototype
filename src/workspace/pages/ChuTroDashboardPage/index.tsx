@@ -4,7 +4,7 @@ import {
   Building2, FileText, Plus, Zap, ChevronRight,
   Home, Users, CheckSquare, AlertTriangle, TrendingUp, KeyRound, CalendarClock,
 } from "lucide-react";
-import { C, font } from "../../../shared/theme";
+import { C, font, shadow } from "../../../shared/theme";
 import { useBreakpoint } from "../../../shared/components/useBreakpoint";
 import { LandlordShell } from "../../../shared/components/LandlordShell";
 import { formatVnd } from "../../../shared/utils/format";
@@ -166,13 +166,13 @@ export function ChuTroDashboardPage() {
     : `${Math.round(amount).toLocaleString("vi-VN")}đ`;
 
   // BR-012 — "Phòng trống", "Hóa đơn chưa thu", "Sắp đến hạn" LUÔN hiện (`secret: false`);
-  // "Tổng số phòng" / "Phòng đã có khách" / "Khách đang ở" / "Đã thu trong tháng"
+  // "Tổng số phòng" / "Phòng đã có người ở" / "Người ở hiện tại" / "Đã thu trong tháng"
   // mặc định ẩn (`secret: true` + `revealKPIs` khởi tạo `false`).
   const periodLabel = dbKpis?.periodLabel ?? "kỳ hiện tại";
   const dynamicKPIS: DashboardKpi[] = [
     { label: "Tổng số phòng", value: totalRoomsCount, unit: "Phòng", accent: C.primary, Icon: Home, secret: true },
-    { label: "Phòng đã có khách", value: rentedRoomsCount, unit: "Phòng", hint: `${occupancyRate}% lấp đầy`, accent: C.primary, Icon: KeyRound, secret: true, testId: "dashboard-kpi-rented-rooms" },
-    { label: "Khách đang ở", value: occupantCount, unit: "Người", accent: C.available, Icon: Users, secret: true },
+    { label: "Phòng đã có người ở", value: rentedRoomsCount, unit: "Phòng", hint: `${occupancyRate}% lấp đầy`, accent: C.primary, Icon: KeyRound, secret: true, testId: "dashboard-kpi-rented-rooms" },
+    { label: "Người ở hiện tại", value: occupantCount, unit: "Người", accent: C.available, Icon: Users, secret: true },
     { label: "Phòng trống", value: emptyRoomsCount, unit: "Phòng", accent: C.available, Icon: CheckSquare, secret: false },
     { label: "Hóa đơn chưa thu", value: dbKpis?.unpaidInvoiceCount ?? 0, unit: "HĐ", hint: formatMoney(dbKpis?.unpaidInvoiceAmount ?? 0), accent: C.repairing, Icon: AlertTriangle, secret: false },
     { label: `Sắp đến hạn (${DUE_SOON_DAYS} ngày)`, value: dbKpis?.dueSoonInvoiceCount ?? 0, unit: "HĐ", hint: formatMoney(dbKpis?.dueSoonInvoiceAmount ?? 0), accent: C.warning, Icon: CalendarClock, secret: false, testId: "dashboard-kpi-due-soon" },
@@ -230,7 +230,7 @@ export function ChuTroDashboardPage() {
     return (
       <LandlordShell active="overview" mobileTitle="Dashboard">
         <div role="alert" style={{ maxWidth: 560, margin: "70px auto", padding: 24, background: C.white, border: `1px solid ${C.border}`, borderRadius: 16, textAlign: "center", fontFamily: font }}>
-          <AlertTriangle size={30} color="#C07B4A" />
+          <AlertTriangle size={30} color={C.repairing} />
           <h1 style={{ fontSize: 18, color: C.textPrimary, margin: "12px 0 6px" }}>Chưa tải được dữ liệu dashboard</h1>
           <p style={{ color: C.textSecondary, fontSize: 13.5, lineHeight: 1.5 }}>Không thể đọc khu trọ, phòng hoặc hóa đơn. Dữ liệu chưa bị thay đổi; hãy thử tải lại.</p>
           <PrimaryBtn onClick={() => void loadDashboardData(property === "all" ? undefined : property)}>Thử tải lại</PrimaryBtn>
@@ -270,12 +270,12 @@ export function ChuTroDashboardPage() {
 
           {/* Vacant Rooms Banner */}
           {emptyRoomsCount > 0 ? (
-            <div style={{ background: "#EBF2E8", border: "1px solid #C6D8C1", borderRadius: 14, padding: "14px 16px", display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+            <div style={{ background: C.successBg, border: `1px solid ${C.successBorder}`, borderRadius: 14, padding: "14px 16px", display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                <Home size={16} color="#4F7A4A" />
+                <Home size={16} color={C.available} />
                 <span style={{ fontFamily: font, fontSize: 13, fontWeight: 700, color: C.textPrimary }}>{emptyRoomsCount} phòng đang trống</span>
               </div>
-              <button onClick={toPost} style={{ background: "none", border: "none", color: "#4F7A4A", fontFamily: font, fontSize: 13, fontWeight: 700, cursor: "pointer", padding: 0 }}>Tạo tin đăng</button>
+              <button onClick={toPost} style={{ background: "none", border: "none", color: C.available, fontFamily: font, fontSize: 13, fontWeight: 700, cursor: "pointer", padding: 0 }}>Tạo tin đăng</button>
             </div>
           ) : null}
 
@@ -342,7 +342,7 @@ export function ChuTroDashboardPage() {
           onClick={() => handleQuickToolClick("room")}
           disabled={!canWrite}
           data-testid="dashboard-fab-add-room"
-          style={{ position: "fixed", right: 18, bottom: "calc(76px + env(safe-area-inset-bottom))", width: 54, height: 54, borderRadius: "50%", background: canWrite ? C.primary : C.border, border: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: canWrite ? "pointer" : "not-allowed", boxShadow: canWrite ? "0 4px 16px rgba(138,106,69,0.36)" : "none", zIndex: 90 }}>
+          style={{ position: "fixed", right: 18, bottom: "calc(76px + env(safe-area-inset-bottom))", width: 54, height: 54, borderRadius: "50%", background: canWrite ? C.primary : C.border, border: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: canWrite ? "pointer" : "not-allowed", boxShadow: canWrite ? shadow.md : "none", zIndex: 90 }}>
           <Plus size={24} color={canWrite ? "white" : C.textSecondary} />
         </button>
         {Modals}
@@ -360,9 +360,9 @@ export function ChuTroDashboardPage() {
           {/* Greeting Header Block with Illustration */}
           <div style={{
             display: "flex", justifyContent: "space-between", alignItems: "center",
-            background: "#F7EFE2", borderRadius: 20, padding: "24px 32px", marginBottom: 24,
+            background: C.cream, borderRadius: 20, padding: "24px 32px", marginBottom: 24,
             border: `1px solid ${C.border}`, position: "relative", overflow: "hidden",
-            boxShadow: "0 2px 10px rgba(42,26,12,0.02)"
+            boxShadow: shadow.sm
           }}>
             <div style={{ zIndex: 2 }}>
               <h1 style={{ fontFamily: font, fontSize: 24, fontWeight: 800, color: C.textPrimary, margin: "0 0 6px", letterSpacing: "-0.01em" }}>Chào {displayName} 👋</h1>
@@ -384,13 +384,13 @@ export function ChuTroDashboardPage() {
           {/* Vacant Rooms Banner */}
           {emptyRoomsCount > 0 ? (
             <div style={{
-              background: "#EBF2E8", border: "1px solid #C6D8C1", borderRadius: 16,
+              background: C.successBg, border: `1px solid ${C.successBorder}`, borderRadius: 16,
               padding: "16px 20px", display: "flex", justifyContent: "space-between",
               alignItems: "center", marginBottom: 24, gap: 12, flexWrap: "wrap",
-              boxShadow: "0 2px 8px rgba(79,122,74,0.04)"
+              boxShadow: shadow.sm
             }}>
               <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-                <div style={{ width: 38, height: 38, borderRadius: 10, background: "#4F7A4A", display: "flex", alignItems: "center", justifyContent: "center", color: "white", flexShrink: 0 }}>
+                <div style={{ width: 38, height: 38, borderRadius: 10, background: C.available, display: "flex", alignItems: "center", justifyContent: "center", color: "white", flexShrink: 0 }}>
                   <Home size={18} />
                 </div>
                 <div>
@@ -398,13 +398,13 @@ export function ChuTroDashboardPage() {
                   <p style={{ fontFamily: font, fontSize: 12.5, color: C.textSecondary, margin: 0 }}>Có thể tạo tin đăng để tìm người ở.</p>
                 </div>
               </div>
-              <button onClick={toPost} style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "none", border: "none", color: "#4F7A4A", fontFamily: font, fontSize: 13.5, fontWeight: 700, cursor: "pointer", padding: 0 }}>
+              <button onClick={toPost} style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "none", border: "none", color: C.available, fontFamily: font, fontSize: 13.5, fontWeight: 700, cursor: "pointer", padding: 0 }}>
                 Tạo tin đăng <ChevronRight size={16} />
               </button>
             </div>
           ) : totalRoomsCount > 0 ? (
-            <div style={{ background: "#F5F8F5", border: "1px solid #D5E2D5", borderRadius: 16, padding: "16px 20px", display: "flex", alignItems: "center", gap: 14, marginBottom: 24 }}>
-              <div style={{ width: 38, height: 38, borderRadius: 10, background: "#85A081", display: "flex", alignItems: "center", justifyContent: "center", color: "white", flexShrink: 0 }}>
+            <div style={{ background: C.successBg, border: `1px solid ${C.successBorder}`, borderRadius: 16, padding: "16px 20px", display: "flex", alignItems: "center", gap: 14, marginBottom: 24 }}>
+              <div style={{ width: 38, height: 38, borderRadius: 10, background: C.available, display: "flex", alignItems: "center", justifyContent: "center", color: "white", flexShrink: 0 }}>
                 <Home size={18} />
               </div>
               <div>
@@ -419,7 +419,7 @@ export function ChuTroDashboardPage() {
           <DueInvoicesPanel invoices={reminderInvoices} onOpenInvoice={openInvoice} onViewAll={toInvoices} />
 
           {/* Room operations */}
-          <div style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: 16, padding: "20px 22px", marginBottom: 28, boxShadow: "0 2px 10px rgba(42,26,12,0.015)" }}>
+          <div style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: 16, padding: "20px 22px", marginBottom: 28, boxShadow: shadow.sm }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
               <h2 style={{ fontFamily: font, fontSize: 17, fontWeight: 800, color: C.textPrimary, margin: 0 }}>Tình trạng phòng</h2>
               <button onClick={toRooms} style={{ fontFamily: font, fontSize: 13, fontWeight: 700, color: C.primary, background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: 4 }}>Xem tất cả phòng <ChevronRight size={15} /></button>
@@ -438,7 +438,7 @@ export function ChuTroDashboardPage() {
                 </thead>
                 <tbody>
                   {displayRooms.map((r, i) => (
-                    <tr key={i} style={{ borderTop: `1px solid ${C.border}`, background: i % 2 ? "rgba(247,239,226,0.2)" : C.white }}>
+                    <tr key={i} style={{ borderTop: `1px solid ${C.border}`, background: i % 2 ? C.bg : C.white }}>
                       <td style={{ fontFamily: font, fontSize: 13.5, fontWeight: 800, color: C.textPrimary, padding: "13px 14px" }}>{r.code}</td>
                       <td style={{ fontFamily: font, fontSize: 13.5, color: C.textSecondary, padding: "13px 14px" }}>{r.property}</td>
                       <td style={{ padding: "13px 14px" }}><StatusChip status={r.status} /></td>
@@ -485,7 +485,7 @@ export function ChuTroDashboardPage() {
             desc="Quản lý số phòng, danh sách khu trọ và trạng thái từng phòng."
             cta="Quản lý"
             onClick={toRooms}
-            color="#4F7A4A"
+            color={C.available}
             bgImage="/assets/card_house_icon.png"
           />
           <UtilityCard
@@ -493,7 +493,7 @@ export function ChuTroDashboardPage() {
             desc="Theo dõi các tin cho thuê đang hiển thị cho người thuê."
             cta="Chi tiết"
             onClick={toListings}
-            color="#C99B65"
+            color={C.secondary}
             bgImage="/assets/card_listing_icon.png"
           />
           <UtilityCard
@@ -501,7 +501,7 @@ export function ChuTroDashboardPage() {
             desc="Theo dõi hóa đơn kỳ này và số tiền đang chờ thu."
             cta="Thu tiền"
             onClick={toInvoices}
-            color="#C8861A"
+            color={C.warning}
             bgImage="/assets/card_payment_icon.png"
           />
           <UtilityCard
@@ -509,7 +509,7 @@ export function ChuTroDashboardPage() {
             desc="Liên hệ đội ngũ Trọ Nhanh khi cần trợ giúp."
             cta="Gửi ngay"
             onClick={() => { window.location.href = SUPPORT_EMAIL_HREF; }}
-            color="#6B8E5A"
+            color={C.available}
             bgImage="/assets/card_support_icon.png"
           />
         </aside>}

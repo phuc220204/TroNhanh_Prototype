@@ -12,7 +12,7 @@ const STATUS_OPTIONS: Array<{ value: RoomStatusDb; label: string }> = [
   { value: "Available", label: "Trống" },
   { value: "Deposited", label: "Đã cọc" },
   { value: "Rented", label: "Đang thuê" },
-  { value: "Hidden", label: "Đang ẩn / bảo trì" },
+  { value: "Hidden", label: "Đã ẩn" },
 ];
 
 /** Đơn giá của KHU — chỉ để hiển thị "bỏ trống thì phòng dùng số này". */
@@ -201,7 +201,7 @@ export function EditRoomModal({ roomId, propertyPrices, onClose, onUpdated }: Ed
       }
     >
       {!canWrite && (
-        <div data-testid="edit-room-readonly-banner" style={bannerStyle}>⚠️ {blockReason}</div>
+        <div data-testid="edit-room-readonly-banner" style={bannerStyle}>{blockReason}</div>
       )}
       {errorMsg && (
         <div data-testid="edit-room-form-error" style={bannerStyle}>{errorMsg}</div>

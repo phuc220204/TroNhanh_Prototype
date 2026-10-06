@@ -1,6 +1,6 @@
-import { Users, CheckCircle, Clock, UserPlus, CalendarPlus } from "lucide-react";
+import { Users, UserPlus, CalendarPlus } from "lucide-react";
 import { C, font, radius } from "../../../shared/theme";
-import { Button } from "../../../shared/components/common";
+import { Badge, Button } from "../../../shared/components/common";
 import { formatDate, formatVnd } from "../../../shared/utils/format";
 import type { Property } from "../../types/room";
 import type { OccupancyItem } from "../../services/occupancy-service";
@@ -49,19 +49,8 @@ function contractPeriod(row: OccupancyRow): string {
 }
 
 function LinkStatus({ row, onOpenLinkModal }: { row: OccupancyRow; onOpenLinkModal: (occ: OccupancyItem) => void }) {
-  if (row.occ.link_status === "Confirmed") {
-    return (
-      <span style={{ color: C.success, fontWeight: 700, display: "inline-flex", alignItems: "center", gap: 4, fontSize: 12.5 }}>
-        <CheckCircle size={12} /> Đã liên kết
-      </span>
-    );
-  }
-  if (row.occ.link_status === "Pending") {
-    return (
-      <span title="Đang chờ người ở xác nhận liên kết" style={{ color: C.warning, fontWeight: 600, display: "inline-flex", alignItems: "center", gap: 4, fontSize: 12.5 }}>
-        <Clock size={12} /> Chờ xác nhận
-      </span>
-    );
+  if (row.occ.link_status === "Confirmed" || row.occ.link_status === "Pending") {
+    return <Badge kind="link" status={row.occ.link_status} data-testid={`occupancy-link-${row.occ.link_status.toLowerCase()}`} />;
   }
   return (
     <Button variant="ghost" size="sm" requiresWrite onClick={() => onOpenLinkModal(row.occ)} data-testid="link-occupant-account-btn">

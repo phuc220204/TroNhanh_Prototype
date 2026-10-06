@@ -1,10 +1,9 @@
 import { useState } from "react";
 import { Plus, Search, ChevronDown, Home, Zap, FileText, Lock, Users, AlertTriangle, Building2 } from "lucide-react";
-import { C, font } from "../../../shared/theme";
-import { Button } from "../../../shared/components/common";
+import { C, font, shadow } from "../../../shared/theme";
+import { Badge, Button } from "../../../shared/components/common";
 import type { Room, Property } from "../../types/room";
 import type { RoomStatus } from "../../../shared/types/status";
-import { ROOM_STATUS_META } from "../../../shared/utils/statusMaps";
 
 const FILTER_CHIPS: { label: string; value: RoomStatus | "all" }[] = [
   { label: "Tất cả", value: "all" },
@@ -16,25 +15,8 @@ const FILTER_CHIPS: { label: string; value: RoomStatus | "all" }[] = [
 
 const SORT_OPTIONS = ["Mới cập nhật", "Mã phòng", "Giá thuê", "Trạng thái"];
 
-function StatusChip({ status, small }: { status: RoomStatus; small?: boolean }) {
-  const m = ROOM_STATUS_META[status];
-  return (
-    <span
-      style={{
-        fontFamily: font,
-        fontSize: small ? 11 : 12,
-        fontWeight: 700,
-        color: C.white,
-        background: m?.color || C.textSecondary,
-        borderRadius: 999,
-        padding: small ? "2px 9px" : "3px 11px",
-        display: "inline-block",
-        whiteSpace: "nowrap",
-      }}
-    >
-      {m?.label || status}
-    </span>
-  );
+function StatusChip({ status }: { status: RoomStatus }) {
+  return <Badge kind="room" status={status} />;
 }
 
 interface RoomsViewProps {
@@ -127,52 +109,14 @@ export function RoomsView({
               empty state chỉ hiện khi chưa có phòng nào. Nghĩa là chủ trọ có một
               khu rồi thì vĩnh viễn không tạo được khu thứ hai — cùng loại lỗ với
               cái migration 20260807140000 đã vá, chỉ là ở một mức sâu hơn. */}
-          <button
-            type="button"
-            disabled={isReadOnly}
-            onClick={onAddProperty}
-            data-testid="add-property-btn"
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: 6,
-              padding: "9px 16px",
-              background: C.white,
-              color: isReadOnly ? C.textSecondary : C.primary,
-              border: `1.5px solid ${isReadOnly ? C.border : C.primary}`,
-              borderRadius: 10,
-              fontFamily: font,
-              fontSize: 13.5,
-              fontWeight: 700,
-              cursor: isReadOnly ? "not-allowed" : "pointer",
-            }}
-          >
-            <Building2 size={16} /> Thêm khu trọ
-          </button>
+          <Button variant="outline" requiresWrite icon={<Building2 size={16} />} onClick={onAddProperty} data-testid="add-property-btn">
+            Thêm khu trọ
+          </Button>
 
           {/* Add Room Button */}
-          <button
-            type="button"
-            disabled={isReadOnly}
-            onClick={onAddRoom}
-            data-testid="add-room-btn"
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: 6,
-              padding: "9px 16px",
-              background: isReadOnly ? C.border : C.primary,
-              color: isReadOnly ? C.textSecondary : "white",
-              border: "none",
-              borderRadius: 10,
-              fontFamily: font,
-              fontSize: 13.5,
-              fontWeight: 700,
-              cursor: isReadOnly ? "not-allowed" : "pointer",
-            }}
-          >
-            <Plus size={16} /> Thêm phòng mới
-          </button>
+          <Button variant="primary" requiresWrite icon={<Plus size={16} />} onClick={onAddRoom} data-testid="add-room-btn">
+            Thêm phòng mới
+          </Button>
         </div>
       </div>
 
@@ -228,7 +172,14 @@ export function RoomsView({
               key={room.id}
               data-testid="room-card"
               data-room-code={room.code}
+              role="button"
+              tabIndex={0}
+              aria-label={`Xem chi tiết phòng ${room.code}`}
               onClick={() => onSelectRoom(room)}
+              onKeyDown={(e) => {
+                if (e.target !== e.currentTarget) return;
+                if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onSelectRoom(room); }
+              }}
               style={{
                 background: C.white,
                 border: `1.5px solid ${C.border}`,
@@ -239,7 +190,7 @@ export function RoomsView({
                 display: "flex",
                 flexDirection: "column",
                 gap: 12,
-                boxShadow: "0 2px 8px rgba(0,0,0,0.03)",
+                boxShadow: shadow.sm,
               }}
             >
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
@@ -261,24 +212,12 @@ export function RoomsView({
 
               {/* Action Toolbar */}
               <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: 10, display: "flex", justifyContent: "space-between", gap: 6 }} onClick={(e) => e.stopPropagation()}>
-                <button
-                  type="button"
-                  title="Ghi chỉ số điện nước"
-                  data-testid="room-utility-btn"
-                  onClick={() => onOpenActionModal("utility", room)}
-                  style={{ flex: 1, padding: "6px", background: C.bg, border: `1px solid ${C.border}`, borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 4 }}
-                >
-                  <Zap size={13} color={C.primary} /> Điện nước
-                </button>
-                <button
-                  type="button"
-                  title="Tạo hóa đơn"
-                  data-testid="room-invoice-btn"
-                  onClick={() => onOpenActionModal("invoice", room)}
-                  style={{ flex: 1, padding: "6px", background: C.bg, border: `1px solid ${C.border}`, borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 4 }}
-                >
-                  <FileText size={13} color={C.primary} /> Hóa đơn
-                </button>
+                <Button variant="outline" size="sm" requiresWrite icon={<Zap size={13} />} onClick={() => onOpenActionModal("utility", room)} data-testid="room-utility-btn" style={{ flex: 1, justifyContent: "center" }}>
+                  Điện nước
+                </Button>
+                <Button variant="outline" size="sm" requiresWrite icon={<FileText size={13} />} onClick={() => onOpenActionModal("invoice", room)} data-testid="room-invoice-btn" style={{ flex: 1, justifyContent: "center" }}>
+                  Hóa đơn
+                </Button>
               </div>
             </div>
           ))}

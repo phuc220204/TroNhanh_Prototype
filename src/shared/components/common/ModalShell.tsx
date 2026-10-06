@@ -1,13 +1,22 @@
 import { useEffect, useId, useRef } from "react";
 import { X } from "lucide-react";
-import { C, font } from "../../theme";
+import { C, font, shadow } from "../../theme";
+
+const MODAL_MAX_WIDTH = { sm: 400, md: 460, lg: 720 } as const;
 
 /* ══════════════════════════════════════════
    SHARED MODAL SHELL
    Overlay + card + header (title/close) + footer.
    Dùng chung cho các modal landlord (Thêm phòng/khu trọ, Ghi điện nước…).
 ══════════════════════════════════════════ */
-export function ModalShell({ title, onClose, children, footer }: { title: string; onClose: () => void; children: React.ReactNode; footer: React.ReactNode }) {
+export function ModalShell({ title, onClose, children, footer, size = "md" }: {
+  title: string;
+  onClose: () => void;
+  children: React.ReactNode;
+  footer: React.ReactNode;
+  /** sm 400 · md 460 (mặc định) · lg 720 — form dài/nhiều cột dùng lg. */
+  size?: keyof typeof MODAL_MAX_WIDTH;
+}) {
   const dialogRef = useRef<HTMLDivElement>(null);
   const onCloseRef = useRef(onClose);
   const titleId = useId();
@@ -46,14 +55,14 @@ export function ModalShell({ title, onClose, children, footer }: { title: string
   }, []);
 
   return (
-    <div onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }} style={{ position: "fixed", inset: 0, background: "rgba(42,26,12,0.5)", zIndex: 300, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
-      <div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby={titleId} onClick={e => e.stopPropagation()} style={{ background: C.white, borderRadius: 18, width: "100%", maxWidth: 460, maxHeight: "90vh", overflowY: "auto", boxShadow: "0 16px 48px rgba(42,26,12,0.3)" }}>
+    <div onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }} style={{ position: "fixed", inset: 0, background: C.overlay, zIndex: 300, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
+      <div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby={titleId} onClick={e => e.stopPropagation()} style={{ background: C.white, borderRadius: 18, width: "100%", maxWidth: MODAL_MAX_WIDTH[size], maxHeight: "90vh", overflowY: "auto", boxShadow: shadow.lg }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "20px 24px", borderBottom: `1px solid ${C.border}` }}>
           <h3 id={titleId} style={{ fontFamily: font, fontSize: 18, fontWeight: 800, color: C.textPrimary, margin: 0 }}>{title}</h3>
           <button type="button" aria-label="Đóng hộp thoại" onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", minWidth: 44, minHeight: 44 }}><X size={20} color={C.textSecondary} /></button>
         </div>
         <div style={{ padding: "20px 24px", display: "flex", flexDirection: "column", gap: 14 }}>{children}</div>
-        <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, padding: "16px 24px", borderTop: `1px solid ${C.border}` }}>{footer}</div>
+        <div style={{ display: "flex", justifyContent: "flex-end", flexWrap: "wrap", gap: 10, padding: "16px 24px", borderTop: `1px solid ${C.border}` }}>{footer}</div>
       </div>
     </div>
   );

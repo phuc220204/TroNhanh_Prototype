@@ -4,7 +4,7 @@ import {
   LayoutGrid, Building2, FileText, Users, Wallet, Settings, LogOut,
   Home, MessageSquare, User, Search, Lock, X, ChevronLeft, Star, UserSearch
 } from "lucide-react";
-import { C, font } from "../../theme";
+import { C, font, shadow } from "../../theme";
 import { BrandLogo } from "../brand/BrandLogo";
 import { useAuth } from "../../contexts/AuthContext";
 import { useSubscriptionContext } from "../../contexts/SubscriptionContext";
@@ -67,7 +67,7 @@ export function Sidebar({ active, onSaaSAccess }: { active: LandlordNavId; onSaa
       </div>
 
       {/* User Profile Card */}
-      <div style={{ display: "flex", alignItems: "center", gap: 11, padding: "14px 20px", borderBottom: `1px solid ${C.border}`, background: "rgba(240,231,214,0.15)" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 11, padding: "14px 20px", borderBottom: `1px solid ${C.border}`, background: C.bg }}>
         <div style={{ width: 38, height: 38, borderRadius: "50%", background: C.caramelSoft, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, fontWeight: 700, color: C.primary, fontFamily: font, fontSize: 15 }}>
           {displayName[0].toUpperCase()}
         </div>
@@ -128,7 +128,7 @@ export function Sidebar({ active, onSaaSAccess }: { active: LandlordNavId; onSaa
 
 export function MobileHeader({ title, onBack }: { title: string; onBack?: () => void }) {
   return (
-    <div style={{ background: C.primaryDark, height: 56, display: "flex", alignItems: "center", padding: "0 16px", gap: 12, position: "sticky", top: 0, zIndex: 100, boxShadow: "0 2px 12px rgba(42,26,12,0.22)", flexShrink: 0, "--tn-brand-logo-color": C.cream } as React.CSSProperties}>
+    <div style={{ background: C.primaryDark, height: 56, display: "flex", alignItems: "center", padding: "0 16px", gap: 12, position: "sticky", top: 0, zIndex: 100, boxShadow: shadow.sm, flexShrink: 0, "--tn-brand-logo-color": C.cream } as React.CSSProperties}>
       {onBack ? (
         <button type="button" onClick={onBack} aria-label="Quay lại tổng quan" data-testid="landlord-mobile-back" style={{ background: "none", border: "none", padding: 0, minWidth: 44, minHeight: 44, display: "flex", alignItems: "center", justifyContent: "flex-start", cursor: "pointer", color: C.cream }}>
           <ChevronLeft size={24} />
@@ -164,7 +164,7 @@ export function MobileTabBar({ active, onSaaSAccess }: { active: LandlordNavId; 
 
   return (
     <>
-      <nav style={{ background: C.white, borderTop: `1px solid ${C.border}`, height: 60, display: "flex", boxShadow: "0 -2px 12px rgba(92,70,50,0.08)", flexShrink: 0, position: "sticky", bottom: 0, zIndex: 80 }}>
+      <nav style={{ background: C.white, borderTop: `1px solid ${C.border}`, height: 60, display: "flex", boxShadow: shadow.sm, flexShrink: 0, position: "sticky", bottom: 0, zIndex: 80 }}>
         {tabs.map(({ Icon, label, on, onTap }) => {
           const isActive = on.includes(active) || (label === "Tài khoản" && accountOpen);
           return (
@@ -209,8 +209,8 @@ function AccountSheet({ open, onClose, onNavigate, onLogout }: {
     { Icon: Settings, label: "Cài đặt", action: () => onNavigate("/tai-khoan/cai-dat") },
   ];
   return (
-    <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(42,26,12,0.5)", zIndex: 300, display: "flex", alignItems: "flex-end" }}>
-      <div onClick={e => e.stopPropagation()} style={{ background: C.white, width: "100%", borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: "10px 0 calc(14px + env(safe-area-inset-bottom))", boxShadow: "0 -8px 40px rgba(30,18,10,0.2)", maxHeight: "85vh", overflowY: "auto" }}>
+    <div onClick={onClose} style={{ position: "fixed", inset: 0, background: C.overlay, zIndex: 300, display: "flex", alignItems: "flex-end" }}>
+      <div onClick={e => e.stopPropagation()} style={{ background: C.white, width: "100%", borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: "10px 0 calc(14px + env(safe-area-inset-bottom))", boxShadow: shadow.lg, maxHeight: "85vh", overflowY: "auto" }}>
         <div style={{ width: 40, height: 4, borderRadius: 4, background: C.border, margin: "0 auto 14px" }} />
 
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 18px 12px" }}>
@@ -226,7 +226,7 @@ function AccountSheet({ open, onClose, onNavigate, onLogout }: {
           </div>
           <div style={{ minWidth: 0 }}>
             <p style={{ fontFamily: font, fontSize: 15, fontWeight: 700, color: C.textPrimary, margin: 0 }}>{displayName}</p>
-            <p style={{ fontFamily: font, fontSize: 12.5, color: C.textSecondary, margin: "2px 0 0" }}>Đang dùng Landlord Hub</p>
+            <p style={{ fontFamily: font, fontSize: 12.5, color: C.textSecondary, margin: "2px 0 0" }}>Khu chủ trọ</p>
           </div>
         </div>
 
@@ -260,7 +260,7 @@ function LogoutToast({ show, onDone }: { show: boolean; onDone: () => void }) {
   }, [show, onDone]);
   if (!show) return null;
   return (
-    <div style={{ position: "fixed", left: "50%", bottom: "calc(80px + env(safe-area-inset-bottom))", transform: "translateX(-50%)", zIndex: 400, background: C.primaryDark, color: C.cream, fontFamily: font, fontSize: 13.5, fontWeight: 600, padding: "11px 20px", borderRadius: 10, boxShadow: "0 8px 28px rgba(30,18,10,0.3)", whiteSpace: "nowrap" }}>
+    <div style={{ position: "fixed", left: "50%", bottom: "calc(80px + env(safe-area-inset-bottom))", transform: "translateX(-50%)", zIndex: 400, background: C.primaryDark, color: C.cream, fontFamily: font, fontSize: 13.5, fontWeight: 600, padding: "11px 20px", borderRadius: 10, boxShadow: shadow.lg, whiteSpace: "nowrap" }}>
       Đã đăng xuất khỏi bản quản lý
     </div>
   );

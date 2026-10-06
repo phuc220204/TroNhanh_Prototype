@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { X, Pencil } from "lucide-react";
-import { C, font, radius } from "../../../shared/theme";
+import { C, font, radius, shadow } from "../../../shared/theme";
 import { useBreakpoint } from "../../../shared/components/useBreakpoint";
 import { Button } from "../../../shared/components/common";
 import type { Room } from "../../types/room";
@@ -49,7 +49,7 @@ export function RoomDetailModal({ room, onClose, onEdit }: RoomDetailModalProps)
       style={{
         position: "fixed",
         inset: 0,
-        background: "rgba(0,0,0,0.45)",
+        background: C.overlay,
         backdropFilter: "blur(2px)",
         zIndex: 400,
         display: "flex",
@@ -61,13 +61,16 @@ export function RoomDetailModal({ room, onClose, onEdit }: RoomDetailModalProps)
       <div
         // Chặn nổi bọt: bấm trong nội dung không được đóng modal.
         onClick={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        aria-label={`Chi tiết phòng ${room.code}`}
         style={{
           background: C.white,
           width: "100%",
           maxWidth: isMobile ? "100%" : 1040,
           maxHeight: isMobile ? "92vh" : "88vh",
           borderRadius: isMobile ? `${radius.xl}px ${radius.xl}px 0 0` : radius.xl,
-          boxShadow: "0 24px 64px rgba(42,26,12,0.28)",
+          boxShadow: shadow.lg,
           display: "flex",
           flexDirection: "column",
           overflow: "hidden",

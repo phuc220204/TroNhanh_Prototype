@@ -18,11 +18,11 @@ import {
 
 /** Lý do hay gặp — bấm một chip là điền sẵn, giữ thao tác ≤ 3 chạm. */
 const QUICK_REASONS = [
-  "Khách hẹn trả sau",
+  "Người ở hẹn trả sau",
   "Không liên lạc được",
-  "Khách đang khó khăn tài chính",
+  "Người ở đang khó khăn tài chính",
   "Chưa thống nhất số tiền",
-  "Khách đi vắng",
+  "Người ở đi vắng",
 ];
 
 const formatDate = (value: string) => {
@@ -73,7 +73,7 @@ function NoteForm({ initial, submitLabel, isSaving, onSubmit, onCancel, testIdPr
         onChange={e => setReason(e.target.value)}
         maxLength={COLLECTION_NOTE_REASON_MAX_LENGTH}
         rows={2}
-        placeholder="Lý do chưa thu được, ví dụ: khách hẹn cuối tuần trả, đã gọi 2 lần không nghe máy…"
+        placeholder="Lý do chưa thu được, ví dụ: người ở hẹn cuối tuần trả, đã gọi 2 lần không nghe máy…"
         aria-label="Lý do chưa thu được"
         data-testid={`${testIdPrefix}-input`}
         style={{ ...inputStyle, resize: "vertical", lineHeight: 1.45 }}

@@ -10,7 +10,8 @@ import React, { useState } from "react";
 import {
   Building2, ChevronDown, ChevronRight, Eye, Pencil, Calendar,
 } from "lucide-react";
-import { C, font } from "../../../shared/theme";
+import { C, font, shadow } from "../../../shared/theme";
+import { Badge } from "../../../shared/components/common";
 import type { RoomStatus } from "../../../shared/types/status";
 import { formatDate } from "../../../shared/utils/format";
 import { useCanWrite, useWriteBlockReason } from "../../../shared/contexts/SubscriptionContext";
@@ -51,7 +52,7 @@ export function PrimaryBtn({
         border: "none", borderRadius: 10, fontFamily: font,
         fontSize: small ? 13 : 13.5, fontWeight: 700,
         cursor: isDisabled ? "not-allowed" : "pointer",
-        boxShadow: isDisabled ? "none" : "0 2px 10px rgba(138,106,69,0.25)",
+        boxShadow: isDisabled ? "none" : shadow.sm,
         whiteSpace: "nowrap", opacity: isDisabled ? 0.6 : 1,
         transition: "background 0.15s"
       }}
@@ -101,42 +102,15 @@ export function GhostBtn({
   );
 }
 
+/** Trạng thái phòng — nhãn + màu lấy từ statusMaps qua Badge (một bộ từ vựng cho cả app). */
 export function StatusChip({ status }: { status: RoomStatus }) {
-  let label = "Trống";
-  let bg = "#EBF2E8";
-  let color = "#4F7A4A";
-
-  // Trước đây các nhánh này còn so sánh với "Available"/"Rented"/"Đã cọc" —
-  // luôn false vì RoomStatus là lowercase. Chuẩn hoá DB→local đã làm ở
-  // mapDbRoom (QuanLyPhongPage), nên ở đây chỉ cần 4 giá trị hợp lệ.
-  if (status === "available") {
-    label = "Trống";
-    bg = "#EBF2E8";
-    color = "#4F7A4A";
-  } else if (status === "rented") {
-    label = "Đang thuê";
-    bg = "#F5EFE6";
-    color = "#9B8C78";
-  } else if (status === "deposited") {
-    label = "Đã cọc";
-    bg = "#FEF6EC";
-    color = "#C99B65";
-  } else if (status === "hidden") {
-    label = "Đã ẩn";
-    bg = "#FCECEC";
-    color = "#C07B4A";
-  }
-
-  return (
-    <span style={{ fontFamily: font, fontSize: 11.5, fontWeight: 700, color, background: bg, borderRadius: 8, padding: "3px 9px", whiteSpace: "nowrap" }}>
-      {label}
-    </span>
-  );
+  return <Badge kind="room" status={status} />;
 }
 
+/** Tình trạng thanh toán kỳ gần nhất. null = chưa có hóa đơn. */
 export function PayText({ paid }: { paid: boolean | null }) {
   if (paid === null) return <span style={{ color: C.textSecondary }}>—</span>;
-  return <span style={{ fontFamily: font, fontSize: 13, fontWeight: 600, color: paid ? "#4F7A4A" : "#C07B4A" }}>{paid ? "Đã thanh toán" : "Chưa thanh toán"}</span>;
+  return <Badge kind="invoice" status={paid ? "paid" : "unpaid"} />;
 }
 
 /* ══════════════════════════════════════════
@@ -156,7 +130,7 @@ export function PropertySelector({ value, onChange, options, mobile }: { value: 
             background: C.white, border: `1.5px solid ${open ? C.primary : C.border}`,
             borderRadius: 10, fontFamily: font, fontSize: 13.5, fontWeight: 700,
             color: C.textPrimary, cursor: "pointer", width: mobile ? "100%" : undefined,
-            minWidth: mobile ? undefined : 200, boxShadow: "0 2px 6px rgba(42,26,12,0.01)"
+            minWidth: mobile ? undefined : 200, boxShadow: shadow.sm
           }}>
           <span style={{ display: "flex", alignItems: "center", gap: 8 }}><Building2 size={15} color={C.primary} />{options.find(option => option.value === value)?.label ?? value}</span>
           <ChevronDown size={16} color={C.textSecondary} style={{ transform: open ? "rotate(180deg)" : "none", transition: "transform 0.15s" }} />
@@ -165,7 +139,7 @@ export function PropertySelector({ value, onChange, options, mobile }: { value: 
       {open && (
         <>
           <div onClick={() => setOpen(false)} style={{ position: "fixed", inset: 0, zIndex: 40 }} />
-          <div style={{ position: "absolute", top: "calc(100% + 6px)", left: mobile ? 0 : 80, background: C.white, border: `1px solid ${C.border}`, borderRadius: 12, boxShadow: "0 10px 30px rgba(42,26,12,0.1)", padding: 6, zIndex: 41, minWidth: 220 }}>
+          <div style={{ position: "absolute", top: "calc(100% + 6px)", left: mobile ? 0 : 80, background: C.white, border: `1px solid ${C.border}`, borderRadius: 12, boxShadow: shadow.md, padding: 6, zIndex: 41, minWidth: 220 }}>
             {options.map(option => (
               <button key={option.value} onClick={() => { onChange(option.value); setOpen(false); }}
                 style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%", textAlign: "left", padding: "10px 12px", background: option.value === value ? C.caramelSoft : "transparent", border: "none", borderRadius: 8, fontFamily: font, fontSize: 13.5, fontWeight: option.value === value ? 700 : 500, color: C.textPrimary, cursor: "pointer" }}>
@@ -193,15 +167,15 @@ export function SegmentedBar({ rooms, propertyId }: { rooms: any[]; propertyId: 
   const total = activeRooms.length;
 
   const data = [
-    { label: "Trống", value: activeRooms.filter(r => r.status === "Available" || r.status === "available").length, color: "#4F7A4A" },
+    { label: "Trống", value: activeRooms.filter(r => r.status === "Available" || r.status === "available").length, color: C.available },
     { label: "Đã cọc", value: activeRooms.filter(r => r.status === "Deposited" || r.status === "deposited" || r.status === "Đã cọc" || r.status === "đã cọc").length, color: C.secondary },
-    { label: "Đang thuê", value: activeRooms.filter(r => r.status === "Rented" || r.status === "rented").length, color: "#9B8C78" },
-    { label: "Đã ẩn", value: activeRooms.filter(r => r.status === "Hidden" || r.status === "hidden").length, color: "#C07B4A" },
+    { label: "Đang thuê", value: activeRooms.filter(r => r.status === "Rented" || r.status === "rented").length, color: C.rented },
+    { label: "Đã ẩn", value: activeRooms.filter(r => r.status === "Hidden" || r.status === "hidden").length, color: C.repairing },
   ];
 
   return (
     <div style={{ marginBottom: 18 }}>
-      <div style={{ display: "flex", height: 8, borderRadius: 999, overflow: "hidden", marginBottom: 12, background: "#EADCCB" }}>
+      <div style={{ display: "flex", height: 8, borderRadius: 999, overflow: "hidden", marginBottom: 12, background: C.border }}>
         {data.map(s => {
           const pct = total > 0 ? (s.value / total) * 100 : 0;
           if (pct === 0) return null;
@@ -243,7 +217,7 @@ export function UtilityCard({
       style={{
         background: C.white, border: `1px solid ${hov ? color : C.border}`, borderRadius: 16, padding: "20px 22px",
         display: "flex", flexDirection: "column", gap: 10, transition: "all 0.15s",
-        transform: hov ? "translateY(-2px)" : "none", boxShadow: hov ? "0 6px 20px rgba(42,26,12,0.06)" : "0 2px 10px rgba(42,26,12,0.02)",
+        transform: hov ? "translateY(-2px)" : "none", boxShadow: hov ? shadow.md : shadow.sm,
         position: "relative", overflow: "hidden", minHeight: 140
       }}>
 
@@ -256,7 +230,7 @@ export function UtilityCard({
             <div style={{ display: "flex", justifyContent: "space-between", fontFamily: font, fontSize: 11.5, fontWeight: 700, color: C.textPrimary, marginBottom: 4 }}>
               <span>{progress.label}</span>
             </div>
-            <div style={{ height: 6, background: "#EADCCB", borderRadius: 99 }}>
+            <div style={{ height: 6, background: C.border, borderRadius: 99 }}>
               <div style={{ width: `${progress.pct}%`, height: "100%", background: color, borderRadius: 99 }} />
             </div>
           </div>
@@ -288,19 +262,12 @@ export function ListingRow({ l, onClick, onView, onEdit }: {
   onView: () => void;
   onEdit: () => void;
 }) {
-  const statusLabels: Record<string, string> = {
-    active: "Đang hiển thị",
-    hidden: "Đã ẩn",
-    PendingApproval: "Chờ duyệt",
-    Expired: "Hết hạn",
-  };
-  const isActive = l.status === "active";
   return (
     <div onClick={onClick} data-testid="dashboard-listing-row" style={{ display: "flex", alignItems: "center", gap: 14, padding: "14px 18px", background: C.white, border: `1px solid ${C.border}`, borderRadius: 12, cursor: "pointer", justifyContent: "space-between", flexWrap: "wrap", transition: "border-color 0.15s" }}>
       <div style={{ flex: "1 1 220px", minWidth: 0 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 9, marginBottom: 4, flexWrap: "wrap" }}>
           <span style={{ fontFamily: font, fontSize: 14, fontWeight: 700, color: C.textPrimary }}>{l.title}</span>
-          <span style={{ fontFamily: font, fontSize: 10.5, fontWeight: 700, color: isActive ? C.available : C.textSecondary, background: isActive ? C.successBg : C.caramelSoft, borderRadius: 6, padding: "2px 8px" }}>{statusLabels[l.status] ?? "Chưa rõ trạng thái"}</span>
+          <Badge kind="listing" status={l.status} />
         </div>
         <p style={{ fontFamily: font, fontSize: 12.5, color: C.textSecondary, margin: 0 }}>{l.sub}</p>
       </div>
