@@ -6,6 +6,8 @@ export interface SkeletonProps {
   count?: number;
   style?: React.CSSProperties;
   "data-testid"?: string;
+  /** Đọc cho trình đọc màn hình, ví dụ "Đang tải danh sách phòng". */
+  label?: string;
 }
 
 export function Skeleton({
@@ -13,6 +15,7 @@ export function Skeleton({
   count = 1,
   style,
   "data-testid": testId,
+  label = "Đang tải",
 }: SkeletonProps) {
   const items = Array.from({ length: count });
 
@@ -24,7 +27,7 @@ export function Skeleton({
 
   if (variant === "card") {
     return (
-      <div data-testid={testId} style={{ display: "flex", flexDirection: "column", gap: 12, ...style }}>
+      <div data-testid={testId} role="status" aria-busy="true" aria-label={label} style={{ display: "flex", flexDirection: "column", gap: 12, ...style }}>
         {items.map((_, i) => (
           <div
             key={i}
@@ -49,7 +52,7 @@ export function Skeleton({
 
   if (variant === "row") {
     return (
-      <div data-testid={testId} style={{ display: "flex", flexDirection: "column", gap: 8, ...style }}>
+      <div data-testid={testId} role="status" aria-busy="true" aria-label={label} style={{ display: "flex", flexDirection: "column", gap: 8, ...style }}>
         {items.map((_, i) => (
           <div
             key={i}
@@ -66,7 +69,7 @@ export function Skeleton({
   }
 
   return (
-    <div data-testid={testId} style={{ display: "flex", flexDirection: "column", gap: 8, ...style }}>
+    <div data-testid={testId} role="status" aria-busy="true" aria-label={label} style={{ display: "flex", flexDirection: "column", gap: 8, ...style }}>
       {items.map((_, i) => (
         <div
           key={i}

@@ -5,8 +5,7 @@ import { C, font } from "../../../shared/theme";
 import { useBreakpoint } from "../../../shared/components/useBreakpoint";
 import { PublicNavbar } from "../../../shared/components/PublicNavbar";
 import { useAuth } from "../../../shared/contexts/AuthContext";
-import { config } from "../../../shared/config";
-import { canShowBoostAction } from "../../../../supabase/functions/_shared/boost-access.mjs";
+import { useBoostAvailability } from "../../hooks/useBoostAvailability";
 import { Step1Basic } from "./Step1Basic";
 import { Step2Amenities } from "./Step2Amenities";
 import { Step3Photos } from "./Step3Photos";
@@ -35,14 +34,9 @@ export function DangTinPage() {
   const location = useLocation();
   const { id } = useParams<{ id?: string }>();
   const { isMobile } = useBreakpoint();
-  const { profile, user } = useAuth();
-  const boostChoiceAvailable = canShowBoostAction(
-    config.payments.boostCheckoutEnabled,
-    config.payments.boostTestMode,
-    config.payments.boostTestSellerId,
-    user?.id,
-  );
-  const isPayosTestMode = config.payments.boostTestMode === "true";
+  const { profile } = useAuth();
+  const boost = useBoostAvailability();
+  const boostChoiceAvailable = boost.isBoostAvailable;
   const prefill = (location.state as { prefill?: any } | null)?.prefill ?? {};
 
   const [toast, setToast] = useState(false);
@@ -107,6 +101,17 @@ export function DangTinPage() {
     return () => window.removeEventListener("beforeunload", warnBeforeUnload);
   }, [hasUnsavedChanges]);
 
+  // Bản nháp có thể nhớ một gói Boost mà server không còn bán (admin đổi gói).
+  // Khi đã có danh sách gói thật thì bỏ lựa chọn cũ, để không gửi đi thanh toán.
+  useEffect(() => {
+    if (selectedBoostDays === null || boost.packages.length === 0) return;
+    if (!boost.packages.some((item) => item.days === selectedBoostDays)) setSelectedBoostDays(null);
+  }, [boost.packages, selectedBoostDays, setSelectedBoostDays]);
+
+  // Lưu nháp giữ nguyên lựa chọn Boost khi gói đang tải hoặc tải lỗi tạm thời;
+  // chỉ bỏ khi server chủ động tắt Boost.
+  const isBoostDisabledByServer = !boost.isBoostAvailable && !boost.isPending && !boost.hasLoadError;
+
   if (isLoadingListing) {
     return (
       <div style={{ minHeight: "100vh", background: C.bg, fontFamily: font, display: "flex", flexDirection: "column" }}>
@@ -153,21 +158,23 @@ export function DangTinPage() {
       ? "Đã lưu bản nháp thành công!"
       : isEditMode
         ? (updatedStatus === "PendingApproval" ? "Cập nhật & Đã gửi duyệt lại!" : "Cập nhật tin thành công!")
-        : "Đã tiếp nhận tin đăng!";
+        : updatedStatus === "Active" ? "Tin đã được đăng!" : "Đã tiếp nhận tin đăng!";
 
     const successDesc = updatedStatus === "Draft"
       ? "Tin đăng của bạn đã được lưu dưới dạng Bản nháp. Bạn có thể mở lại để chỉnh sửa và gửi duyệt sau từ trang Quản lý tin đăng."
       : boostCheckoutError
-        ? `${boostCheckoutError} Tin vẫn đang chờ duyệt; sau khi thanh toán thành công, Boost chỉ bắt đầu khi moderator duyệt tin.`
+        ? (updatedStatus === "Active"
+          ? `${boostCheckoutError} Tin đang hiển thị; Boost bắt đầu ngay khi thanh toán thành công.`
+          : `${boostCheckoutError} Tin đang chờ duyệt; sau khi thanh toán thành công, Boost bắt đầu khi tin được duyệt.`)
       : isEditMode
         ? (updatedStatus === "PendingApproval"
           ? "Tin của bạn đã được cập nhật và cần duyệt lại trước khi hiển thị."
           : updatedStatus === "Active"
             ? "Tin đăng của bạn đã được cập nhật thành công và đang hiển thị."
             : "Tin đăng của bạn đã được cập nhật thành công. Hãy kiểm tra trạng thái trong Quản lý tin đăng.")
-        : selectedBoostDays !== null
-          ? `Tin đã được gửi duyệt. Bạn sẽ được chuyển đến payOS để thanh toán gói Boost ${selectedBoostDays} ngày; thời hạn Boost chỉ bắt đầu khi moderator duyệt tin.`
-          : "Tin đã được lưu. Hãy kiểm tra trạng thái duyệt trong Quản lý tin đăng.";
+        : updatedStatus === "Active"
+          ? "Tin đăng của bạn đã được duyệt tự động và đang hiển thị trên Trọ Nhanh."
+          : "Tin đã được gửi duyệt. Hãy kiểm tra trạng thái duyệt trong Quản lý tin đăng.";
 
     return (
       <div style={{ minHeight: "100vh", background: C.bg, fontFamily: font, display: "flex", flexDirection: "column" }}>
@@ -262,8 +269,7 @@ export function DangTinPage() {
           )}
           {step === 4 && shouldShowBoostStep && (
             <Step5Visibility
-              boostAvailable={boostChoiceAvailable}
-              isTestMode={isPayosTestMode}
+              boost={boost}
               selectedBoostDays={selectedBoostDays}
               onSelectBoostDays={setSelectedBoostDays}
             />
@@ -287,7 +293,7 @@ export function DangTinPage() {
                   type="button"
                   data-testid="listing-draft-btn"
                   disabled={isSubmitting}
-                  onClick={() => handlePostSubmit(true, boostChoiceAvailable ? selectedBoostDays : null)}
+                  onClick={() => handlePostSubmit(true, isBoostDisabledByServer ? null : selectedBoostDays)}
                   style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "10px 18px", background: C.white, border: `1.5px solid ${C.border}`, borderRadius: 10, fontFamily: font, fontSize: 13.5, fontWeight: 600, color: C.textPrimary, cursor: isSubmitting ? "not-allowed" : "pointer" }}
                 >
                   Lưu nháp

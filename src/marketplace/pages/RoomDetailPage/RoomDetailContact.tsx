@@ -7,6 +7,7 @@ import { C, font } from "../../../shared/theme";
 import { nearbyCategoryMeta } from "../../../shared/constants/nearby";
 import { LeafletMap, isValidLatLng } from "../../../shared/components/common/LeafletMap";
 import { SaveListingButton } from "../../components/SaveListingButton";
+import { ListingPostedTime, ListingTag } from "../../components/ListingCardMeta";
 import { getListingImage, type ListingCardItem } from "../../services/listing-mappers";
 import { parseMetadataFromDescription } from "../../utils/listingMetadata";
 import { getListingCosts } from "../../utils/listingCosts";
@@ -332,7 +333,10 @@ export function MobileSimilarRooms({ listings, onOpen }: { listings: ListingCard
         {listings.map(room => (
           <div key={room.id} onClick={() => onOpen(room.id)} data-testid="similar-room-card"
             style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: 12, overflow: "hidden", display: "flex", cursor: "pointer" }}>
-            <img src={room.img} alt={room.title} style={{ width: 90, height: 90, objectFit: "cover", flexShrink: 0 }} />
+            <div style={{ position: "relative", width: 90, flexShrink: 0 }}>
+              <img src={room.img} alt={room.title} style={{ width: 90, height: "100%", minHeight: 90, objectFit: "cover", display: "block" }} />
+              <ListingTag badge={room.badge} style={{ position: "absolute", top: 6, left: 6, fontSize: 9.5, padding: "2px 6px" }} />
+            </div>
             <div style={{ padding: "11px 13px", flex: 1, minWidth: 0 }}>
               <p style={{ fontFamily: font, fontSize: 13, fontWeight: 700, color: C.textPrimary, margin: "0 0 4px", lineHeight: 1.35 }}>{room.title}</p>
               <div style={{ display: "flex", alignItems: "center", gap: 4, marginBottom: 6 }}>
@@ -340,6 +344,7 @@ export function MobileSimilarRooms({ listings, onOpen }: { listings: ListingCard
                 <span style={{ fontFamily: font, fontSize: 11, color: C.textSecondary }}>{room.loc} · {room.area} m²</span>
               </div>
               <span style={{ fontFamily: font, fontSize: 12, fontWeight: 700, color: C.primary }}>{room.price}/tháng</span>
+              <ListingPostedTime postedAt={room.postedAt} size={11} style={{ display: "flex", marginTop: 4 }} />
             </div>
           </div>
         ))}

@@ -49,12 +49,18 @@ Deno.serve(async (request) => {
   }
 
   const adminClient = createClient(supabaseUrl, serviceKey, { auth: { persistSession: false } });
-  const { data: result, error } = await adminClient.rpc("complete_verified_boost_payment", {
+  const paymentArgs = {
     p_order_code: data.orderCode,
     p_amount: data.amount,
     p_payment_link_id: data.paymentLinkId,
     p_reference: typeof data.reference === "string" ? data.reference : "",
-  });
+  };
+  // Một webhook cho mọi đơn payOS: thử đơn Boost trước, không có thì đơn gói SaaS
+  // (hai bảng dùng hai dải order_code riêng nên không trùng).
+  let { data: result, error } = await adminClient.rpc("complete_verified_boost_payment", paymentArgs);
+  if (!error && result === "UNKNOWN_ORDER") {
+    ({ data: result, error } = await adminClient.rpc("complete_verified_saas_payment", paymentArgs));
+  }
   // A 5xx asks payOS to retry. Do not acknowledge an unrecorded payment.
   if (error) return json({ error: "PAYMENT_RECONCILIATION_FAILED" }, 503);
   if (result === "UNKNOWN_ORDER") {

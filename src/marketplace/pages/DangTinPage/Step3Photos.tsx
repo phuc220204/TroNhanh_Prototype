@@ -1,6 +1,7 @@
 import { useRef, useEffect } from "react";
-import { Upload, Trash2, ArrowUp, ArrowDown, Image as ImageIcon, AlertCircle } from "lucide-react";
-import { C, font } from "../../../shared/theme";
+import { Upload, Trash2, ArrowUp, ArrowDown, Image as ImageIcon, AlertCircle, Lightbulb } from "lucide-react";
+import { C, font, radius } from "../../../shared/theme";
+import { PHOTO_TIPS } from "./listing-tips";
 
 export interface PhotoFileItem {
   file?: File;
@@ -72,6 +73,18 @@ export function Step3Photos({ photos, setPhotos, error, uploadProgress }: Step3P
         <p style={{ fontFamily: font, fontSize: 13.5, color: C.textSecondary, margin: 0 }}>
             Tải lên ít nhất 3 hình ảnh rõ nét để người thuê xem đúng hiện trạng phòng.
         </p>
+      </div>
+
+      <div
+        data-testid="photo-tips"
+        style={{ padding: 14, borderRadius: radius.md, background: C.cream, color: C.textSecondary, font: `13px/1.55 ${font}` }}
+      >
+        <p style={{ display: "flex", alignItems: "center", gap: 6, margin: "0 0 6px", fontWeight: 700, color: C.textPrimary }}>
+          <Lightbulb size={14} color={C.primary} /> Mẹo chụp ảnh đẹp
+        </p>
+        <ul style={{ margin: 0, paddingLeft: 18 }}>
+          {PHOTO_TIPS.map((tip) => <li key={tip}>{tip}</li>)}
+        </ul>
       </div>
 
       {/* Upload Zone */}

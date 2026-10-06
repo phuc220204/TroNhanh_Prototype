@@ -84,6 +84,7 @@ export function SearchResultsPage() {
           amenities: item.amenities.map(mapAmenityToKey),
           type: mapTypeToKey(item.type),
           badge: item.badge,
+          postedAt: item.postedAt,
           img: item.img,
           contact_phone: item.contact_phone,
           boost_expire_at: item.boost_expire_at,

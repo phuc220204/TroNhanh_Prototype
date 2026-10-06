@@ -1,9 +1,10 @@
 import { useEffect } from "react";
 import { X, Pencil } from "lucide-react";
-import { C, font, radius } from "../../../shared/theme";
+import { C, font, radius, shadow } from "../../../shared/theme";
 import { useBreakpoint } from "../../../shared/components/useBreakpoint";
 import { Button } from "../../../shared/components/common";
-import type { Room } from "../../types/room";
+import type { Property, Room } from "../../types/room";
+import { RoomActions, type RoomActionType } from "./RoomActions";
 import { RoomDetailTabs } from "../../components/RoomDetailTabs";
 
 /**
@@ -22,12 +23,14 @@ import { RoomDetailTabs } from "../../components/RoomDetailTabs";
 interface RoomDetailModalProps {
   room: Room | null;
   onClose: () => void;
-  onOpenActionModal?: (type: any, room: Room) => void;
+  onOpenActionModal?: (type: RoomActionType, room: Room) => void;
+  /** Khu của phòng — để hiện đúng đơn giá đang áp (trước đây luôn "Chưa cấu hình"). */
+  property?: Property | null;
   /** Mở form sửa phòng. Không truyền ⇒ không hiện nút (chỗ chỉ để xem). */
   onEdit?: (room: Room) => void;
 }
 
-export function RoomDetailModal({ room, onClose, onEdit }: RoomDetailModalProps) {
+export function RoomDetailModal({ room, onClose, onEdit, onOpenActionModal, property }: RoomDetailModalProps) {
   const { isMobile } = useBreakpoint();
 
   // Esc để đóng: modal chiếm gần hết màn hình nên tìm nút X mất công hơn drawer.
@@ -49,7 +52,7 @@ export function RoomDetailModal({ room, onClose, onEdit }: RoomDetailModalProps)
       style={{
         position: "fixed",
         inset: 0,
-        background: "rgba(0,0,0,0.45)",
+        background: C.overlay,
         backdropFilter: "blur(2px)",
         zIndex: 400,
         display: "flex",
@@ -61,13 +64,16 @@ export function RoomDetailModal({ room, onClose, onEdit }: RoomDetailModalProps)
       <div
         // Chặn nổi bọt: bấm trong nội dung không được đóng modal.
         onClick={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        aria-label={`Chi tiết phòng ${room.code}`}
         style={{
           background: C.white,
           width: "100%",
           maxWidth: isMobile ? "100%" : 1040,
           maxHeight: isMobile ? "92vh" : "88vh",
           borderRadius: isMobile ? `${radius.xl}px ${radius.xl}px 0 0` : radius.xl,
-          boxShadow: "0 24px 64px rgba(42,26,12,0.28)",
+          boxShadow: shadow.lg,
           display: "flex",
           flexDirection: "column",
           overflow: "hidden",
@@ -126,8 +132,20 @@ export function RoomDetailModal({ room, onClose, onEdit }: RoomDetailModalProps)
         </div>
 
         <div style={{ flex: 1, overflowY: "auto", padding: isMobile ? 16 : 26 }}>
-          <RoomDetailTabs room={room} />
+          <RoomDetailTabs
+            room={room}
+            electricityUnitPrice={property?.electricity_unit_price}
+            waterUnitPrice={property?.water_unit_price}
+            serviceFee={property?.service_fee}
+          />
         </div>
+
+        {/* Làm việc ngay từ chi tiết phòng — trước đây đây là ngõ cụt, phải đóng rồi tìm lại thẻ. */}
+        {onOpenActionModal && (
+          <div data-testid="room-detail-actions" style={{ display: "flex", gap: 8, padding: isMobile ? "12px 16px calc(12px + env(safe-area-inset-bottom))" : "14px 26px", borderTop: `1px solid ${C.border}`, flexShrink: 0 }}>
+            <RoomActions room={room} onAction={onOpenActionModal} size="md" />
+          </div>
+        )}
       </div>
     </div>
   );

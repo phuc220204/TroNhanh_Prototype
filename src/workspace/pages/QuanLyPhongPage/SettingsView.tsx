@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Save, Trash2, AlertTriangle } from "lucide-react";
+import { useToast } from "../../../shared/contexts/ToastContext";
 import { C, font } from "../../../shared/theme";
 import { ModalShell } from "../../../shared/components/common/ModalShell";
 import { Button, VietQRBlock } from "../../../shared/components/common";
@@ -17,6 +18,8 @@ interface SettingsViewProps {
   mobile?: boolean;
   isReadOnly?: boolean;
   onRefreshData?: () => void;
+  /** Gọi sau khi xóa khu thành công — trang cha báo thành công và chuyển tab. */
+  onDeleted?: (propertyName: string) => void;
 }
 
 const inputStyle: React.CSSProperties = {
@@ -58,6 +61,14 @@ export function validatePropertySettings(input: {
   const water = Number(input.waterPrice);
   const service = Number(input.serviceFee);
 
+  // Ô trống phải báo riêng: `Number("")` là 0, nên phí dịch vụ để trống sẽ lọt
+  // qua kiểm "không âm" và âm thầm lưu thành 0đ.
+  if (input.elecPrice.trim() === "") return "Vui lòng nhập đơn giá điện.";
+  if (input.waterPrice.trim() === "") return "Vui lòng nhập đơn giá nước.";
+  if (input.serviceFee.trim() === "") {
+    return "Vui lòng nhập phí dịch vụ (nhập 0 nếu khu không thu phí).";
+  }
+
   if (!Number.isFinite(elec) || elec <= 0) {
     return "Đơn giá điện phải là một số lớn hơn 0.";
   }
@@ -86,16 +97,25 @@ export function validatePropertySettings(input: {
   return null;
 }
 
-export function SettingsView({ property, mobile, isReadOnly, onRefreshData }: SettingsViewProps) {
-  const [elecPrice, setElecPrice] = useState(String(property?.electricity_unit_price ?? 3500));
-  const [waterPrice, setWaterPrice] = useState(String(property?.water_unit_price ?? 15000));
-  const [serviceFee, setServiceFee] = useState(String(property?.service_fee ?? 100000));
-  const [bankName, setBankName] = useState(property?.bank_name || "MB");
+/** Chưa khai ⇒ ô trống (hiện "Chưa cấu hình"), KHÔNG điền một mức giá bịa ra. */
+const priceToInput = (value: number | null | undefined): string =>
+  value === null || value === undefined ? "" : String(value);
+
+/**
+ * ⚠️ State form khởi tạo từ `property` MỘT lần. Nơi render PHẢI đặt
+ * `key={property.id}` — nếu không, đổi khu vẫn giữ giá/STK của khu cũ và bấm
+ * "Lưu" sẽ ghi đè chúng lên khu mới.
+ */
+export function SettingsView({ property, mobile, isReadOnly, onRefreshData, onDeleted }: SettingsViewProps) {
+  const [elecPrice, setElecPrice] = useState(priceToInput(property?.electricity_unit_price));
+  const [waterPrice, setWaterPrice] = useState(priceToInput(property?.water_unit_price));
+  const [serviceFee, setServiceFee] = useState(priceToInput(property?.service_fee));
+  const [bankName, setBankName] = useState(property?.bank_name || "");
   const [accountNum, setAccountNum] = useState(property?.bank_account_number || "");
   const [accountName, setAccountName] = useState(property?.bank_account_name || "");
 
   const [saving, setSaving] = useState(false);
-  const [toastMsg, setToastMsg] = useState("");
+  const { showToast } = useToast();
   const [errorMsg, setErrorMsg] = useState("");
 
   // ── BR-011: xóa khu ────────────────────────────────────────────────────────
@@ -110,7 +130,6 @@ export function SettingsView({ property, mobile, isReadOnly, onRefreshData }: Se
     if (!property || isReadOnly) return;
 
     setErrorMsg("");
-    setToastMsg("");
 
     const validationError = validatePropertySettings({
       elecPrice, waterPrice, serviceFee, accountNumber: accountNum, bankCode: bankName,
@@ -131,8 +150,7 @@ export function SettingsView({ property, mobile, isReadOnly, onRefreshData }: Se
         bank_account_name: accountName.trim(),
       });
 
-      setToastMsg("Đã cập nhật cấu hình khu trọ thành công!");
-      setTimeout(() => setToastMsg(""), 3000);
+      showToast("Đã lưu cấu hình khu trọ.", { testId: "settings-success" });
       if (onRefreshData) onRefreshData();
     } catch (err: unknown) {
       setErrorMsg(toUserMessage(err));
@@ -144,12 +162,20 @@ export function SettingsView({ property, mobile, isReadOnly, onRefreshData }: Se
   const openDeleteConfirm = async () => {
     if (!property || isReadOnly) return;
     setDeleteError("");
+    setRentedCount(0);
     setCheckingRented(true);
     setConfirmOpen(true);
     // Chỉ để hiển thị. Guard thật nằm trong RPC `soft_delete_property`.
-    const count = await countRentedRooms(property.id);
-    setRentedCount(count);
-    setCheckingRented(false);
+    try {
+      const count = await countRentedRooms(property.id);
+      setRentedCount(count);
+    } catch (err: unknown) {
+      // Không kẹt modal ở "Đang kiểm tra…": báo lỗi, vẫn cho bấm xóa vì RPC
+      // tự chặn khi còn phòng đang thuê.
+      setDeleteError(`Chưa kiểm tra được tình trạng phòng: ${toUserMessage(err)}`);
+    } finally {
+      setCheckingRented(false);
+    }
   };
 
   const handleDelete = async () => {
@@ -159,7 +185,9 @@ export function SettingsView({ property, mobile, isReadOnly, onRefreshData }: Se
       setDeleting(true);
       await softDeleteProperty(property.id);
       setConfirmOpen(false);
-      if (onRefreshData) onRefreshData();
+      showToast(`Đã xóa khu "${property.name}".`);
+      if (onDeleted) onDeleted(property.name);
+      else if (onRefreshData) onRefreshData();
     } catch (err: unknown) {
       setDeleteError(toUserMessage(err));
     } finally {
@@ -167,19 +195,22 @@ export function SettingsView({ property, mobile, isReadOnly, onRefreshData }: Se
     }
   };
 
+  // Theo giá trị ĐÃ LƯU của khu, không theo ô đang gõ.
+  const missingSettings = [
+    property?.electricity_unit_price == null && "đơn giá điện",
+    property?.water_unit_price == null && "đơn giá nước",
+    property?.service_fee == null && "phí dịch vụ",
+    !property?.bank_account_number && "tài khoản nhận tiền",
+  ].filter((item): item is string => typeof item === "string");
+
   const roomCount = property?.rooms?.length ?? 0;
   const gridColumns = mobile ? "1fr" : "1fr 1fr 1fr";
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 20, maxWidth: 640 }}>
       <div style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: 16, padding: mobile ? 16 : 22 }}>
-        {toastMsg && (
-          <div data-testid="settings-success" style={{ background: "#E8F5E1", border: "1px solid #B4E1A2", color: "#2E5B1E", padding: "10px 16px", borderRadius: 10, fontFamily: font, fontSize: 13, fontWeight: 600, marginBottom: 16 }}>
-            {toastMsg}
-          </div>
-        )}
         {errorMsg && (
-          <div data-testid="settings-error" style={{ background: "#FCECEC", border: `1px solid ${C.error}`, color: C.error, padding: "10px 16px", borderRadius: 10, fontFamily: font, fontSize: 13, fontWeight: 600, marginBottom: 16 }}>
+          <div data-testid="settings-error" style={{ background: C.errorBg, border: `1px solid ${C.errorBorder}`, color: C.error, padding: "10px 16px", borderRadius: 10, fontFamily: font, fontSize: 13, fontWeight: 600, marginBottom: 16 }}>
             {errorMsg}
           </div>
         )}
@@ -193,6 +224,13 @@ export function SettingsView({ property, mobile, isReadOnly, onRefreshData }: Se
           </p>
         </div>
 
+        {missingSettings.length > 0 && (
+          <div data-testid="settings-not-configured" style={{ background: C.warningBg, border: `1px solid ${C.warningBorder}`, color: C.textPrimary, padding: "10px 16px", borderRadius: 10, fontFamily: font, fontSize: 13, lineHeight: 1.5, marginBottom: 16 }}>
+            <strong>Chưa cấu hình:</strong> {missingSettings.join(", ")}. Hãy nhập và bấm
+            “Lưu cài đặt” để hóa đơn tính đúng tiền và có mã VietQR.
+          </div>
+        )}
+
         <form onSubmit={handleSave} style={{ display: "flex", flexDirection: "column", gap: 16 }}>
           <div style={{ display: "grid", gridTemplateColumns: gridColumns, gap: 12 }}>
             <div>
@@ -203,6 +241,7 @@ export function SettingsView({ property, mobile, isReadOnly, onRefreshData }: Se
                 type="number"
                 min={1}
                 value={elecPrice}
+                placeholder="Chưa cấu hình"
                 onChange={(e) => setElecPrice(e.target.value)}
                 style={inputStyle}
               />
@@ -216,6 +255,7 @@ export function SettingsView({ property, mobile, isReadOnly, onRefreshData }: Se
                 type="number"
                 min={1}
                 value={waterPrice}
+                placeholder="Chưa cấu hình"
                 onChange={(e) => setWaterPrice(e.target.value)}
                 style={inputStyle}
               />
@@ -229,6 +269,7 @@ export function SettingsView({ property, mobile, isReadOnly, onRefreshData }: Se
                 type="number"
                 min={0}
                 value={serviceFee}
+                placeholder="Chưa cấu hình"
                 onChange={(e) => setServiceFee(e.target.value)}
                 style={inputStyle}
               />
@@ -365,7 +406,7 @@ export function SettingsView({ property, mobile, isReadOnly, onRefreshData }: Se
           }
         >
           {deleteError && (
-            <div data-testid="delete-property-error" style={{ background: "#FCECEC", border: `1px solid ${C.error}`, color: C.error, padding: "10px 14px", borderRadius: 8, fontFamily: font, fontSize: 13, fontWeight: 600, marginBottom: 14 }}>
+            <div data-testid="delete-property-error" style={{ background: C.errorBg, border: `1px solid ${C.errorBorder}`, color: C.error, padding: "10px 14px", borderRadius: 8, fontFamily: font, fontSize: 13, fontWeight: 600, marginBottom: 14 }}>
               {deleteError}
             </div>
           )}
@@ -375,7 +416,7 @@ export function SettingsView({ property, mobile, isReadOnly, onRefreshData }: Se
               Đang kiểm tra tình trạng phòng...
             </p>
           ) : rentedCount > 0 ? (
-            <div data-testid="delete-blocked-notice" style={{ display: "flex", gap: 12, alignItems: "flex-start", background: "#FCECEC", borderRadius: 10, padding: "12px 14px" }}>
+            <div data-testid="delete-blocked-notice" style={{ display: "flex", gap: 12, alignItems: "flex-start", background: C.errorBg, borderRadius: 10, padding: "12px 14px" }}>
               <AlertTriangle size={20} color={C.error} style={{ flexShrink: 0, marginTop: 2 }} />
               <p style={{ fontFamily: font, fontSize: 13.5, color: C.textPrimary, margin: 0, lineHeight: 1.5 }}>
                 Khu <strong>{property?.name}</strong> còn <strong>{rentedCount} phòng đang cho thuê</strong>.

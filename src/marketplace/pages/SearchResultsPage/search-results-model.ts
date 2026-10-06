@@ -1,3 +1,4 @@
+import type { ListingBadge } from "../../services/listing-mappers";
 import { PROPERTY_TYPES, PRICE_RANGES } from "../../../shared/constants/catalog";
 import { provinceName } from "../../../shared/utils/vn-regions";
 
@@ -23,7 +24,8 @@ export type SearchRoom = {
   loc: string;
   amenities: string[];
   type: string;
-  badge: string | null;
+  badge: ListingBadge | null;
+  postedAt: string | null;
   img: string;
   contact_phone: string;
   boost_expire_at: string | null;

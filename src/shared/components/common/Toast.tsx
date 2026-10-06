@@ -1,5 +1,5 @@
 import React, { useEffect } from "react";
-import { C, font, radius } from "../../theme";
+import { C, font, radius, shadow } from "../../theme";
 
 export interface ToastProps {
   message: string;
@@ -27,7 +27,7 @@ export function Toast({
   }, [onClose, duration]);
 
   const isSuccess = variant === "success";
-  const bg = isSuccess ? "#EDF2E7" : "#FBEDE9";
+  const bg = isSuccess ? C.successBg : C.errorBg;
   const borderColor = isSuccess ? C.success : C.error;
   const textColor = isSuccess ? C.success : C.error;
 
@@ -46,15 +46,16 @@ export function Toast({
         fontFamily: font,
         fontSize: 13,
         fontWeight: 600,
-        boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
+        boxShadow: shadow.md,
         ...style,
       }}
     >
       <span>{isSuccess ? "✓" : "✕"}</span>
-      <span>{message}</span>
+      <span style={{ flex: 1 }}>{message}</span>
       {onClose && (
         <button
           type="button"
+          aria-label="Đóng thông báo"
           onClick={onClose}
           style={{
             background: "none",

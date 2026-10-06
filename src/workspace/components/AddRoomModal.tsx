@@ -24,8 +24,8 @@ interface AddRoomModalProps {
 const STATUS_OPTIONS: Array<{ value: RoomStatusDb; label: string }> = [
   { value: "Available", label: "Trống" },
   { value: "Deposited", label: "Đã cọc" },
-  { value: "Rented", label: "Đang thuê" },
-  { value: "Hidden", label: "Đang ẩn / bảo trì" },
+  // "Đang thuê" không chọn tay ở đây: phòng thành Đang thuê qua hợp đồng (Người ở & Hợp đồng).
+  { value: "Hidden", label: "Đã ẩn" },
 ];
 
 /**
@@ -141,7 +141,7 @@ export function AddRoomModal({ properties, defaultPropertyId, onClose, onCreated
     >
       {!canWrite && (
         <div data-testid="add-room-readonly-banner" style={{ background: C.white, border: `1px solid ${C.error}`, color: C.error, padding: "10px 14px", borderRadius: radius.sm, fontFamily: font, fontSize: 13, fontWeight: 600, marginBottom: 14 }}>
-          ⚠️ {blockReason}
+          {blockReason}
         </div>
       )}
       {errorMsg && (

@@ -34,7 +34,8 @@ export type DbListing = {
 };
 
 function BoostPaymentStatus({ listing }: { listing: DbListing }) {
-  const latest = listing.boost_orders?.[0];
+  // Đơn đã trả đang chờ duyệt được ưu tiên hiển thị, kể cả khi có đơn mới hơn chưa trả.
+  const latest = listing.boost_orders?.find((order) => order.status === "PAID_PENDING_APPROVAL") ?? listing.boost_orders?.[0];
   if (latest?.status === "PAID_PENDING_APPROVAL") {
     return (
       <span data-testid="listing-paid-pending-approval" style={{ color: C.primary, fontSize: 11, fontWeight: 700, lineHeight: 1.45 }}>

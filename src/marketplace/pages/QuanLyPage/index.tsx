@@ -11,13 +11,12 @@ import { useBreakpoint } from "../../../shared/components/useBreakpoint";
 // từ 2026-08-09 nằm trong khu vực TÀI KHOẢN, không phải "Dashboard chủ trọ".
 // Đăng tin là việc miễn phí ai cũng làm được; `/chu-tro/*` là module SaaS trả phí.
 import { RenterShell } from "../../../shared/components/RenterShell";
-import { config } from "../../../shared/config";
 import { useAuth } from "../../../shared/contexts/AuthContext";
 import { searchListings } from "../../services/listing-queries";
 import { listMyBoostOrders, type BoostOrderSummary } from "../../services/boost-orders-service";
 import { updateListingStatus, deleteListing, linkListingToRoom } from "../../services/listing-mutations";
 import { formatVND } from "../../utils/listingMetadata";
-import { canShowBoostAction } from "../../../../supabase/functions/_shared/boost-access.mjs";
+import { useBoostAvailability } from "../../hooks/useBoostAvailability";
 import { logError, toUserMessage } from "../../../shared/services/supabase-error";
 import { MyListingsTable, type DbListing } from "./MyListingsTable";
 import { LinkRoomModal } from "./LinkRoomModal";
@@ -62,12 +61,7 @@ export function QuanLyPage() {
   const { isMobile, width } = useBreakpoint();
   const isCompact = width < 1180;
   const { user } = useAuth();
-  const showBoostAction = canShowBoostAction(
-    config.payments.boostCheckoutEnabled,
-    config.payments.boostTestMode,
-    config.payments.boostTestSellerId,
-    user?.id,
-  );
+  const showBoostAction = useBoostAvailability().isBoostAvailable;
 
   const [dbListings, setDbListings]   = useState<DbListing[]>([]);
   const [isLoading, setIsLoading]     = useState(true);

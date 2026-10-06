@@ -1,12 +1,15 @@
 import { supabase } from "../supabaseClient";
 import type { SubscriptionStatus } from "../types/status";
 import { toSubscriptionStatus } from "../types/status";
+import { toLocalISODate } from "../utils/format";
+
+/** Số ngày dùng thử — khớp `activate_subscription_trial` (migration 20261008090000). */
+export const TRIAL_DAYS = 15;
 
 export interface SubscriptionData {
   status: SubscriptionStatus;
   trialDaysLeft: number;
   plan: any | null;
-  limits: { maxProperties: number; maxRooms: number };
   isReadOnly: boolean;
   canWrite: boolean;
   expireDate: string | null;
@@ -16,7 +19,6 @@ const DEFAULT_NONE_SUBSCRIPTION: SubscriptionData = {
   status: "NONE",
   trialDaysLeft: 0,
   plan: null,
-  limits: { maxProperties: 1, maxRooms: 5 },
   isReadOnly: false,
   canWrite: false,
   expireDate: null,
@@ -30,7 +32,7 @@ const DEFAULT_NONE_SUBSCRIPTION: SubscriptionData = {
 export function effectiveSubscriptionStatus(
   rawStatus: string | null | undefined,
   expireDate: string | null | undefined,
-  today = new Date().toISOString().slice(0, 10),
+  today = toLocalISODate(),
 ): SubscriptionStatus {
   const status = toSubscriptionStatus(rawStatus);
   if (
@@ -77,10 +79,6 @@ export async function getMySubscription(userId: string | undefined): Promise<Sub
     status,
     trialDaysLeft,
     plan: data.subscription_plans || null,
-    limits: {
-      maxProperties: status === "NONE" ? 1 : 999,
-      maxRooms: status === "NONE" ? 5 : 999,
-    },
     isReadOnly,
     canWrite,
     expireDate: data.expire_date || null,

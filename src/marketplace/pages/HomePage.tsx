@@ -6,6 +6,7 @@ import { PublicNavbarDesktop, PublicNavbarMobile } from "../../shared/components
 import { BottomTabBar, Button, EmptyState, Skeleton } from "../../shared/components/common";
 import { logError } from "../../shared/services/supabase-error";
 import { getFeaturedListings } from "../services/listing-queries";
+import { mapAmenityToKey } from "../services/listing-mappers";
 import { listActiveDemandPosts } from "../services/demand-post-service";
 import {
   FeaturedRoomsSection,
@@ -59,8 +60,11 @@ export function HomePage() {
             price: l.price,
             area: l.area,
             loc: l.loc,
-            amenities: ["wifi", "ac"],
-            badge: l.badge || "Mới đăng",
+            // Tiện ích THẬT của tin (trước đây gắn cứng wifi + máy lạnh cho mọi tin),
+            // và nhãn thật — không còn tự gắn "Mới đăng" cho tin đã cũ.
+            amenities: Array.from(new Set(l.amenities.map(mapAmenityToKey))),
+            badge: l.badge,
+            postedAt: l.postedAt,
             img: l.img,
           }));
         setDbRooms(formatted);

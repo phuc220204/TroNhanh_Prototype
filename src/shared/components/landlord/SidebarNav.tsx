@@ -2,21 +2,27 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router";
 import {
   LayoutGrid, Building2, FileText, Users, Wallet, Settings, LogOut,
-  Home, MessageSquare, User, Search, Lock, X
+  Home, MessageSquare, User, Search, Lock, X, ChevronLeft, Star, UserSearch, Crown
 } from "lucide-react";
-import { C, font } from "../../theme";
+import { C, font, shadow } from "../../theme";
 import { BrandLogo } from "../brand/BrandLogo";
 import { useAuth } from "../../contexts/AuthContext";
 import { useSubscriptionContext } from "../../contexts/SubscriptionContext";
 
-export type LandlordNavId = "overview" | "rooms" | "listings" | "occupants" | "payments" | "settings";
+export type LandlordNavId =
+  | "overview" | "rooms" | "listings" | "occupants" | "billing" | "settings"
+  | "find-renter" | "reviews"
+  /** Trang mua/gia hạn gói — KHÔNG thuộc SAAS_NAV_IDS: người chưa có gói phải vào được để mua. */
+  | "plans";
 
-function clearDemoAuth() {
-  try {
-    localStorage.removeItem("tronhanh.demoUser");
-    sessionStorage.removeItem("tronhanh.demoUser");
-  } catch { /* storage unavailable — ignore */ }
-}
+/** Các trang thuộc module SaaS (bị khóa khi chưa có gói). Một chỗ duy nhất — LandlordShell dùng lại. */
+export const SAAS_NAV_IDS: readonly LandlordNavId[] = [
+  "overview", "rooms", "occupants", "billing", "settings", "find-renter", "reviews",
+];
+
+/** Giá trị hợp lệ của `?tab=` trong /chu-tro/quan-ly-phong. */
+export const ROOM_PAGE_TABS: readonly LandlordNavId[] = ["rooms", "occupants", "settings"];
+
 
 // Khu vực chủ trọ giờ CHỈ còn phần vận hành. "Quản lý tin đăng" đã chuyển sang
 // `/tai-khoan/tin-cho-thue`: đăng tin là việc miễn phí ai cũng làm được, để nó
@@ -27,7 +33,7 @@ function clearDemoAuth() {
 // dùng được không cần gói.
 const NAV_FREE: { id: LandlordNavId | "messages"; icon: typeof LayoutGrid; label: string; to?: string }[] = [
   { id: "listings", icon: FileText, label: "Tin đăng của tôi", to: "/tai-khoan/tin-cho-thue" },
-  { id: "messages", icon: MessageSquare, label: "Tin nhắn in-app", to: "/tin-nhan" },
+  { id: "messages", icon: MessageSquare, label: "Tin nhắn", to: "/tin-nhan" },
 ];
 
 // "Tổng quan" chuyển xuống đây: sau khi quản lý tin đăng dọn sang khu tài
@@ -37,8 +43,11 @@ const NAV_SAAS: { id: LandlordNavId; icon: typeof LayoutGrid; label: string; to?
   { id: "overview", icon: LayoutGrid, label: "Tổng quan", to: "/chu-tro" },
   { id: "rooms", icon: Building2, label: "Khu trọ & Phòng", to: "/chu-tro/quan-ly-phong?tab=rooms" },
   { id: "occupants", icon: Users, label: "Người ở & Hợp đồng", to: "/chu-tro/quan-ly-phong?tab=occupants" },
-  { id: "payments", icon: Wallet, label: "Hóa đơn & Thanh toán", to: "/chu-tro/quan-ly-phong?tab=payments" },
+  // Một màn hóa đơn duy nhất: /chu-tro/hoa-don (có nhật ký thu tiền, ghi nhận đã thu).
+  { id: "billing", icon: Wallet, label: "Hóa đơn & Thanh toán", to: "/chu-tro/hoa-don" },
   { id: "settings", icon: Settings, label: "Cài đặt khu trọ", to: "/chu-tro/quan-ly-phong?tab=settings" },
+  { id: "find-renter", icon: UserSearch, label: "Tìm người thuê", to: "/chu-tro/tim-nguoi-thue" },
+  { id: "reviews", icon: Star, label: "Đánh giá khu trọ", to: "/chu-tro/danh-gia" },
 ];
 
 export function Sidebar({ active, onSaaSAccess }: { active: LandlordNavId; onSaaSAccess: () => void }) {
@@ -52,15 +61,15 @@ export function Sidebar({ active, onSaaSAccess }: { active: LandlordNavId; onSaa
   return (
     <aside style={{ width: 248, background: C.white, borderRight: `1px solid ${C.border}`, display: "flex", flexDirection: "column", position: "sticky", top: 0, height: "100vh", flexShrink: 0 }}>
       <div style={{ padding: "22px 20px 18px", borderBottom: `1px solid ${C.border}` }}>
-        <button onClick={() => navigate("/chu-tro")} aria-label="Trọ Nhanh Landlord Hub" style={{ display: "flex", background: "none", border: "none", padding: 0, cursor: "pointer" }}>
+        <button onClick={() => navigate("/chu-tro")} aria-label="Về tổng quan chủ trọ" style={{ display: "flex", background: "none", border: "none", padding: 0, cursor: "pointer" }}>
           <BrandLogo variant="full" size="sm" />
         </button>
-        <p style={{ fontFamily: font, fontSize: 13, fontWeight: 700, color: C.textPrimary, margin: "8px 0 1px" }}>Landlord Hub</p>
+        <p style={{ fontFamily: font, fontSize: 13, fontWeight: 700, color: C.textPrimary, margin: "8px 0 1px" }}>Khu chủ trọ</p>
         <p style={{ fontFamily: font, fontSize: 11.5, color: C.textSecondary, margin: 0 }}>Quản lý phòng trọ chuyên nghiệp</p>
       </div>
 
       {/* User Profile Card */}
-      <div style={{ display: "flex", alignItems: "center", gap: 11, padding: "14px 20px", borderBottom: `1px solid ${C.border}`, background: "rgba(240,231,214,0.15)" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 11, padding: "14px 20px", borderBottom: `1px solid ${C.border}`, background: C.bg }}>
         <div style={{ width: 38, height: 38, borderRadius: "50%", background: C.caramelSoft, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, fontWeight: 700, color: C.primary, fontFamily: font, fontSize: 15 }}>
           {displayName[0].toUpperCase()}
         </div>
@@ -105,24 +114,31 @@ export function Sidebar({ active, onSaaSAccess }: { active: LandlordNavId; onSaa
               <span style={{ display: "flex", alignItems: "center", gap: 11 }}>
                 <Icon size={17} /> {label}
               </span>
-              {isLocked && <Lock size={14} color="#9B8C78" />}
+              {isLocked && <Lock size={14} color={C.rented} />}
             </button>
           );
         })}
       </nav>
 
       <div style={{ padding: "0 12px 14px" }}>
+        <button onClick={() => navigate("/chu-tro/goi-dich-vu")} data-testid="sidebar-plans-link" style={{ display: "flex", alignItems: "center", gap: 11, padding: "9px 13px", borderRadius: 10, border: "none", background: active === "plans" ? C.caramelSoft : "transparent", cursor: "pointer", fontFamily: font, fontSize: 13, fontWeight: active === "plans" ? 700 : 600, color: C.primary, width: "100%" }}><Crown size={16} /> Gói dịch vụ</button>
         <button onClick={() => navigate("/")} style={{ display: "flex", alignItems: "center", gap: 11, padding: "9px 13px", borderRadius: 10, border: "none", background: "transparent", cursor: "pointer", fontFamily: font, fontSize: 13, fontWeight: 500, color: C.textSecondary, width: "100%" }}><Search size={16} /> Về trang tìm phòng</button>
-        <button onClick={() => { signOut(); clearDemoAuth(); navigate("/"); }} style={{ display: "flex", alignItems: "center", gap: 11, padding: "9px 13px", borderRadius: 10, border: "none", background: "transparent", cursor: "pointer", fontFamily: font, fontSize: 13, fontWeight: 600, color: C.repairing, width: "100%" }}><LogOut size={16} /> Đăng xuất</button>
+        <button onClick={() => { signOut(); navigate("/"); }} style={{ display: "flex", alignItems: "center", gap: 11, padding: "9px 13px", borderRadius: 10, border: "none", background: "transparent", cursor: "pointer", fontFamily: font, fontSize: 13, fontWeight: 600, color: C.repairing, width: "100%" }}><LogOut size={16} /> Đăng xuất</button>
       </div>
     </aside>
   );
 }
 
-export function MobileHeader({ title }: { title: string }) {
+export function MobileHeader({ title, onBack }: { title: string; onBack?: () => void }) {
   return (
-    <div style={{ background: C.primaryDark, height: 56, display: "flex", alignItems: "center", padding: "0 16px", gap: 12, position: "sticky", top: 0, zIndex: 100, boxShadow: "0 2px 12px rgba(42,26,12,0.22)", flexShrink: 0, "--tn-brand-logo-color": C.cream } as React.CSSProperties}>
-      <BrandLogo variant="full" size="sm" />
+    <div style={{ background: C.primaryDark, height: 56, display: "flex", alignItems: "center", padding: "0 16px", gap: 12, position: "sticky", top: 0, zIndex: 100, boxShadow: shadow.sm, flexShrink: 0, "--tn-brand-logo-color": C.cream } as React.CSSProperties}>
+      {onBack ? (
+        <button type="button" onClick={onBack} aria-label="Quay lại tổng quan" data-testid="landlord-mobile-back" style={{ background: "none", border: "none", padding: 0, minWidth: 44, minHeight: 44, display: "flex", alignItems: "center", justifyContent: "flex-start", cursor: "pointer", color: C.cream }}>
+          <ChevronLeft size={24} />
+        </button>
+      ) : (
+        <BrandLogo variant="full" size="sm" />
+      )}
       <span style={{ fontFamily: font, fontSize: 18, fontWeight: 800, color: C.cream, flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{title}</span>
     </div>
   );
@@ -135,28 +151,29 @@ export function MobileTabBar({ active, onSaaSAccess }: { active: LandlordNavId; 
   const [accountOpen, setAccountOpen] = useState(false);
   const [loggedOut, setLoggedOut] = useState(false);
 
-  const tabs: { Icon: typeof Home; label: string; on: LandlordNavId; onTap: () => void }[] = [
-    { Icon: Home, label: "Trang chủ", on: "overview", onTap: () => navigate("/chu-tro") },
-    { 
-      Icon: Building2, label: "Phòng", on: "rooms", 
-      onTap: () => {
-        if (subStatus === "NONE") onSaaSAccess();
-        else navigate("/chu-tro/quan-ly-phong");
-      } 
-    },
-    { Icon: MessageSquare, label: "Tin nhắn", on: "occupants", onTap: () => navigate("/tin-nhan") },
-    { Icon: User, label: "Tài khoản", on: "settings", onTap: () => setAccountOpen(true) },
+  const openSaaS = (to: string) => () => {
+    if (subStatus === "NONE") onSaaSAccess();
+    else navigate(to);
+  };
+  // `on`: các trang làm tab sáng. "Tin nhắn"/"Tài khoản" là lối ra ngoài, không
+  // ứng với trang nào ở đây (trước đây gán nhầm occupants/settings nên sáng sai).
+  const tabs: { Icon: typeof Home; label: string; on: LandlordNavId[]; onTap: () => void }[] = [
+    { Icon: Home, label: "Tổng quan", on: ["overview"], onTap: () => navigate("/chu-tro") },
+    { Icon: Building2, label: "Phòng", on: ["rooms", "occupants", "settings"], onTap: openSaaS("/chu-tro/quan-ly-phong") },
+    { Icon: Wallet, label: "Hóa đơn", on: ["billing"], onTap: openSaaS("/chu-tro/hoa-don") },
+    { Icon: MessageSquare, label: "Tin nhắn", on: [], onTap: () => navigate("/tin-nhan") },
+    { Icon: User, label: "Tài khoản", on: [], onTap: () => setAccountOpen(true) },
   ];
 
   return (
     <>
-      <nav style={{ background: C.white, borderTop: `1px solid ${C.border}`, height: 60, display: "flex", boxShadow: "0 -2px 12px rgba(92,70,50,0.08)", flexShrink: 0, position: "sticky", bottom: 0, zIndex: 80 }}>
+      <nav style={{ background: C.white, borderTop: `1px solid ${C.border}`, height: 60, display: "flex", boxShadow: shadow.sm, flexShrink: 0, position: "sticky", bottom: 0, zIndex: 80 }}>
         {tabs.map(({ Icon, label, on, onTap }) => {
-          const isActive = on === active || (label === "Tài khoản" && accountOpen);
+          const isActive = on.includes(active) || (label === "Tài khoản" && accountOpen);
           return (
             <button key={label} onClick={onTap} style={{ flex: 1, minHeight: 44, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 3, background: "none", border: "none", cursor: "pointer" }}>
-              <Icon size={22} color={isActive ? C.primary : "#9B8C78"} strokeWidth={isActive ? 2.5 : 1.8} />
-              <span style={{ fontFamily: font, fontSize: 10, fontWeight: isActive ? 700 : 400, color: isActive ? C.primary : "#9B8C78" }}>{label}</span>
+              <Icon size={22} color={isActive ? C.primary : C.rented} strokeWidth={isActive ? 2.5 : 1.8} />
+              <span style={{ fontFamily: font, fontSize: 10, fontWeight: isActive ? 700 : 400, color: isActive ? C.primary : C.rented }}>{label}</span>
             </button>
           );
         })}
@@ -169,7 +186,6 @@ export function MobileTabBar({ active, onSaaSAccess }: { active: LandlordNavId; 
         onLogout={() => {
           setAccountOpen(false);
           signOut();
-          clearDemoAuth();
           setLoggedOut(true);
           window.setTimeout(() => navigate("/"), 650);
         }}
@@ -189,15 +205,16 @@ function AccountSheet({ open, onClose, onNavigate, onLogout }: {
   // bấm chỉ đóng sheet chứ không đi đâu. Cả ba đều đã có trang thật.
   const items: { Icon: typeof User; label: string; action: () => void }[] = [
     { Icon: User, label: "Hồ sơ", action: () => onNavigate("/tai-khoan") },
+    { Icon: Crown, label: "Gói dịch vụ", action: () => onNavigate("/chu-tro/goi-dich-vu") },
     { Icon: FileText, label: "Tin đăng của tôi", action: () => onNavigate("/tai-khoan/tin-cho-thue") },
     { Icon: MessageSquare, label: "Tin nhắn", action: () => onNavigate("/tin-nhan") },
-    { Icon: LayoutGrid, label: "Dashboard chủ trọ", action: () => onNavigate("/chu-tro") },
+    { Icon: LayoutGrid, label: "Tổng quan chủ trọ", action: () => onNavigate("/chu-tro") },
     { Icon: Search, label: "Về trang tìm phòng", action: () => onNavigate("/") },
     { Icon: Settings, label: "Cài đặt", action: () => onNavigate("/tai-khoan/cai-dat") },
   ];
   return (
-    <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(42,26,12,0.5)", zIndex: 300, display: "flex", alignItems: "flex-end" }}>
-      <div onClick={e => e.stopPropagation()} style={{ background: C.white, width: "100%", borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: "10px 0 calc(14px + env(safe-area-inset-bottom))", boxShadow: "0 -8px 40px rgba(30,18,10,0.2)", maxHeight: "85vh", overflowY: "auto" }}>
+    <div onClick={onClose} style={{ position: "fixed", inset: 0, background: C.overlay, zIndex: 300, display: "flex", alignItems: "flex-end" }}>
+      <div onClick={e => e.stopPropagation()} style={{ background: C.white, width: "100%", borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: "10px 0 calc(14px + env(safe-area-inset-bottom))", boxShadow: shadow.lg, maxHeight: "85vh", overflowY: "auto" }}>
         <div style={{ width: 40, height: 4, borderRadius: 4, background: C.border, margin: "0 auto 14px" }} />
 
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 18px 12px" }}>
@@ -213,7 +230,7 @@ function AccountSheet({ open, onClose, onNavigate, onLogout }: {
           </div>
           <div style={{ minWidth: 0 }}>
             <p style={{ fontFamily: font, fontSize: 15, fontWeight: 700, color: C.textPrimary, margin: 0 }}>{displayName}</p>
-            <p style={{ fontFamily: font, fontSize: 12.5, color: C.textSecondary, margin: "2px 0 0" }}>Đang dùng Landlord Hub</p>
+            <p style={{ fontFamily: font, fontSize: 12.5, color: C.textSecondary, margin: "2px 0 0" }}>Khu chủ trọ</p>
           </div>
         </div>
 
@@ -247,7 +264,7 @@ function LogoutToast({ show, onDone }: { show: boolean; onDone: () => void }) {
   }, [show, onDone]);
   if (!show) return null;
   return (
-    <div style={{ position: "fixed", left: "50%", bottom: "calc(80px + env(safe-area-inset-bottom))", transform: "translateX(-50%)", zIndex: 400, background: C.primaryDark, color: C.cream, fontFamily: font, fontSize: 13.5, fontWeight: 600, padding: "11px 20px", borderRadius: 10, boxShadow: "0 8px 28px rgba(30,18,10,0.3)", whiteSpace: "nowrap" }}>
+    <div style={{ position: "fixed", left: "50%", bottom: "calc(80px + env(safe-area-inset-bottom))", transform: "translateX(-50%)", zIndex: 400, background: C.primaryDark, color: C.cream, fontFamily: font, fontSize: 13.5, fontWeight: 600, padding: "11px 20px", borderRadius: 10, boxShadow: shadow.lg, whiteSpace: "nowrap" }}>
       Đã đăng xuất khỏi bản quản lý
     </div>
   );

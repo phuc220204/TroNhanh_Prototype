@@ -73,6 +73,9 @@ const ERROR_MESSAGES: Record<string, string> = {
   EXTEND_DATE_NOT_LATER:
     "Ngày kết thúc mới phải muộn hơn ngày kết thúc hiện tại.",
   USER_NOT_FOUND_BY_EMAIL: "Không tìm thấy tài khoản người dùng với email này.",
+  OCCUPANCY_NOT_FOUND: "Không tìm thấy người ở này. Có thể dữ liệu đã thay đổi — hãy tải lại trang.",
+  OCCUPANCY_NOT_OWNED: "Bạn không có quyền thao tác với người ở này.",
+  OCCUPANCY_LINK_NOT_PENDING: "Yêu cầu liên kết không còn ở trạng thái chờ xác nhận.",
 
   // Điện nước & hóa đơn
   READING_LOWER_THAN_PREVIOUS:

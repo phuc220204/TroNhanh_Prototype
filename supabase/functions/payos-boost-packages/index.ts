@@ -1,5 +1,5 @@
 import { createClient } from "npm:@supabase/supabase-js@2.110.0";
-import { canPayosSellerCheckout, getPayosCorsOrigin } from "../_shared/boost-access.mjs";
+import { getPayosCorsOrigin } from "../_shared/boost-access.mjs";
 
 function json(body: object, status: number, origin: string) {
   return new Response(JSON.stringify(body), {
@@ -26,10 +26,15 @@ Deno.serve(async (request) => {
     return new Response("Payment is not configured", { status: 503 });
   }
   const requestOrigin = request.headers.get("origin");
-  const corsOrigin = getPayosCorsOrigin(requestOrigin, siteOrigin, Deno.env.get("PAYOS_TEST_MODE")) ?? siteOrigin;
+  const corsOrigin = getPayosCorsOrigin(requestOrigin, siteOrigin) ?? siteOrigin;
   if (requestOrigin && corsOrigin !== requestOrigin) return new Response("Forbidden origin", { status: 403 });
   if (request.method === "OPTIONS") return json({}, 200, corsOrigin);
   if (request.method !== "POST") return json({ error: "METHOD_NOT_ALLOWED" }, 405, corsOrigin);
+  // Công tắc bật/tắt Boost cho TOÀN hệ thống. Frontend coi lỗi này là "Boost
+  // đang tắt" và tự ẩn mọi lối vào thanh toán — không còn cờ VITE_ riêng.
+  if (Deno.env.get("PAYOS_CHECKOUT_ENABLED") !== "true") {
+    return json({ error: "PAYMENT_NOT_AVAILABLE" }, 503, corsOrigin);
+  }
 
   const supabaseUrl = Deno.env.get("SUPABASE_URL");
   const anonKey = Deno.env.get("SUPABASE_ANON_KEY");
@@ -41,18 +46,6 @@ Deno.serve(async (request) => {
   const userClient = createClient(supabaseUrl, anonKey, { auth: { persistSession: false } });
   const { data: userData, error: userError } = await userClient.auth.getUser(token);
   if (userError || !userData.user) return json({ error: "AUTH_REQUIRED" }, 401, corsOrigin);
-
-  const testMode = Deno.env.get("PAYOS_TEST_MODE");
-  const testSellerId = Deno.env.get("PAYOS_TEST_SELLER_ID");
-  if (testMode !== "true" && testMode !== "false") {
-    return json({ error: "PAYMENT_MODE_NOT_CONFIGURED" }, 503, corsOrigin);
-  }
-  if (testMode === "true" && !testSellerId) {
-    return json({ error: "TEST_SELLER_NOT_CONFIGURED" }, 503, corsOrigin);
-  }
-  if (!canPayosSellerCheckout(testMode, testSellerId, userData.user.id)) {
-    return json({ error: "TEST_SELLER_ONLY" }, 403, corsOrigin);
-  }
 
   const adminClient = createClient(supabaseUrl, serviceKey, { auth: { persistSession: false } });
   const { data: setting, error } = await adminClient

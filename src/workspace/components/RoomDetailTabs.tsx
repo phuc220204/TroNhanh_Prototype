@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from "react";
 import { Home, Users, FileText, Wallet, Zap, AlertTriangle, History } from "lucide-react";
 import { C, font, radius, space } from "../../shared/theme";
-import { ROOM_STATUS_META } from "../../shared/utils/statusMaps";
+import { Badge, Skeleton } from "../../shared/components/common";
+import { useBreakpoint } from "../../shared/components/useBreakpoint";
 import { toUserMessage } from "../../shared/services/supabase-error";
 import {
   getRoomHistory,
@@ -94,7 +95,7 @@ export function RoomDetailTabs({
           data-testid="room-outstanding-banner"
           style={{
             display: "flex", alignItems: "center", gap: space[2],
-            background: "#FBEDE9", border: `1px solid #EBC9C0`,
+            background: C.errorBg, border: `1px solid ${C.errorBorder}`,
             borderRadius: radius.md, padding: `${space[3]}px ${space[4]}px`,
             marginBottom: space[4],
           }}
@@ -181,7 +182,6 @@ function OverviewTab({
   waterUnitPrice?: number;
   serviceFee?: number;
 }) {
-  const meta = ROOM_STATUS_META[room.status];
   const latestInvoice = history.invoices[0] ?? null;
 
   return (
@@ -193,12 +193,7 @@ function OverviewTab({
         <Row k="Giá thuê" v={room.price} strong />
         <Row k="Nội thất / tiện ích" v={room.amenities.length ? room.amenities.join(", ") : "Chưa khai báo"} />
         <RowNode k="Trạng thái">
-          <span style={{
-            fontFamily: font, fontSize: 11, fontWeight: 700, color: C.white,
-            background: meta?.color ?? C.textSecondary, borderRadius: radius.pill, padding: "2px 9px",
-          }}>
-            {meta?.label ?? room.status}
-          </span>
+          <Badge kind="room" status={room.status} />
         </RowNode>
       </Section>
 
@@ -285,6 +280,7 @@ function UtilityTab({ history }: { history: RoomHistory }) {
   const [type, setType] = useState<UtilityType>("Electricity");
   const rows = history.readings.filter((r) => r.type === type);
   const unit = type === "Electricity" ? "kWh" : "m³";
+  const { isMobile } = useBreakpoint();
 
   return (
     <div>
@@ -313,6 +309,19 @@ function UtilityTab({ history }: { history: RoomHistory }) {
 
       {rows.length === 0 ? (
         <Empty text={`Chưa ghi chỉ số ${type === "Electricity" ? "điện" : "nước"} kỳ nào.`} />
+      ) : isMobile ? (
+        <div data-testid="utility-history-table" style={{ display: "flex", flexDirection: "column", gap: space[2] }}>
+          {rows.map((r) => (
+            <div key={r.id} style={card}>
+              <CardHead title={periodLabel(r.period)} right={vnd(r.amount)} />
+              <p style={cardLine}>
+                {num(r.previousReading)} → {num(r.currentReading)} · dùng{" "}
+                <strong style={{ color: C.textPrimary }}>{num(r.consumption)} {unit}</strong>
+                <DeltaPercent value={r.deltaPercent} />
+              </p>
+            </div>
+          ))}
+        </div>
       ) : (
         <div style={{ overflowX: "auto" }}>
           <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 480 }}>
@@ -331,14 +340,7 @@ function UtilityTab({ history }: { history: RoomHistory }) {
                   <td style={td}>{num(r.currentReading)}</td>
                   <td style={td}>
                     <span style={{ fontWeight: 700 }}>{num(r.consumption)}</span>
-                    {r.deltaPercent != null && r.deltaPercent !== 0 && (
-                      <span style={{
-                        marginLeft: 6, fontSize: 11, fontWeight: 700,
-                        color: r.deltaPercent > 0 ? C.error : C.success,
-                      }}>
-                        {r.deltaPercent > 0 ? "▲" : "▼"} {Math.abs(r.deltaPercent)}%
-                      </span>
-                    )}
+                    <DeltaPercent value={r.deltaPercent} />
                   </td>
                   <td style={{ ...td, fontWeight: 700 }}>{vnd(r.amount)}</td>
                 </tr>
@@ -355,6 +357,7 @@ function UtilityTab({ history }: { history: RoomHistory }) {
    TAB 3 — HÓA ĐƠN & CÔNG NỢ (nhiều kỳ)
    ══════════════════════════════════════════════════════════════════════════ */
 function InvoicesTab({ history }: { history: RoomHistory }) {
+  const { isMobile } = useBreakpoint();
   if (history.invoices.length === 0) return <Empty text="Chưa phát sinh hóa đơn nào." />;
 
   const totalBilled = history.invoices.reduce((s, i) => s + i.totalAmount, 0);
@@ -369,33 +372,55 @@ function InvoicesTab({ history }: { history: RoomHistory }) {
               color={history.totalOutstanding > 0 ? C.error : C.textPrimary} />
       </div>
 
-      <div style={{ overflowX: "auto" }}>
-        <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 520 }}>
-          <thead>
-            <tr>
-              {["Kỳ", "Tổng tiền", "Đã thu", "Còn lại", "Hạn thu", "Trạng thái"].map((h) => (
-                <th key={h} style={th}>{h}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody data-testid="invoice-history-table">
-            {history.invoices.map((inv) => (
-              <tr key={inv.id} style={{ borderTop: `1px solid ${C.border}` }}>
-                <td style={td}>{periodLabel(inv.period)}</td>
-                <td style={td}>{vnd(inv.totalAmount)}</td>
-                <td style={{ ...td, color: C.success }}>{vnd(inv.paidAmount)}</td>
-                <td style={{ ...td, fontWeight: 700, color: inv.remaining > 0 ? C.error : C.textSecondary }}>
-                  {inv.remaining > 0 ? vnd(inv.remaining) : "—"}
-                </td>
-                <td style={{ ...td, color: inv.isOverdue ? C.error : C.textSecondary }}>
-                  {dateLabel(inv.dueDate)}
-                </td>
-                <td style={td}><InvoiceStatusBadge status={inv.status} isOverdue={inv.isOverdue} /></td>
+      {isMobile ? (
+        <div data-testid="invoice-history-table" style={{ display: "flex", flexDirection: "column", gap: space[2] }}>
+          {history.invoices.map((inv) => (
+            <div key={inv.id} style={card}>
+              <CardHead
+                title={periodLabel(inv.period)}
+                right={<InvoiceStatusBadge status={inv.status} isOverdue={inv.isOverdue} />}
+              />
+              <p style={cardLine}>
+                Tổng {vnd(inv.totalAmount)} · đã thu <span style={{ color: C.success }}>{vnd(inv.paidAmount)}</span>
+              </p>
+              <p style={{ ...cardLine, marginTop: 2 }}>
+                {inv.remaining > 0 && (
+                  <strong style={{ color: C.error }}>Còn {vnd(inv.remaining)} · </strong>
+                )}
+                <span style={{ color: inv.isOverdue ? C.error : C.textSecondary }}>Hạn {dateLabel(inv.dueDate)}</span>
+              </p>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div style={{ overflowX: "auto" }}>
+          <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 520 }}>
+            <thead>
+              <tr>
+                {["Kỳ", "Tổng tiền", "Đã thu", "Còn lại", "Hạn thu", "Trạng thái"].map((h) => (
+                  <th key={h} style={th}>{h}</th>
+                ))}
               </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+            </thead>
+            <tbody data-testid="invoice-history-table">
+              {history.invoices.map((inv) => (
+                <tr key={inv.id} style={{ borderTop: `1px solid ${C.border}` }}>
+                  <td style={td}>{periodLabel(inv.period)}</td>
+                  <td style={td}>{vnd(inv.totalAmount)}</td>
+                  <td style={{ ...td, color: C.success }}>{vnd(inv.paidAmount)}</td>
+                  <td style={{ ...td, fontWeight: 700, color: inv.remaining > 0 ? C.error : C.textSecondary }}>
+                    {inv.remaining > 0 ? vnd(inv.remaining) : "—"}
+                  </td>
+                  <td style={{ ...td, color: inv.isOverdue ? C.error : C.textSecondary }}>
+                    {dateLabel(inv.dueDate)}
+                  </td>
+                  <td style={td}><InvoiceStatusBadge status={inv.status} isOverdue={inv.isOverdue} /></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 }
@@ -478,6 +503,32 @@ const card: React.CSSProperties = {
   borderRadius: radius.md, padding: `${space[2]}px ${space[3]}px`,
 };
 
+const cardLine: React.CSSProperties = {
+  fontFamily: font, fontSize: 12.5, color: C.textSecondary, margin: 0, lineHeight: 1.5,
+};
+
+/** Dòng đầu của thẻ (điện thoại): tên kỳ bên trái, số tiền / nhãn bên phải. */
+function CardHead({ title, right }: { title: string; right: React.ReactNode }) {
+  return (
+    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: space[2], marginBottom: 4 }}>
+      <span style={{ fontFamily: font, fontSize: 13.5, fontWeight: 700, color: C.textPrimary }}>{title}</span>
+      {typeof right === "string"
+        ? <span style={{ fontFamily: font, fontSize: 13.5, fontWeight: 800, color: C.textPrimary }}>{right}</span>
+        : right}
+    </div>
+  );
+}
+
+/** Mức tăng/giảm tiêu thụ so với kỳ trước. */
+function DeltaPercent({ value }: { value: number | null }) {
+  if (value == null || value === 0) return null;
+  return (
+    <span style={{ marginLeft: 6, fontSize: 11, fontWeight: 700, color: value > 0 ? C.error : C.success }}>
+      {value > 0 ? "▲" : "▼"} {Math.abs(value)}%
+    </span>
+  );
+}
+
 function Section({ icon, title, children }: { icon: React.ReactNode; title: string; children: React.ReactNode }) {
   return (
     <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: space[4], marginTop: space[4] }}>
@@ -519,29 +570,14 @@ function Stat({ label, value, color }: { label: string; value: string; color?: s
   );
 }
 
+/** BR-029: chủ trọ gắn tài khoản → Pending; chỉ người ở tự xác nhận mới thành Confirmed. */
 function LinkStatusBadge({ status }: { status: string | null }) {
-  // BR-029: chủ trọ gắn tài khoản -> Pending; chỉ Renter tự xác nhận mới thành Confirmed.
-  const meta: Record<string, { label: string; color: string }> = {
-    Pending: { label: "Chờ xác nhận", color: C.warning },
-    Confirmed: { label: "Đã xác nhận", color: C.success },
-    Rejected: { label: "Đã từ chối", color: C.error },
-  };
-  const m = status ? meta[status] : undefined;
-  return (
-    <span style={{ fontFamily: font, fontSize: 12, fontWeight: 700, color: m?.color ?? C.textSecondary }}>
-      {m?.label ?? "Chưa gắn tài khoản"}
-    </span>
-  );
+  return <Badge kind="link" status={status ?? ""} />;
 }
 
+/** Quá hạn tính theo due_date (DB có thể vẫn ghi Unpaid — chưa có job Overdue). */
 function InvoiceStatusBadge({ status, isOverdue }: { status: string; isOverdue: boolean }) {
-  const label = isOverdue ? "Quá hạn"
-    : status === "Paid" ? "Đã thu"
-    : status === "PartiallyPaid" ? "Thu một phần"
-    : status === "Overdue" ? "Quá hạn" : "Chưa thu";
-  const color = label === "Đã thu" ? C.success
-    : label === "Thu một phần" ? C.warning : C.error;
-  return <span style={{ fontFamily: font, fontSize: 11.5, fontWeight: 700, color }}>{label}</span>;
+  return <Badge kind="invoice" status={isOverdue ? "overdue" : status} />;
 }
 
 function Empty({ text }: { text: string }) {
@@ -549,22 +585,13 @@ function Empty({ text }: { text: string }) {
 }
 
 function Loading() {
-  return (
-    <div style={{ display: "flex", flexDirection: "column", gap: space[2] }}>
-      {[0, 1, 2].map((i) => (
-        <div key={i} style={{
-          height: 44, background: C.cream, borderRadius: radius.md,
-          opacity: 1 - i * 0.25,
-        }} />
-      ))}
-    </div>
-  );
+  return <Skeleton variant="row" count={3} label="Đang tải lịch sử phòng" />;
 }
 
 function ErrorBox({ message }: { message: string }) {
   return (
     <div style={{
-      background: "#FBEDE9", border: `1px solid #EBC9C0`, borderRadius: radius.md,
+      background: C.errorBg, border: `1px solid ${C.errorBorder}`, borderRadius: radius.md,
       padding: `${space[3]}px ${space[4]}px`,
     }}>
       <p style={{ fontFamily: font, fontSize: 13, color: C.error, margin: 0 }}>{message}</p>

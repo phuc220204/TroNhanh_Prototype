@@ -1,5 +1,6 @@
 import { supabase } from "../../shared/supabaseClient";
 import { logError } from "../../shared/services/supabase-error";
+import { toLocalISODate } from "../../shared/utils/format";
 
 export interface OccupantInput {
   full_name: string;
@@ -126,7 +127,8 @@ export async function endOccupancy(contractId: string, endDate?: string): Promis
   try {
     const { error } = await supabase.rpc("terminate_contract", {
       p_contract_id: contractId,
-      p_end_date: endDate || new Date().toISOString().split("T")[0],
+      // Ngày theo giờ địa phương — `toISOString()` là UTC, trước 7h sáng ra hôm qua.
+      p_end_date: endDate || toLocalISODate(),
     });
 
     if (error) throw error;
@@ -150,6 +152,20 @@ export async function linkRenterAccount(occupancyId: string, email: string): Pro
     if (error) throw error;
   } catch (err) {
     logError("occupancy-service.linkRenterAccount", err);
+    throw err;
+  }
+}
+
+/**
+ * Hủy yêu cầu liên kết ĐANG CHỜ (gõ nhầm email). Liên kết đã xác nhận không gỡ ở đây.
+ * Gửi lại tới email khác thì dùng `linkRenterAccount` (ghi đè, đặt lại Pending).
+ */
+export async function cancelOccupancyLink(occupancyId: string): Promise<void> {
+  try {
+    const { error } = await supabase.rpc("cancel_occupancy_link", { p_occupancy_id: occupancyId });
+    if (error) throw error;
+  } catch (err) {
+    logError("occupancy-service.cancelOccupancyLink", err);
     throw err;
   }
 }

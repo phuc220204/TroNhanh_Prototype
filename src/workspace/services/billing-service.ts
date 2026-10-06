@@ -31,6 +31,17 @@ export interface InvoiceItem {
   } | null;
   /** Các khoản đã thu của hóa đơn này (embed từ `getInvoices`). */
   payments?: { amount: number }[] | null;
+  /** Nhật ký thu tiền (embed từ `getInvoices`) — để bảng hiện ghi chú gần nhất. */
+  invoice_collection_notes?: { reason: string; follow_up_date: string | null; created_at: string }[] | null;
+}
+
+/** Lần ghi nhật ký thu tiền mới nhất của hóa đơn, nếu có. */
+export function getLatestCollectionNote(invoice: InvoiceItem) {
+  const notes = invoice.invoice_collection_notes ?? [];
+  return notes.reduce<(typeof notes)[number] | null>(
+    (latest, note) => (!latest || note.created_at > latest.created_at ? note : latest),
+    null,
+  );
 }
 
 /** Tổng đã thu của một hóa đơn, từ phần `payments` đã embed. */
@@ -48,6 +59,11 @@ export function getPaidAmount(invoice: InvoiceItem): number {
  */
 export function getRemainingAmount(invoice: InvoiceItem): number {
   return Math.max(0, Number(invoice.total_amount || 0) - getPaidAmount(invoice));
+}
+
+/** "YYYY-MM-DD" theo giờ địa phương — so với cột `due_date` kiểu date. */
+function toLocalDateString(date: Date): string {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
 }
 
 /** BR-004 — đúng 4 trạng thái hóa đơn. Không có giá trị nào khác. */
@@ -124,7 +140,7 @@ export async function getInvoices(params: GetInvoicesParams): Promise<InvoiceIte
   try {
     let q = supabase
       .from("invoices")
-      .select("*, rooms!inner(room_code, property_id, properties(name)), invoice_items(*), payments(amount)")
+      .select("*, rooms!inner(room_code, property_id, properties(name)), invoice_items(*), payments(amount), invoice_collection_notes(reason, follow_up_date, created_at)")
       .eq("owner_id", ownerId)
       .is("deleted_at", null)
       .order("created_at", { ascending: false });
@@ -135,7 +151,15 @@ export async function getInvoices(params: GetInvoicesParams): Promise<InvoiceIte
     if (period && period !== "all") {
       q = q.eq("period", period);
     }
-    if (status) {
+    // "Quá hạn" theo due_date, không theo cột status: chưa có job chuyển
+    // Unpaid → Overdue (BR-004) nên lọc theo status sẽ bỏ sót hóa đơn quá hạn.
+    // Hai lọc "chưa thu" loại hóa đơn đã quá hạn để khớp badge hiển thị.
+    const today = toLocalDateString(new Date());
+    if (status === "Overdue") {
+      q = q.neq("status", "Paid").lt("due_date", today);
+    } else if (status === "Unpaid" || status === "PartiallyPaid") {
+      q = q.eq("status", status).gte("due_date", today);
+    } else if (status) {
       q = q.eq("status", status);
     }
 
@@ -144,8 +168,9 @@ export async function getInvoices(params: GetInvoicesParams): Promise<InvoiceIte
     if (error) throw error;
     return (data || []) as unknown as InvoiceItem[];
   } catch (err) {
+    // Ném lỗi để trang phân biệt "lỗi tải" với "chưa có hóa đơn" (PRD AC#1).
     logError("billing-service.getInvoices", err);
-    return [];
+    throw err;
   }
 }
 
@@ -254,6 +279,114 @@ export async function recordPayment(
     return data as string;
   } catch (err) {
     logError("billing-service.recordPayment", err);
+    throw err;
+  }
+}
+
+/**
+ * Chỉ số gần nhất của phòng — bản NÉM LỖI (khác `getLatestReading` nuốt lỗi
+ * trả null). Form ghi chỉ số cần phân biệt "chưa có kỳ trước" với "không tải
+ * được": nhầm hai cái đó thì người dùng lưu chỉ số mà không biết mốc so sánh.
+ *
+ * Sắp theo `period desc` — ĐÚNG thứ tự RPC `record_utility_reading` dùng để
+ * derive `previous_reading`, để kiểm tra ở form khớp kiểm tra ở server.
+ */
+export async function getLatestReadingOrThrow(
+  roomId: string,
+  type: "Electricity" | "Water"
+): Promise<{ period: string; current_reading: number } | null> {
+  try {
+    const { data, error } = await supabase
+      .from("utility_readings")
+      .select("period, current_reading")
+      .eq("room_id", roomId)
+      .eq("type", type)
+      .is("deleted_at", null)
+      .order("period", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (error) throw error;
+    if (!data) return null;
+    return { period: data.period, current_reading: Number(data.current_reading) };
+  } catch (err) {
+    logError("billing-service.getLatestReadingOrThrow", err);
+    throw err;
+  }
+}
+
+/** Chỉ số cũ (điện + nước) của phòng cho modal "Ghi điện nước nhanh". Chưa có bản ghi ⇒ 0 (khớp `coalesce(v_previous, 0)` của RPC). */
+export interface PreviousReadings {
+  electricity: number;
+  water: number;
+}
+
+/** Bản ném lỗi: modal phải phân biệt "phòng chưa có chỉ số" với "đọc lỗi" (chỉ số cũ không được âm thầm thành 0). */
+export async function getPreviousReadingsOrThrow(roomId: string): Promise<PreviousReadings> {
+  const [electricity, water] = await Promise.all([
+    getLatestReadingOrThrow(roomId, "Electricity"),
+    getLatestReadingOrThrow(roomId, "Water"),
+  ]);
+  return { electricity: electricity?.current_reading ?? 0, water: water?.current_reading ?? 0 };
+}
+
+export interface InvoiceDraftSourceData {
+  /** Hợp đồng Active mới nhất của phòng; null = chưa có hợp đồng đang hiệu lực. */
+  contract: { id: string; rent_price: number } | null;
+  /** Chỉ số điện/nước của ĐÚNG kỳ `period`. */
+  readings: {
+    type: string;
+    period: string;
+    previous_reading: number;
+    current_reading: number;
+    unit_price: number;
+    deleted_at: string | null;
+  }[];
+  /** Phí dịch vụ đang áp (giá riêng phòng → giá khu). null = chưa cấu hình. */
+  serviceFee: number | null;
+}
+
+/**
+ * Dữ liệu thật để dựng bản nháp hóa đơn (xem `invoice-draft.ts`). Ném lỗi để
+ * UI phân biệt "lỗi tải" với "chưa có dữ liệu".
+ *
+ * Phí dịch vụ lấy qua RPC `get_room_effective_prices` (đã coalesce giá phòng →
+ * giá khu, và assert `owner_id = auth.uid()`), không tự lặp logic ở client.
+ */
+export async function getInvoiceDraftSources(roomId: string, period: string): Promise<InvoiceDraftSourceData> {
+  try {
+    const [contractRes, readingsRes, pricesRes] = await Promise.all([
+      supabase
+        .from("contracts")
+        .select("id, rent_price")
+        .eq("room_id", roomId)
+        .eq("status", "Active")
+        .is("deleted_at", null)
+        .order("start_date", { ascending: false })
+        .limit(1)
+        .maybeSingle(),
+      supabase
+        .from("utility_readings")
+        .select("type, period, previous_reading, current_reading, unit_price, deleted_at")
+        .eq("room_id", roomId)
+        .eq("period", period)
+        .is("deleted_at", null),
+      supabase.rpc("get_room_effective_prices", { p_room_id: roomId }),
+    ]);
+    if (contractRes.error) throw contractRes.error;
+    if (readingsRes.error) throw readingsRes.error;
+    if (pricesRes.error) throw pricesRes.error;
+
+    const prices = (pricesRes.data ?? [])[0];
+    const rawServiceFee = prices?.service_fee as number | null | undefined;
+    return {
+      contract: contractRes.data
+        ? { id: contractRes.data.id, rent_price: Number(contractRes.data.rent_price) }
+        : null,
+      readings: readingsRes.data ?? [],
+      serviceFee: rawServiceFee === null || rawServiceFee === undefined ? null : Number(rawServiceFee),
+    };
+  } catch (err) {
+    logError("billing-service.getInvoiceDraftSources", err);
     throw err;
   }
 }

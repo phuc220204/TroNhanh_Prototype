@@ -1,26 +1,28 @@
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useMemo } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router";
 import {
   Building2, FileText, Plus, Zap, ChevronRight,
-  Eye, EyeOff, Lock, Home, Users, CheckSquare, AlertTriangle, TrendingUp,
+  Home, Users, CheckSquare, AlertTriangle, TrendingUp, KeyRound, CalendarClock,
 } from "lucide-react";
-import { C, font } from "../../../shared/theme";
+import { C, font, shadow } from "../../../shared/theme";
 import { useBreakpoint } from "../../../shared/components/useBreakpoint";
-import { LandlordShell, useLandlordShell } from "../../../shared/components/LandlordShell";
-import type { RoomStatus } from "../../../shared/types/status";
-import { EmptyState, Button, Toast } from "../../../shared/components/common";
-import { logError } from "../../../shared/services/supabase-error";
+import { LandlordShell } from "../../../shared/components/LandlordShell";
+import { formatVnd } from "../../../shared/utils/format";
+import { EmptyState, Button, Skeleton } from "../../../shared/components/common";
+import { useToast } from "../../../shared/contexts/ToastContext";
 import { useAuth } from "../../../shared/contexts/AuthContext";
 import { useCanWrite } from "../../../shared/contexts/SubscriptionContext";
-import { getPropertiesByOwnerOrThrow } from "../../services/property-service";
-import { getRoomsByOwnerOrThrow } from "../../services/room-service";
-import { getDashboardMetrics, type DashboardKPIs } from "../../services/dashboard-service";
-import { getMyListings } from "../../../marketplace/services/listing-queries";
+import { DUE_SOON_DAYS } from "../../services/invoice-due";
+import { qk } from "../../../shared/query/keys";
+import { useDashboardData, toDashboardRoom } from "./useDashboardData";
 import {
   PrimaryBtn, GhostBtn, StatusChip, PayText, PropertySelector,
   SegmentedBar, RoomTaskBtn, UtilityCard, ListingRow, Footer,
 } from "./atoms";
 import { UtilityModal } from "./UtilityModal";
+import { KpiGrid, type DashboardKpi } from "./KpiGrid";
+import { DueInvoicesPanel } from "./DueInvoicesPanel";
 // Bản dùng chung ở `workspace/components/`, KHÔNG phải bản sao cũ trong thư mục
 // này. Bản cũ gửi `owner_id` từ client (§6.1), `insert` thẳng vào `rooms` từ
 // component thay vì qua service layer, và không có ô đơn giá riêng của phòng —
@@ -35,71 +37,39 @@ const SUPPORT_EMAIL = "tronhanh2026@gmail.com";
 const SUPPORT_EMAIL_HREF = `mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent("[Trọ Nhanh] Yêu cầu hỗ trợ")}`;
 
 export function ChuTroDashboardPage() {
-  const { subStatus } = useLandlordShell();
   const navigate = useNavigate();
-  const { isMobile } = useBreakpoint();
+  const { isMobile, isTablet } = useBreakpoint();
   const { user, profile } = useAuth();
   const displayName = profile?.full_name || user?.email?.split("@")[0] || "Chủ trọ";
 
-  const [properties, setProperties] = useState<any[]>([]);
-  const [rooms, setRooms] = useState<any[]>([]);
-  const [realListings, setRealListings] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [dashboardError, setDashboardError] = useState(false);
-
+  const queryClient = useQueryClient();
   const [property, setProperty] = useState("all");
+  const {
+    properties, rooms, kpis: dbKpis, listings: realListings,
+    isPending: loading, isError: dashboardError, isSwitchingProperty, refetchAll,
+  } = useDashboardData(user?.id, property);
+
   const [modal, setModal] = useState<null | "utility" | "room">(null);
   const [revealKPIs, setRevealKPIs] = useState(false);
-  const [toast, setToast] = useState<{ message: string; variant: "success" | "error" } | null>(null);
+  const { showToast } = useToast();
 
-  // `isLocked` = chưa từng kích hoạt gói ⇒ khóa cả đường VÀO module SaaS.
   // `canWrite` = BR-015, quyết định được GHI hay không (false cho cả NONE lẫn
-  // READ_ONLY). Hai thứ khác nhau: READ_ONLY vẫn phải xem được dữ liệu.
-  const isLocked = subStatus === "NONE";
+  // READ_ONLY). READ_ONLY vẫn phải xem được dữ liệu. Trạng thái NONE (chưa kích
+  // hoạt gói) do `LandlordShell` chặn bằng màn mời dùng thử — trang này không tự
+  // kiểm tra lại. (Trước đây trang đọc `useLandlordShell()` NGOÀI Provider nên
+  // luôn nhận "NONE": người đã trả tiền vẫn thấy banner khóa và bị chặn chuyển trang.)
   const canWrite = useCanWrite();
 
-  const toRooms = () => {
-    if (isLocked) {
-      setToast({ message: "Vui lòng kích hoạt dùng thử hoặc đăng ký gói SaaS ở góc dưới Sidebar để truy cập tính năng Quản lý trọ.", variant: "error" });
-      return;
-    }
-    navigate("/chu-tro/quan-ly-phong");
-  };
+  const toRooms = () => navigate("/chu-tro/quan-ly-phong");
   const toListings = () => navigate("/tai-khoan/tin-cho-thue");
   const toPost = () => navigate("/dang-tin-cho-thue");
 
-  const [dbKpis, setDbKpis] = useState<DashboardKPIs | null>(null);
+  const handlePropertyChange = (value: string) => setProperty(value);
 
-  const loadDashboardData = useCallback(async (propertyId?: string) => {
-    if (!user) return;
-    try {
-      setLoading(true);
-      setDashboardError(false);
-      const [props, rms, kpis, listings] = await Promise.all([
-        getPropertiesByOwnerOrThrow(user.id),
-        getRoomsByOwnerOrThrow(user.id),
-        getDashboardMetrics(user.id, propertyId),
-        getMyListings(user.id),
-      ]);
-      setProperties(props);
-      setRooms(rms);
-      setDbKpis(kpis);
-      setRealListings(listings ? listings.slice(0, 3) : []);
-    } catch (err) {
-      logError("ChuTroDashboardPage.loadDashboardData", err);
-      setDashboardError(true);
-    } finally {
-      setLoading(false);
-    }
-  }, [user]);
-
-  useEffect(() => {
-    void loadDashboardData();
-  }, [loadDashboardData]);
-
-  const handlePropertyChange = (value: string) => {
-    setProperty(value);
-    void loadDashboardData(value === "all" ? undefined : value);
+  /** Làm mới sau thao tác ghi: phòng + mọi KPI của chủ trọ này. */
+  const refreshAfterWrite = () => {
+    void queryClient.invalidateQueries({ queryKey: qk.rooms.all });
+    void queryClient.invalidateQueries({ queryKey: qk.dashboard.summary(user?.id) });
   };
 
   const displayProperties = useMemo(() => {
@@ -114,39 +84,32 @@ export function ChuTroDashboardPage() {
     return [];
   }, [rooms, property]);
 
-  const activeRoomsList = useMemo(() => {
-    return filteredRooms;
-  }, [filteredRooms]);
-
-  // Convert rooms data
-  const displayRooms = useMemo(() => {
-    return activeRoomsList.slice(0, 4).map(r => ({
-      code: r.room_code || r.code || "",
-      property: r.properties?.name || r.property || "Khu trọ",
-      status: (r.status === "Available" ? "available" : r.status === "Deposited" ? "deposited" : r.status === "Rented" ? "rented" : r.status === "Hidden" ? "hidden" : r.status === "available" ? "available" : r.status === "deposited" ? "deposited" : r.status === "rented" ? "rented" : "available") as RoomStatus,
-      occupant: r.occupant_name || (r.occupant ? r.occupant.name : null),
-      paid: r.payment_status === "Paid" ? true : r.payment_status === "Unpaid" ? false : (r.bill ? r.bill.paid : null),
-      task: r.status === "Available" || r.status === "available"
-        ? "Tạo tin đăng"
-        : (r.status === "Rented" || r.status === "rented") && (r.payment_status === "Unpaid" || (r.bill && !r.bill.paid))
-          ? "Xem hóa đơn"
-          : (r.status === "Deposited" || r.status === "deposited" || r.status === "Đã cọc" || r.status === "đã cọc")
-            ? "Xem hợp đồng"
-            : null
-    }));
-  }, [activeRoomsList]);
+  // Bản cũ đọc `occupant_name` / `payment_status` / `bill` — các trường của dữ
+  // liệu mock, không có trong DB ⇒ cột "Người ở" và "Thanh toán" luôn trống.
+  const displayRooms = useMemo(() => filteredRooms.slice(0, 4).map(toDashboardRoom), [filteredRooms]);
 
   // Convert listings
+  // `getMyListings` chỉ trả tin Active dạng `ListingCardItem` (`type`, `loc`,
+  // `priceNum`, `views_count`, `postedAt`) — map đúng các trường đó.
   const displayListings = useMemo(() => {
     return realListings.map(l => ({
+      id: l.id as string,
       title: l.title,
-      sub: `${l.property_type || "Tin cho thuê"} · ${l.district || ""} · ${Number(l.price || 0).toLocaleString("vi-VN")}đ`,
-      status: (l.status === "Active" ? "active" : l.status === "Inactive" ? "hidden" : l.status) as any,
-      views: l.view_count ?? l.views,
-      createdAt: l.created_at,
-      canDelete: true
+      sub: [l.type || "Tin cho thuê", l.loc, `${formatVnd(l.priceNum)}/tháng`].filter(Boolean).join(" · "),
+      status: "active",
+      views: l.views_count ?? null,
+      createdAt: l.postedAt ?? l.created_at ?? null,
     }));
   }, [realListings]);
+  const viewListing = (listingId: string) => navigate(`/phong/${listingId}`);
+  const editListing = (listingId: string) => navigate(`/dang-tin-cho-thue/${listingId}`);
+
+  const handleUtilitySaved = () => {
+    setModal(null);
+    showToast("Đã lưu chỉ số điện nước.", { testId: "dashboard-toast" });
+    void queryClient.invalidateQueries({ queryKey: qk.billing.all });
+    refreshAfterWrite();
+  };
 
   const totalRoomsCount = dbKpis?.totalRoomsCount ?? 0;
   const rentedRoomsCount = dbKpis?.rentedRoomsCount ?? 0;
@@ -157,23 +120,29 @@ export function ChuTroDashboardPage() {
     ? `${(amount / 1_000_000).toLocaleString("vi-VN", { maximumFractionDigits: 1 })} triệu đ`
     : `${Math.round(amount).toLocaleString("vi-VN")}đ`;
 
-  // BR-012 — "Phòng trống" và "Chưa đóng tiền" LUÔN hiện (`secret: false`);
-  // "Tổng số phòng" / "Khách đang ở" / "Đã thu trong tháng" mặc định ẩn
-  // (`secret: true` + `revealKPIs` khởi tạo `false`).
-  const dynamicKPIS = [
-    { label: "Tổng số phòng", value: totalRoomsCount, unit: "Phòng", accent: C.primary, secret: true },
-    { label: "Khách đang ở", value: occupantCount, unit: "Người", hint: `${occupancyRate}% lấp đầy`, accent: "#4F7A4A", secret: true },
-    { label: "Phòng trống", value: emptyRoomsCount, unit: "Phòng", accent: C.secondary, secret: false },
-    { label: "Hóa đơn chưa thu", value: dbKpis?.unpaidInvoiceCount ?? 0, unit: "HĐ", hint: formatMoney(dbKpis?.unpaidInvoiceAmount ?? 0), accent: "#C07B4A", secret: false },
-    { label: "Đã thu trong tháng", value: formatMoney(dbKpis?.collectedThisMonth ?? 0), unit: "", accent: C.primaryDark, secret: true },
-    { label: "Hóa đơn kỳ này", value: dbKpis?.invoiceCountThisPeriod ?? 0, unit: "HĐ", hint: formatMoney(dbKpis?.invoiceAmountThisPeriod ?? 0), accent: "#4F7A4A", secret: false },
+  // BR-012 — "Phòng trống", "Hóa đơn chưa thu", "Sắp đến hạn" LUÔN hiện (`secret: false`);
+  // "Tổng số phòng" / "Phòng đã có người ở" / "Người ở hiện tại" / "Đã thu trong tháng"
+  // mặc định ẩn (`secret: true` + `revealKPIs` khởi tạo `false`).
+  const periodLabel = dbKpis?.periodLabel ?? "kỳ hiện tại";
+  const dynamicKPIS: DashboardKpi[] = [
+    { label: "Tổng số phòng", value: totalRoomsCount, unit: "Phòng", accent: C.primary, Icon: Home, secret: true },
+    { label: "Phòng đã có người ở", value: rentedRoomsCount, unit: "Phòng", hint: `${occupancyRate}% lấp đầy`, accent: C.primary, Icon: KeyRound, secret: true, testId: "dashboard-kpi-rented-rooms" },
+    { label: "Người ở hiện tại", value: occupantCount, unit: "Người", accent: C.available, Icon: Users, secret: true },
+    { label: "Phòng trống", value: emptyRoomsCount, unit: "Phòng", accent: C.available, Icon: CheckSquare, secret: false },
+    { label: "Hóa đơn chưa thu", value: dbKpis?.unpaidInvoiceCount ?? 0, unit: "HĐ", hint: formatMoney(dbKpis?.unpaidInvoiceAmount ?? 0), accent: C.repairing, Icon: AlertTriangle, secret: false },
+    { label: `Sắp đến hạn (${DUE_SOON_DAYS} ngày)`, value: dbKpis?.dueSoonInvoiceCount ?? 0, unit: "HĐ", hint: formatMoney(dbKpis?.dueSoonInvoiceAmount ?? 0), accent: C.warning, Icon: CalendarClock, secret: false, testId: "dashboard-kpi-due-soon" },
+    { label: "Đã thu trong tháng", value: formatMoney(dbKpis?.collectedThisMonth ?? 0), unit: "", caption: periodLabel, accent: C.primaryDark, Icon: TrendingUp, secret: true },
+    { label: "Hóa đơn kỳ này", value: dbKpis?.invoiceCountThisPeriod ?? 0, unit: "HĐ", hint: `${formatMoney(dbKpis?.invoiceAmountThisPeriod ?? 0)} · ${periodLabel}`, accent: C.available, Icon: TrendingUp, secret: false },
   ];
+  const reminderInvoices = dbKpis?.reminderInvoices ?? [];
+  const openInvoice = (invoiceId: string) => navigate(`/chu-tro/hoa-don?hoa-don=${invoiceId}`);
+  const toInvoices = () => navigate("/chu-tro/hoa-don");
 
   const handleRoomTask = (task: string) => {
     if (task === "Tạo tin đăng") {
       toPost();
     } else if (task === "Xem hóa đơn" || task === "Nhắc nợ") {
-      navigate("/chu-tro/hoa-don");
+      toInvoices();
     } else if (task === "Xem hợp đồng" || task === "Gia hạn") {
       navigate("/chu-tro/quan-ly-phong?tab=occupants");
     }
@@ -188,12 +157,12 @@ export function ChuTroDashboardPage() {
 
   const Modals = (
     <>
-      {modal === "utility" && <UtilityModal onClose={() => setModal(null)} properties={properties} onSave={() => void loadDashboardData(property === "all" ? undefined : property)} />}
+      {modal === "utility" && <UtilityModal onClose={() => setModal(null)} properties={properties} rooms={rooms} onSaved={handleUtilitySaved} />}
       {modal === "room" && (
         <AddRoomModal
           properties={properties.map((p: any) => ({ id: p.id, name: p.name }))}
           onClose={() => setModal(null)}
-          onCreated={() => void loadDashboardData(property === "all" ? undefined : property)}
+          onCreated={refreshAfterWrite}
         />
       )}
     </>
@@ -202,7 +171,7 @@ export function ChuTroDashboardPage() {
   if (loading) {
     return (
       <LandlordShell active="overview" mobileTitle="Dashboard">
-        <div role="status" style={{ minHeight: "55vh", display: "grid", placeItems: "center", color: C.textSecondary, fontFamily: font, fontWeight: 600 }}>Đang tải dữ liệu dashboard...</div>
+        <Skeleton variant="row" count={6} label="Đang tải tổng quan" style={{ padding: "24px 0" }} />
       </LandlordShell>
     );
   }
@@ -211,10 +180,10 @@ export function ChuTroDashboardPage() {
     return (
       <LandlordShell active="overview" mobileTitle="Dashboard">
         <div role="alert" style={{ maxWidth: 560, margin: "70px auto", padding: 24, background: C.white, border: `1px solid ${C.border}`, borderRadius: 16, textAlign: "center", fontFamily: font }}>
-          <AlertTriangle size={30} color="#C07B4A" />
+          <AlertTriangle size={30} color={C.repairing} />
           <h1 style={{ fontSize: 18, color: C.textPrimary, margin: "12px 0 6px" }}>Chưa tải được dữ liệu dashboard</h1>
           <p style={{ color: C.textSecondary, fontSize: 13.5, lineHeight: 1.5 }}>Không thể đọc khu trọ, phòng hoặc hóa đơn. Dữ liệu chưa bị thay đổi; hãy thử tải lại.</p>
-          <PrimaryBtn onClick={() => void loadDashboardData(property === "all" ? undefined : property)}>Thử tải lại</PrimaryBtn>
+          <PrimaryBtn onClick={() => void refetchAll()}>Thử tải lại</PrimaryBtn>
         </div>
       </LandlordShell>
     );
@@ -244,16 +213,6 @@ export function ChuTroDashboardPage() {
     return (
       <LandlordShell active="overview" mobileTitle="Dashboard">
         <div style={{ padding: "16px 16px 100px" }}>
-          {isLocked && (
-            <div style={{ background: "#FEF6EC", border: `1.5px dashed ${C.primary}`, borderRadius: 14, padding: 16, marginBottom: 16, display: "flex", gap: 12, alignItems: "flex-start" }}>
-              <Lock size={20} color={C.primary} style={{ flexShrink: 0, marginTop: 2 }} />
-              <div>
-                <h4 style={{ fontFamily: font, fontSize: 14, fontWeight: 800, color: C.textPrimary, margin: "0 0 4px" }}>Gói SaaS chưa kích hoạt</h4>
-                <p style={{ fontFamily: font, fontSize: 12, color: C.textSecondary, margin: "0 0 10px", lineHeight: 1.4 }}>Hãy bắt đầu dùng thử gói SaaS Quản lý vận hành 30 ngày ở dropdown chân Sidebar để mở khóa đầy đủ tính năng.</p>
-              </div>
-            </div>
-          )}
-
           <p style={{ fontFamily: font, fontSize: 19, fontWeight: 800, color: C.textPrimary, margin: "0 0 4px" }}>Chào {displayName} 👋</p>
           <p style={{ fontFamily: font, fontSize: 13, color: C.textSecondary, margin: "0 0 14px" }}>Mọi thứ trong tầm kiểm soát. Chúc bạn một ngày làm việc hiệu quả!</p>
 
@@ -261,37 +220,18 @@ export function ChuTroDashboardPage() {
 
           {/* Vacant Rooms Banner */}
           {emptyRoomsCount > 0 ? (
-            <div style={{ background: "#EBF2E8", border: "1px solid #C6D8C1", borderRadius: 14, padding: "14px 16px", display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+            <div style={{ background: C.successBg, border: `1px solid ${C.successBorder}`, borderRadius: 14, padding: "14px 16px", display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                <Home size={16} color="#4F7A4A" />
+                <Home size={16} color={C.available} />
                 <span style={{ fontFamily: font, fontSize: 13, fontWeight: 700, color: C.textPrimary }}>{emptyRoomsCount} phòng đang trống</span>
               </div>
-              <button onClick={toPost} style={{ background: "none", border: "none", color: "#4F7A4A", fontFamily: font, fontSize: 13, fontWeight: 700, cursor: "pointer", padding: 0 }}>Tạo tin đăng</button>
+              <button onClick={toPost} style={{ background: "none", border: "none", color: C.available, fontFamily: font, fontSize: 13, fontWeight: 700, cursor: "pointer", padding: 0 }}>Tạo tin đăng</button>
             </div>
           ) : null}
 
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-            <p style={{ fontFamily: font, fontSize: 15, fontWeight: 800, color: C.textPrimary, margin: 0 }}>Chỉ số vận hành</p>
-            <button
-              onClick={() => setRevealKPIs(!revealKPIs)}
-              data-testid="dashboard-kpi-toggle"
-              style={{ display: "flex", alignItems: "center", gap: 5, background: "none", border: "none", color: C.primary, fontFamily: font, fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
-              {revealKPIs ? <EyeOff size={14} /> : <Eye size={14} />} {revealKPIs ? "Ẩn số liệu" : "Hiện số liệu"}
-            </button>
-          </div>
+          <div aria-busy={isSwitchingProperty} style={{ opacity: isSwitchingProperty ? 0.55 : 1, transition: "opacity 150ms" }}><KpiGrid kpis={dynamicKPIS} isRevealed={revealKPIs} onToggleReveal={() => setRevealKPIs(!revealKPIs)} isMobile /></div>
 
-          <div style={{ display: "flex", gap: 10, overflowX: "auto", paddingBottom: 6, marginBottom: 22 }}>
-            {dynamicKPIS.map(k => {
-              const isSecret = k.secret && !revealKPIs;
-              return (
-                <div key={k.label} style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: 12, padding: "13px 16px", minWidth: 120, flexShrink: 0 }}>
-                  <p style={{ fontFamily: font, fontSize: 10.5, fontWeight: 700, color: C.textSecondary, margin: "0 0 6px", textTransform: "uppercase", letterSpacing: "0.04em" }}>{k.label}</p>
-                  <span style={{ fontFamily: font, fontSize: 26, fontWeight: 900, color: k.accent, lineHeight: 1 }}>{isSecret ? "•••" : k.value}</span>
-                  {k.hint && <p style={{ fontFamily: font, fontSize: 11, color: C.textSecondary, margin: "5px 0 0" }}>{isSecret ? "••••" : k.hint}</p>}
-                </div>
-              );
-            })}
-          </div>
+          <DueInvoicesPanel invoices={reminderInvoices} onOpenInvoice={openInvoice} onViewAll={toInvoices} />
 
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
             <span style={{ fontFamily: font, fontSize: 15, fontWeight: 800, color: C.textPrimary }}>Tình trạng phòng</span>
@@ -299,7 +239,7 @@ export function ChuTroDashboardPage() {
           </div>
           <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 22 }}>
             {displayRooms.slice(0, 3).map((r, i) => (
-              <div key={i} onClick={toRooms} style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: 12, padding: 14, cursor: isLocked ? "default" : "pointer" }}>
+              <div key={i} onClick={toRooms} style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: 12, padding: 14, cursor: "pointer" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
                   <span style={{ fontFamily: font, fontSize: 15, fontWeight: 800, color: C.textPrimary }}>{r.code} <span style={{ fontWeight: 500, fontSize: 12.5, color: C.textSecondary }}>· {r.property}</span></span>
                   <StatusChip status={r.status} />
@@ -318,7 +258,17 @@ export function ChuTroDashboardPage() {
           </div>
 
           <p style={{ fontFamily: font, fontSize: 15, fontWeight: 800, color: C.textPrimary, margin: "0 0 12px" }}>Quản lý nhanh</p>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 10, marginBottom: 22 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10, marginBottom: 22 }}>
+            {/* Ghi điện nước là việc chính khi đi từng phòng — trước đây chỉ có ở desktop. */}
+            <button
+              onClick={() => handleQuickToolClick("utility")}
+              disabled={!canWrite}
+              data-testid="dashboard-mobile-utility-btn"
+              style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: 12, padding: "14px 8px", display: "flex", flexDirection: "column", alignItems: "center", gap: 7, cursor: canWrite ? "pointer" : "not-allowed", opacity: canWrite ? 1 : 0.5 }}
+            >
+              <Zap size={20} color={C.primary} />
+              <span style={{ fontFamily: font, fontSize: 12, fontWeight: 600, color: C.textPrimary }}>Ghi điện nước</span>
+            </button>
             <button onClick={toRooms} style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: 12, padding: "14px 8px", display: "flex", flexDirection: "column", alignItems: "center", gap: 7, cursor: "pointer" }}>
               <Building2 size={20} color={C.primary} />
               <span style={{ fontFamily: font, fontSize: 12, fontWeight: 600, color: C.textPrimary }}>Khu trọ & Phòng</span>
@@ -334,7 +284,7 @@ export function ChuTroDashboardPage() {
             <button onClick={toListings} style={{ fontFamily: font, fontSize: 12.5, fontWeight: 700, color: C.primary, background: "none", border: "none", cursor: "pointer" }}>Tất cả</button>
           </div>
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-            {displayListings.slice(0, 2).map((l, i) => <ListingRow key={i} l={l} onClick={toListings} />)}
+            {displayListings.slice(0, 2).map(l => <ListingRow key={l.id} l={l} onClick={toListings} onView={() => viewListing(l.id)} onEdit={() => editListing(l.id)} />)}
           </div>
         </div>
 
@@ -342,7 +292,7 @@ export function ChuTroDashboardPage() {
           onClick={() => handleQuickToolClick("room")}
           disabled={!canWrite}
           data-testid="dashboard-fab-add-room"
-          style={{ position: "fixed", right: 18, bottom: "calc(76px + env(safe-area-inset-bottom))", width: 54, height: 54, borderRadius: "50%", background: canWrite ? C.primary : C.border, border: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: canWrite ? "pointer" : "not-allowed", boxShadow: canWrite ? "0 4px 16px rgba(138,106,69,0.36)" : "none", zIndex: 90 }}>
+          style={{ position: "fixed", right: 18, bottom: "calc(76px + env(safe-area-inset-bottom))", width: 54, height: 54, borderRadius: "50%", background: canWrite ? C.primary : C.border, border: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: canWrite ? "pointer" : "not-allowed", boxShadow: canWrite ? shadow.md : "none", zIndex: 90 }}>
           <Plus size={24} color={canWrite ? "white" : C.textSecondary} />
         </button>
         {Modals}
@@ -357,22 +307,12 @@ export function ChuTroDashboardPage() {
 
         {/* MAIN COLUMN */}
         <main style={{ flex: 1, minWidth: 0 }}>
-          {isLocked && (
-            <div style={{ background: "#FEF6EC", border: `1.5px dashed ${C.primary}`, borderRadius: 14, padding: 18, marginBottom: 20, display: "flex", gap: 14, alignItems: "center" }}>
-              <Lock size={24} color={C.primary} style={{ flexShrink: 0 }} />
-              <div style={{ flex: 1 }}>
-                <h4 style={{ fontFamily: font, fontSize: 15, fontWeight: 800, color: C.textPrimary, margin: "0 0 4px" }}>Trải nghiệm đầy đủ tính năng Quản lý vận hành (SaaS)</h4>
-                <p style={{ fontFamily: font, fontSize: 13, color: C.textSecondary, margin: 0 }}>Các tính năng quản lý khu trọ, hóa đơn, người ở đang bị khóa. Hãy chọn trạng thái **Dùng thử (TRIAL)** hoặc **Kích hoạt (ACTIVE)** ở góc dưới Sidebar để trải nghiệm.</p>
-              </div>
-            </div>
-          )}
-
           {/* Greeting Header Block with Illustration */}
           <div style={{
             display: "flex", justifyContent: "space-between", alignItems: "center",
-            background: "#F7EFE2", borderRadius: 20, padding: "24px 32px", marginBottom: 24,
+            background: C.cream, borderRadius: 20, padding: "24px 32px", marginBottom: 24,
             border: `1px solid ${C.border}`, position: "relative", overflow: "hidden",
-            boxShadow: "0 2px 10px rgba(42,26,12,0.02)"
+            boxShadow: shadow.sm
           }}>
             <div style={{ zIndex: 2 }}>
               <h1 style={{ fontFamily: font, fontSize: 24, fontWeight: 800, color: C.textPrimary, margin: "0 0 6px", letterSpacing: "-0.01em" }}>Chào {displayName} 👋</h1>
@@ -394,13 +334,13 @@ export function ChuTroDashboardPage() {
           {/* Vacant Rooms Banner */}
           {emptyRoomsCount > 0 ? (
             <div style={{
-              background: "#EBF2E8", border: "1px solid #C6D8C1", borderRadius: 16,
+              background: C.successBg, border: `1px solid ${C.successBorder}`, borderRadius: 16,
               padding: "16px 20px", display: "flex", justifyContent: "space-between",
               alignItems: "center", marginBottom: 24, gap: 12, flexWrap: "wrap",
-              boxShadow: "0 2px 8px rgba(79,122,74,0.04)"
+              boxShadow: shadow.sm
             }}>
               <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-                <div style={{ width: 38, height: 38, borderRadius: 10, background: "#4F7A4A", display: "flex", alignItems: "center", justifyContent: "center", color: "white", flexShrink: 0 }}>
+                <div style={{ width: 38, height: 38, borderRadius: 10, background: C.available, display: "flex", alignItems: "center", justifyContent: "center", color: "white", flexShrink: 0 }}>
                   <Home size={18} />
                 </div>
                 <div>
@@ -408,13 +348,13 @@ export function ChuTroDashboardPage() {
                   <p style={{ fontFamily: font, fontSize: 12.5, color: C.textSecondary, margin: 0 }}>Có thể tạo tin đăng để tìm người ở.</p>
                 </div>
               </div>
-              <button onClick={toPost} style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "none", border: "none", color: "#4F7A4A", fontFamily: font, fontSize: 13.5, fontWeight: 700, cursor: "pointer", padding: 0 }}>
+              <button onClick={toPost} style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "none", border: "none", color: C.available, fontFamily: font, fontSize: 13.5, fontWeight: 700, cursor: "pointer", padding: 0 }}>
                 Tạo tin đăng <ChevronRight size={16} />
               </button>
             </div>
           ) : totalRoomsCount > 0 ? (
-            <div style={{ background: "#F5F8F5", border: "1px solid #D5E2D5", borderRadius: 16, padding: "16px 20px", display: "flex", alignItems: "center", gap: 14, marginBottom: 24 }}>
-              <div style={{ width: 38, height: 38, borderRadius: 10, background: "#85A081", display: "flex", alignItems: "center", justifyContent: "center", color: "white", flexShrink: 0 }}>
+            <div style={{ background: C.successBg, border: `1px solid ${C.successBorder}`, borderRadius: 16, padding: "16px 20px", display: "flex", alignItems: "center", gap: 14, marginBottom: 24 }}>
+              <div style={{ width: 38, height: 38, borderRadius: 10, background: C.available, display: "flex", alignItems: "center", justifyContent: "center", color: "white", flexShrink: 0 }}>
                 <Home size={18} />
               </div>
               <div>
@@ -424,67 +364,12 @@ export function ChuTroDashboardPage() {
             </div>
           ) : null}
 
-          {/* Operational Metrics (KPI Section) */}
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
-            <h2 style={{ fontFamily: font, fontSize: 13, fontWeight: 800, color: C.textSecondary, margin: 0, textTransform: "uppercase", letterSpacing: "0.05em" }}>Chỉ số vận hành</h2>
-            <button
-              onClick={() => setRevealKPIs(!revealKPIs)}
-              data-testid="dashboard-kpi-toggle"
-              style={{ display: "flex", alignItems: "center", gap: 6, background: "none", border: "none", color: C.primary, fontFamily: font, fontSize: 13, fontWeight: 700, cursor: "pointer" }}>
-              {revealKPIs ? <EyeOff size={15} /> : <Eye size={15} />} {revealKPIs ? "Ẩn số liệu nhạy cảm" : "Hiện số liệu ẩn"}
-            </button>
-          </div>
+          <div aria-busy={isSwitchingProperty} style={{ opacity: isSwitchingProperty ? 0.55 : 1, transition: "opacity 150ms" }}><KpiGrid kpis={dynamicKPIS} isRevealed={revealKPIs} onToggleReveal={() => setRevealKPIs(!revealKPIs)} /></div>
 
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 12, marginBottom: 28 }}>
-            {dynamicKPIS.map((k, index) => {
-              const isSecret = k.secret && !revealKPIs;
-              let IconComponent = Home;
-              let iconColor = C.primary;
-              let iconBg = "rgba(138, 74, 32, 0.06)";
-
-              if (index === 0) {
-                IconComponent = Home;
-                iconColor = C.primary;
-                iconBg = "rgba(138, 74, 32, 0.06)";
-              } else if (index === 1) {
-                IconComponent = Users;
-                iconColor = "#4F7A4A";
-                iconBg = "rgba(79, 122, 74, 0.06)";
-              } else if (index === 2) {
-                IconComponent = CheckSquare;
-                iconColor = "#4F7A4A";
-                iconBg = "rgba(79, 122, 74, 0.06)";
-              } else if (index === 3) {
-                IconComponent = AlertTriangle;
-                iconColor = "#C07B4A";
-                iconBg = "rgba(192, 123, 74, 0.06)";
-              } else if (index === 4 || index === 5) {
-                IconComponent = TrendingUp;
-                iconColor = index === 4 ? C.primary : "#4F7A4A";
-                iconBg = index === 4 ? "rgba(138, 74, 32, 0.06)" : "rgba(79, 122, 74, 0.06)";
-              }
-
-              return (
-                <div key={k.label} style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: 16, padding: "16px 18px", display: "flex", justifyContent: "space-between", alignItems: "center", boxShadow: "0 2px 10px rgba(42,26,12,0.015)" }}>
-                  <div>
-                    <p style={{ fontFamily: font, fontSize: 11, fontWeight: 700, color: C.textSecondary, margin: "0 0 6px", textTransform: "uppercase", letterSpacing: "0.05em" }}>{k.label}</p>
-                    <span style={{ fontFamily: font, fontSize: 20, fontWeight: 800, color: C.textPrimary, lineHeight: 1 }}>
-                      {isSecret ? "••••••" : k.value}
-                      {!isSecret && k.unit && <span style={{ fontSize: 12, fontWeight: 500, color: C.textSecondary, marginLeft: 4 }}>{k.unit}</span>}
-                    </span>
-                    {k.hint && <p style={{ fontFamily: font, fontSize: 11, color: C.textSecondary, margin: "4px 0 0" }}>{isSecret ? "••••" : `${k.hint}${index === 5 ? ` · ${dbKpis?.periodLabel ?? "kỳ hiện tại"}` : ""}`}</p>}
-                    {index === 4 && <p style={{ fontFamily: font, fontSize: 11, color: C.textSecondary, margin: "4px 0 0" }}>{dbKpis?.periodLabel ?? "Tháng hiện tại"}</p>}
-                  </div>
-                  <div style={{ width: 36, height: 36, borderRadius: 10, background: iconBg, display: "flex", alignItems: "center", justifyContent: "center", color: iconColor }}>
-                    <IconComponent size={18} />
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+          <DueInvoicesPanel invoices={reminderInvoices} onOpenInvoice={openInvoice} onViewAll={toInvoices} />
 
           {/* Room operations */}
-          <div style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: 16, padding: "20px 22px", marginBottom: 28, boxShadow: "0 2px 10px rgba(42,26,12,0.015)" }}>
+          <div style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: 16, padding: "20px 22px", marginBottom: 28, boxShadow: shadow.sm }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
               <h2 style={{ fontFamily: font, fontSize: 17, fontWeight: 800, color: C.textPrimary, margin: 0 }}>Tình trạng phòng</h2>
               <button onClick={toRooms} style={{ fontFamily: font, fontSize: 13, fontWeight: 700, color: C.primary, background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: 4 }}>Xem tất cả phòng <ChevronRight size={15} /></button>
@@ -503,7 +388,7 @@ export function ChuTroDashboardPage() {
                 </thead>
                 <tbody>
                   {displayRooms.map((r, i) => (
-                    <tr key={i} style={{ borderTop: `1px solid ${C.border}`, background: i % 2 ? "rgba(247,239,226,0.2)" : C.white }}>
+                    <tr key={i} style={{ borderTop: `1px solid ${C.border}`, background: i % 2 ? C.bg : C.white }}>
                       <td style={{ fontFamily: font, fontSize: 13.5, fontWeight: 800, color: C.textPrimary, padding: "13px 14px" }}>{r.code}</td>
                       <td style={{ fontFamily: font, fontSize: 13.5, color: C.textSecondary, padding: "13px 14px" }}>{r.property}</td>
                       <td style={{ padding: "13px 14px" }}><StatusChip status={r.status} /></td>
@@ -534,7 +419,7 @@ export function ChuTroDashboardPage() {
             </div>
           ) : (
             <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-              {displayListings.map((l, i) => <ListingRow key={i} l={l} onClick={toListings} />)}
+              {displayListings.map(l => <ListingRow key={l.id} l={l} onClick={toListings} onView={() => viewListing(l.id)} onEdit={() => editListing(l.id)} />)}
             </div>
           )}
 
@@ -542,14 +427,15 @@ export function ChuTroDashboardPage() {
         </main>
 
         {/* RIGHT COLUMN */}
-        <aside style={{ width: 300, flexShrink: 0, display: "flex", flexDirection: "column", gap: 14, paddingTop: 2 }}>
+        {/* Máy tính bảng: cột phụ 300px làm hẹp cột chính — chỉ hiện từ desktop. */}
+        {!isTablet && <aside style={{ width: 300, flexShrink: 0, display: "flex", flexDirection: "column", gap: 14, paddingTop: 2 }}>
           <span style={{ fontFamily: font, fontSize: 12.5, fontWeight: 800, color: C.textSecondary, textTransform: "uppercase", letterSpacing: "0.05em" }}>Công cụ quản lý</span>
           <UtilityCard
             title="Khu trọ & Phòng"
             desc="Quản lý số phòng, danh sách khu trọ và trạng thái từng phòng."
             cta="Quản lý"
             onClick={toRooms}
-            color="#4F7A4A"
+            color={C.available}
             bgImage="/assets/card_house_icon.png"
           />
           <UtilityCard
@@ -557,15 +443,15 @@ export function ChuTroDashboardPage() {
             desc="Theo dõi các tin cho thuê đang hiển thị cho người thuê."
             cta="Chi tiết"
             onClick={toListings}
-            color="#C99B65"
+            color={C.secondary}
             bgImage="/assets/card_listing_icon.png"
           />
           <UtilityCard
             title="Thanh toán & Điện nước"
             desc="Theo dõi hóa đơn kỳ này và số tiền đang chờ thu."
             cta="Thu tiền"
-            onClick={() => navigate("/chu-tro/hoa-don")}
-            color="#C8861A"
+            onClick={toInvoices}
+            color={C.warning}
             bgImage="/assets/card_payment_icon.png"
           />
           <UtilityCard
@@ -573,17 +459,12 @@ export function ChuTroDashboardPage() {
             desc="Liên hệ đội ngũ Trọ Nhanh khi cần trợ giúp."
             cta="Gửi ngay"
             onClick={() => { window.location.href = SUPPORT_EMAIL_HREF; }}
-            color="#6B8E5A"
+            color={C.available}
             bgImage="/assets/card_support_icon.png"
           />
-        </aside>
+        </aside>}
       </div>
       {Modals}
-      {toast && (
-        <div style={{ position: "fixed", top: 20, right: 20, zIndex: 1000 }}>
-          <Toast message={toast.message} variant={toast.variant} onClose={() => setToast(null)} />
-        </div>
-      )}
     </LandlordShell>
   );
 }

@@ -212,6 +212,9 @@ export interface RoomEditable {
  *
  * An toàn khi select trực tiếp: policy `rooms` là `for all using (auth.uid() =
  * owner_id)`, nên phòng của người khác trả về rỗng chứ không lộ dữ liệu.
+ *
+ * @returns `null` khi không có phòng (đã xóa / không thuộc mình). NÉM lỗi khi
+ * truy vấn thất bại — caller phải phân biệt hai trường hợp này.
  */
 export async function getRoomById(roomId: string): Promise<RoomEditable | null> {
   if (!roomId) return null;
@@ -241,8 +244,10 @@ export async function getRoomById(roomId: string): Promise<RoomEditable | null> 
       serviceFee: data.service_fee ?? null,
     };
   } catch (err) {
+    // Ném lỗi chứ không trả `null`: `null` nghĩa là "phòng không tồn tại / đã
+    // xóa". Gộp lỗi mạng vào đó làm UI báo nhầm "Không tìm thấy phòng này".
     logError("room-service.getRoomById", err);
-    return null;
+    throw err;
   }
 }
 

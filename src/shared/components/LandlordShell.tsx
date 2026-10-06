@@ -1,12 +1,14 @@
 import { useState, useMemo, createContext, useContext, ReactNode, Children, isValidElement, cloneElement, ReactElement } from "react";
-import { useLocation } from "react-router";
+import { useLocation, useNavigate } from "react-router";
 import { ChevronRight, Lock } from "lucide-react";
 import { C, font } from "../theme";
 import { useBreakpoint } from "./useBreakpoint";
 import { useSubscriptionContext } from "../contexts/SubscriptionContext";
+import { TRIAL_DAYS } from "../services/subscription-service";
 import { SubscriptionBanner } from "./landlord/SubscriptionBanner";
-import { Sidebar, MobileHeader, MobileTabBar, type LandlordNavId } from "./landlord/SidebarNav";
+import { Sidebar, MobileHeader, MobileTabBar, SAAS_NAV_IDS, ROOM_PAGE_TABS, type LandlordNavId } from "./landlord/SidebarNav";
 import { TrialRegisterModal } from "./landlord/TrialModal";
+import { Button, Skeleton } from "./common";
 
 export type { LandlordNavId };
 
@@ -59,15 +61,18 @@ export function LandlordShell({
 }) {
   const { isMobile } = useBreakpoint();
   const location = useLocation();
-  const { status: subStatus, trialDaysLeft, activateTrial } = useSubscriptionContext();
+  const navigate = useNavigate();
+  const { status: subStatus, trialDaysLeft, activateTrial, isLoading: isSubscriptionLoading } = useSubscriptionContext();
 
   const [showTrialRegister, setShowTrialRegister] = useState(false);
 
   const activeTab = useMemo(() => {
     try {
       const params = new URLSearchParams(location.search);
-      const tab = params.get("tab");
-      if (tab) return tab as LandlordNavId;
+      // Chỉ nhận tab hợp lệ của trang quản lý phòng; giá trị lạ thì giữ `active`
+      // (trước đây ép kiểu thẳng ⇒ menu không sáng mục nào và bỏ qua màn khóa).
+      const tab = params.get("tab") as LandlordNavId | null;
+      if (tab && ROOM_PAGE_TABS.includes(tab)) return tab;
     } catch {
       // ignore search param parse failure
     }
@@ -91,10 +96,17 @@ export function LandlordShell({
   // năng miễn phí nào — nó thuần là module SaaS. Để dashboard mở tự do thì
   // người chưa có gói vào chỉ thấy một trang số liệu rỗng, không hiểu vì sao;
   // màn khóa dưới đây giải thích và mời dùng thử.
-  const isSaaSTab = ["overview", "rooms", "occupants", "payments", "settings"].includes(activeTab);
+  const isSaaSTab = SAAS_NAV_IDS.includes(activeTab);
   const isSaaSBlocked = subStatus === "NONE" && isSaaSTab;
 
   const renderContent = () => {
+    // Đang tải gói: status tạm là "NONE" ⇒ nếu không chờ, người ĐÃ có gói thấy
+    // màn khóa nháy lên mỗi lần tải lại trang.
+    if (isSaaSTab && isSubscriptionLoading) {
+      return (
+        <Skeleton data-testid="landlord-shell-loading" variant="row" count={6} style={{ padding: "24px 0" }} />
+      );
+    }
     if (isSaaSBlocked) {
       return (
         <div
@@ -144,25 +156,12 @@ export function LandlordShell({
             }}
           >
             Quản lý khu trọ, ghi nhận chỉ số điện nước, và tự động tạo hóa đơn thanh toán qua VietQR.
-            Đăng ký dùng thử 30 ngày hoàn toàn miễn phí ngay!
+            Đăng ký dùng thử {TRIAL_DAYS} ngày hoàn toàn miễn phí ngay!
           </p>
-          <button
-            onClick={handleSaaSAccess}
-            style={{
-              padding: "12px 24px",
-              background: C.primary,
-              color: C.white,
-              border: "none",
-              borderRadius: 12,
-              fontFamily: font,
-              fontSize: 14,
-              fontWeight: 700,
-              cursor: "pointer",
-              boxShadow: "0 4px 16px rgba(138,106,69,0.3)",
-            }}
-          >
-            Bắt đầu dùng thử miễn phí
-          </button>
+          <div style={{ display: "flex", gap: 10, flexWrap: "wrap", justifyContent: "center" }}>
+            <Button variant="primary" onClick={handleSaaSAccess} data-testid="paywall-trial-btn">Bắt đầu dùng thử miễn phí</Button>
+            <Button variant="outline" onClick={() => navigate("/chu-tro/goi-dich-vu")} data-testid="paywall-plans-btn">Xem các gói</Button>
+          </div>
         </div>
       );
     }
@@ -173,10 +172,11 @@ export function LandlordShell({
     return (
       <LandlordShellContext.Provider value={{ subStatus, activeTab }}>
         <div style={{ background: C.bg, minHeight: "100vh", display: "flex", flexDirection: "column" }}>
-          <MobileHeader title={mobileTitle} />
+          <MobileHeader title={mobileTitle} onBack={activeTab === "overview" ? undefined : () => navigate("/chu-tro")} />
           <SubscriptionBanner
             status={subStatus}
             trialDaysLeft={trialDaysLeft}
+            onUpgrade={activeTab === "plans" ? undefined : () => navigate("/chu-tro/goi-dich-vu")}
           />
           <div style={{ flex: 1, overflowY: "auto" }}>{renderContent()}</div>
           <MobileTabBar active={activeTab} onSaaSAccess={handleSaaSAccess} />
@@ -201,6 +201,7 @@ export function LandlordShell({
           <SubscriptionBanner
             status={subStatus}
             trialDaysLeft={trialDaysLeft}
+            onUpgrade={activeTab === "plans" ? undefined : () => navigate("/chu-tro/goi-dich-vu")}
           />
           <main style={{ flex: 1, overflowY: "auto" }}>{renderContent()}</main>
         </div>

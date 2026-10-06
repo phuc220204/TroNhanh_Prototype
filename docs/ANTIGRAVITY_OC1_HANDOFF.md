@@ -1,5 +1,14 @@
 # Bàn giao OC1 cho Antigravity — Trọ Nhanh
 
+> **Cập nhật 06/10/2026 — thay thế các bước về biến `VITE_*` của Boost bên dưới.**
+> Frontend không còn đọc `VITE_ENABLE_BOOST_CHECKOUT`, `VITE_PAYOS_TEST_MODE`,
+> `VITE_PAYOS_TEST_SELLER_ID` (có thể xóa trên Vercel). Trang đăng tin và Quản lý
+> tin hỏi Edge Function `payos-boost-packages`; **bật/tắt Boost cho toàn hệ thống
+> chỉ bằng secret Supabase `PAYOS_CHECKOUT_ENABLED`** (`true`/khác `true`), không
+> cần build lại frontend. Chế độ test (allowlist seller, CORS localhost) đã bị gỡ.
+> Link payOS hết hạn sau 15 phút; đơn chưa trả khác gói/giá hoặc quá 10 phút tự
+> chuyển `CANCELLED` và được thay bằng đơn mới (tiền trả vào đơn cũ vẫn được ghi nhận).
+
 Cập nhật: 29/09/2026. Repo: `C:\Users\Admin\Desktop\Tronhanh-prototype\TroNhanh_Prototype`, nhánh `codex/fix-oc1-market-ready`. Báo cáo gốc: `C:\Users\Admin\.codex\attachments\85c854a8-b7fb-45c3-89cb-3f0b590a4b10\Văn bản đã dán.txt`. Goal objective: `C:\Users\Admin\.codex\attachments\95a395dc-9a3c-4cf7-8fbc-f2f52b6bae2b\goal-objective.md`.
 
 ## Cập nhật bắt buộc đọc trước — 29/09/2026

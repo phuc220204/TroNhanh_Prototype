@@ -23,6 +23,7 @@ import {
   PROPERTY_TYPES,
 } from "../../../shared/constants/catalog";
 import { SaveListingButton } from "../../components/SaveListingButton";
+import { FEATURED_CARD_BORDER, ListingPostedTime, ListingTag } from "../../components/ListingCardMeta";
 import {
   getActiveSearchChips,
   type SearchFilters,
@@ -101,6 +102,7 @@ function SearchButton({
 
 export function SearchRoomCard({ room, mobile, onClick }: { room: SearchRoom; mobile?: boolean; onClick?: () => void }) {
   const [isHovered, setIsHovered] = useState(false);
+  const isFeatured = room.badge === "featured";
   return (
     <div
       onClick={onClick}
@@ -115,7 +117,7 @@ export function SearchRoomCard({ room, mobile, onClick }: { room: SearchRoom; mo
       onMouseLeave={() => setIsHovered(false)}
       style={{
         background: C.white,
-        border: `1px solid ${isHovered ? C.sand : C.border}`,
+        border: `${isFeatured ? 1.5 : 1}px solid ${isFeatured ? FEATURED_CARD_BORDER : isHovered ? C.sand : C.border}`,
         borderRadius: 14,
         overflow: "hidden",
         boxShadow: isHovered ? "0 8px 24px rgba(92,70,50,0.14)" : "0 2px 10px rgba(92,70,50,0.07)",
@@ -130,11 +132,7 @@ export function SearchRoomCard({ room, mobile, onClick }: { room: SearchRoom; mo
         <img src={room.img} alt={room.title} style={{ width: "100%", height: mobile ? 140 : 172, objectFit: "cover", display: "block" }} />
         <SaveListingButton listingId={room.id} overlay size={16} />
         <span style={{ position: "absolute", top: 10, left: 10, background: C.available, color: C.white, fontFamily: font, fontSize: 11, fontWeight: 700, borderRadius: 999, padding: "3px 10px" }}>Trống</span>
-        {room.badge && (
-          <span style={{ position: "absolute", bottom: 10, left: 10, background: C.repairing, color: C.white, fontFamily: font, fontSize: 10, fontWeight: 700, borderRadius: 6, padding: "2px 8px", display: "inline-flex", alignItems: "center", gap: 3 }}>
-            {room.badge}
-          </span>
-        )}
+        <ListingTag badge={room.badge} style={{ position: "absolute", bottom: 10, left: 10 }} />
       </div>
       <div style={{ padding: "12px 14px 14px", display: "flex", flexDirection: "column", flex: 1, minWidth: 0 }}>
         <p style={{ fontFamily: font, fontSize: 14, fontWeight: 600, color: C.textPrimary, margin: "0 0 5px", lineHeight: 1.45, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>{room.title}</p>
@@ -145,6 +143,7 @@ export function SearchRoomCard({ room, mobile, onClick }: { room: SearchRoom; mo
           <MapPin size={12} color={C.textSecondary} />
           <span style={{ fontFamily: font, fontSize: 12, color: C.textSecondary }}>{room.area} m² · {room.loc}</span>
         </div>
+        <ListingPostedTime postedAt={room.postedAt} style={{ marginTop: -6, marginBottom: 10 }} />
         <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: "auto" }}>
           {room.amenities.slice(0, 3).map((amenity) => {
             const meta = AMENITY_META[amenity];

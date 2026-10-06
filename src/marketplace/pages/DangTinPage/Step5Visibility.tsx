@@ -1,46 +1,26 @@
-import { useCallback, useEffect, useState } from "react";
 import { CircleCheck, LoaderCircle, Sparkles, Star } from "lucide-react";
 import { C, font } from "../../../shared/theme";
-import { formatBoostVnd, getBoostPackages, type BoostPackage } from "../../services/boost-payment-service";
+import { formatBoostVnd } from "../../services/boost-payment-service";
+import type { BoostAvailability } from "../../hooks/useBoostAvailability";
 
 interface Step5VisibilityProps {
-  boostAvailable: boolean;
-  isTestMode: boolean;
+  boost: BoostAvailability;
   selectedBoostDays: number | null;
   onSelectBoostDays: (days: number | null) => void;
 }
 
 export function Step5Visibility({
-  boostAvailable,
-  isTestMode,
+  boost,
   selectedBoostDays,
   onSelectBoostDays,
 }: Step5VisibilityProps) {
-  const [packages, setPackages] = useState<BoostPackage[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [loadError, setLoadError] = useState(false);
+  const { packages, isPending: loading, hasLoadError: loadError, retry } = boost;
+  // Hiện thẻ Boost khi server đang mở (có gói), đang tải, hoặc tải lỗi (để thử lại).
+  // Server chủ động tắt Boost ⇒ không có gói, không lỗi ⇒ chỉ còn tin thường.
+  const boostAvailable = boost.isBoostAvailable || loading || loadError;
 
-  const loadPackages = useCallback(async () => {
-    setLoading(true);
-    setLoadError(false);
-    try {
-      setPackages(await getBoostPackages());
-    } catch {
-      setPackages([]);
-      setLoadError(true);
-      onSelectBoostDays(null);
-    } finally {
-      setLoading(false);
-    }
-  }, [onSelectBoostDays]);
-
-  useEffect(() => {
-    if (boostAvailable) void loadPackages();
-  }, [boostAvailable, loadPackages]);
-
-  // A Draft can remember a previous Boost choice. It is not a selectable plan
-  // when the current seller is outside the backend's test allowlist.
-  const activeBoostDays = boostAvailable ? selectedBoostDays : null;
+  // Bản nháp có thể còn nhớ lựa chọn Boost cũ; chỉ tính khi gói đó còn bán.
+  const activeBoostDays = packages.some((item) => item.days === selectedBoostDays) ? selectedBoostDays : null;
   const selectedBoostPackage = packages.find((item) => item.days === activeBoostDays);
 
   return (
@@ -105,7 +85,7 @@ export function Step5Visibility({
                 <Sparkles size={17} color={C.primary} /> Tin nổi bật với Boost
               </span>
               <span style={{ display: "block", color: C.textSecondary, fontSize: 13.5, lineHeight: 1.5, marginTop: 4 }}>
-                Thanh toán ngay sau khi gửi tin. Nếu thanh toán thành công, Boost sẽ bắt đầu khi moderator duyệt tin.
+                Tin được xếp lên đầu danh sách tìm kiếm và trang chủ, có nhãn "Nổi bật". Thanh toán qua payOS ngay sau khi gửi tin.
               </span>
             </span>
           </button>
@@ -119,7 +99,7 @@ export function Step5Visibility({
           {!loading && loadError ? (
             <div role="alert" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, color: C.error, font: `13px ${font}` }}>
               <span>Chưa tải được giá các gói. Tin thường vẫn có thể đăng bình thường.</span>
-              <button type="button" onClick={() => void loadPackages()} style={{ border: 0, background: "none", color: C.primary, font: `700 13px ${font}`, cursor: "pointer", whiteSpace: "nowrap" }}>Thử lại</button>
+              <button type="button" onClick={retry} style={{ border: 0, background: "none", color: C.primary, font: `700 13px ${font}`, cursor: "pointer", whiteSpace: "nowrap" }}>Thử lại</button>
             </div>
           ) : null}
 
@@ -147,13 +127,13 @@ export function Step5Visibility({
 
           {selectedBoostPackage ? (
             <p data-testid="listing-boost-immediate-payment" style={{ margin: 0, padding: 11, borderRadius: 9, background: C.cream, color: C.textSecondary, font: `12.5px/1.55 ${font}` }}>
-              Đã chọn gói {selectedBoostPackage.days} ngày ({formatBoostVnd(selectedBoostPackage.amount)} đ). {isTestMode ? "Đang trong đợt kiểm thử giới hạn. " : ""}Bấm gửi tin sẽ lưu tin rồi chuyển ngay đến payOS. Tin vẫn ở trạng thái chờ duyệt; thời hạn Boost chỉ tính từ lúc được duyệt.
+              Đã chọn gói {selectedBoostPackage.days} ngày ({formatBoostVnd(selectedBoostPackage.amount)} đ). Bấm gửi tin sẽ lưu tin rồi chuyển ngay đến payOS. Nếu tin cần duyệt, thời hạn Boost tính từ lúc tin được duyệt; nếu tin hiển thị ngay, Boost bắt đầu ngay sau khi thanh toán.
             </p>
           ) : null}
         </div>
       ) : (
         <p style={{ margin: 0, padding: 14, borderRadius: 10, background: C.cream, color: C.textSecondary, font: `13px/1.55 ${font}` }}>
-          Gói nổi bật hiện chưa mở cho tài khoản này. Bạn vẫn có thể đăng tin thường miễn phí.
+          Gói nổi bật đang tạm đóng. Bạn vẫn có thể đăng tin thường miễn phí.
         </p>
       )}
     </section>

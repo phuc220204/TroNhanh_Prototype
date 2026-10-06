@@ -5,11 +5,18 @@ import {
   LISTING_META,
   INVOICE_STATUS_META,
   CONTRACT_STATUS_META,
+  LINK_STATUS_META,
+  normalizeRoomStatus,
+  normalizeInvoiceStatus,
+  normalizeContractStatus,
+  normalizeLinkStatus,
 } from "../../utils/statusMaps";
+import { toListingStatus } from "../../types/status";
 
 export interface BadgeProps {
   status: string;
-  kind?: "room" | "listing" | "invoice" | "contract";
+  /** Nhận cả giá trị DB ("Rented", "PartiallyPaid") lẫn khóa META ("rented"). */
+  kind?: "room" | "listing" | "invoice" | "contract" | "link";
   style?: React.CSSProperties;
   "data-testid"?: string;
 }
@@ -24,34 +31,16 @@ export function Badge({
   let color = C.textSecondary;
   let bg = C.cream;
 
-  if (kind === "room") {
-    const meta = ROOM_STATUS_META[status as keyof typeof ROOM_STATUS_META];
-    if (meta) {
-      label = meta.label;
-      color = C.white;
-      bg = meta.color;
-    }
-  } else if (kind === "listing") {
-    const meta = LISTING_META[status as keyof typeof LISTING_META];
-    if (meta) {
-      label = meta.label;
-      color = meta.color;
-      bg = meta.bg;
-    }
-  } else if (kind === "invoice") {
-    const meta = INVOICE_STATUS_META[status as keyof typeof INVOICE_STATUS_META];
-    if (meta) {
-      label = meta.label;
-      color = meta.color;
-      bg = meta.bg;
-    }
-  } else if (kind === "contract") {
-    const meta = CONTRACT_STATUS_META[status as keyof typeof CONTRACT_STATUS_META];
-    if (meta) {
-      label = meta.label;
-      color = C.white;
-      bg = meta.color;
-    }
+  const meta =
+    kind === "room" ? ROOM_STATUS_META[normalizeRoomStatus(status) ?? ("" as never)]
+    : kind === "listing" ? LISTING_META[toListingStatus(status)]
+    : kind === "invoice" ? INVOICE_STATUS_META[normalizeInvoiceStatus(status) ?? ("" as never)]
+    : kind === "contract" ? CONTRACT_STATUS_META[normalizeContractStatus(status) ?? ("" as never)]
+    : LINK_STATUS_META[normalizeLinkStatus(status)];
+  if (meta) {
+    label = meta.label;
+    color = meta.color;
+    bg = meta.bg;
   }
 
   return (

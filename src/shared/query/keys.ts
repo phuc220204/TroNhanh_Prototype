@@ -81,6 +81,8 @@ export const qk = {
   rooms: {
     all: ["rooms"] as const,
     byProperty: (propertyId: string) => ["rooms", "property", propertyId] as const,
+    /** Mọi phòng của chủ trọ kèm hợp đồng/hóa đơn — màn /chu-tro/quan-ly-phong. */
+    mine: (ownerId: string | undefined) => ["rooms", "mine", ownerId] as const,
     detail: (id: string) => ["rooms", "detail", id] as const,
     vacant: (ownerId: string | undefined) => ["rooms", "vacant", ownerId] as const,
   },
@@ -108,10 +110,20 @@ export const qk = {
     /** Các kỳ thật sự có hóa đơn — dựng dropdown lọc kỳ ở /chu-tro/hoa-don. */
     periods: (ownerId: string | undefined) => ["billing", "periods", ownerId] as const,
     invoiceDetail: (id: string) => ["billing", "invoice", id] as const,
+    /** Nhật ký thu tiền của một hóa đơn (lý do chưa thu được + ngày hẹn). */
+    collectionNotes: (invoiceId: string) => ["billing", "collectionNotes", invoiceId] as const,
+  },
+
+  boost: {
+    /** Gói Boost + giá từ server. Lỗi PAYMENT_NOT_AVAILABLE = Boost đang tắt toàn hệ thống. */
+    packages: (userId: string | undefined) => ["boost", "packages", userId] as const,
   },
 
   dashboard: {
     summary: (ownerId: string | undefined) => ["dashboard", "summary", ownerId] as const,
+    /** KPI theo khu. Nằm dưới `summary(ownerId)` ⇒ invalidate summary là làm mới mọi khu. */
+    metrics: (ownerId: string | undefined, propertyId?: string) =>
+      ["dashboard", "summary", ownerId, "metrics", propertyId ?? "all"] as const,
   },
 
   // ── Shared kernel ─────────────────────────────────────────────────────────
@@ -124,6 +136,11 @@ export const qk = {
   },
 
   subscription: (userId: string | undefined) => ["subscription", userId] as const,
+  saasPlans: {
+    list: ["saasPlans", "list"] as const,
+    /** Gói đã từng trả tiền ⇒ hiển thị giá gia hạn. */
+    paidPlanIds: (userId: string | undefined) => ["saasPlans", "paid", userId] as const,
+  },
 
   profile: (userId: string | undefined) => ["profile", userId] as const,
   roles: (userId: string | undefined) => ["roles", userId] as const,

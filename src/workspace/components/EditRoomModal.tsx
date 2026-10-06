@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { C, font, radius } from "../../shared/theme";
 import { ModalShell } from "../../shared/components/common/ModalShell";
-import { Button } from "../../shared/components/common";
+import { Button, Skeleton } from "../../shared/components/common";
 import { Field } from "../../shared/components/common/FormField";
 import { toUserMessage } from "../../shared/services/supabase-error";
 import { useCanWrite, useWriteBlockReason } from "../../shared/contexts/SubscriptionContext";
@@ -12,7 +12,7 @@ const STATUS_OPTIONS: Array<{ value: RoomStatusDb; label: string }> = [
   { value: "Available", label: "Trống" },
   { value: "Deposited", label: "Đã cọc" },
   { value: "Rented", label: "Đang thuê" },
-  { value: "Hidden", label: "Đang ẩn / bảo trì" },
+  { value: "Hidden", label: "Đã ẩn" },
 ];
 
 /** Đơn giá của KHU — chỉ để hiển thị "bỏ trống thì phòng dùng số này". */
@@ -58,6 +58,10 @@ export function EditRoomModal({ roomId, propertyPrices, onClose, onUpdated }: Ed
 
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
+  // Lỗi tải (mạng, quyền…) KHÁC "không tìm thấy": phòng vẫn còn, chỉ là chưa đọc
+  // được — phải cho thử lại thay vì báo phòng đã bị xóa.
+  const [loadError, setLoadError] = useState("");
+  const [reloadToken, setReloadToken] = useState(0);
   const [code, setCode] = useState("");
   const [floor, setFloor] = useState("");
   const [area, setArea] = useState("");
@@ -77,7 +81,17 @@ export function EditRoomModal({ roomId, propertyPrices, onClose, onUpdated }: Ed
 
     const load = async () => {
       setLoading(true);
-      const room = await getRoomById(roomId);
+      setLoadError("");
+      setNotFound(false);
+      let room: Awaited<ReturnType<typeof getRoomById>>;
+      try {
+        room = await getRoomById(roomId);
+      } catch (err: unknown) {
+        if (cancelled) return;
+        setLoadError(toUserMessage(err));
+        setLoading(false);
+        return;
+      }
       if (cancelled) return;
 
       if (!room) {
@@ -105,7 +119,7 @@ export function EditRoomModal({ roomId, propertyPrices, onClose, onUpdated }: Ed
 
     void load();
     return () => { cancelled = true; };
-  }, [roomId]);
+  }, [roomId, reloadToken]);
 
   const handleSubmit = async () => {
     if (!canWrite) return;
@@ -155,8 +169,8 @@ export function EditRoomModal({ roomId, propertyPrices, onClose, onUpdated }: Ed
     value === undefined ? "Để trống = theo khu" : `Để trống = theo khu (${value.toLocaleString("vi-VN")}${unit})`;
 
   const bannerStyle = {
-    background: C.white,
-    border: `1px solid ${C.error}`,
+    background: C.errorBg,
+    border: `1px solid ${C.errorBorder}`,
     color: C.error,
     padding: "10px 14px",
     borderRadius: radius.sm,
@@ -176,7 +190,7 @@ export function EditRoomModal({ roomId, propertyPrices, onClose, onUpdated }: Ed
           <Button
             variant="primary"
             requiresWrite
-            disabled={loading || notFound}
+            disabled={loading || notFound || loadError !== ""}
             loading={submitting}
             onClick={handleSubmit}
             data-testid="edit-room-save-btn"
@@ -187,16 +201,23 @@ export function EditRoomModal({ roomId, propertyPrices, onClose, onUpdated }: Ed
       }
     >
       {!canWrite && (
-        <div data-testid="edit-room-readonly-banner" style={bannerStyle}>⚠️ {blockReason}</div>
+        <div data-testid="edit-room-readonly-banner" style={bannerStyle}>{blockReason}</div>
       )}
       {errorMsg && (
         <div data-testid="edit-room-form-error" style={bannerStyle}>{errorMsg}</div>
       )}
 
       {loading ? (
-        <p style={{ fontFamily: font, fontSize: 14, color: C.textSecondary, textAlign: "center", padding: "24px 0", margin: 0 }}>
-          Đang tải thông tin phòng...
-        </p>
+        <Skeleton variant="row" count={4} label="Đang tải thông tin phòng" style={{ padding: "8px 0" }} />
+      ) : loadError ? (
+        <div data-testid="edit-room-load-error" style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 12, padding: "24px 0", textAlign: "center" }}>
+          <p style={{ fontFamily: font, fontSize: 14, color: C.error, margin: 0, lineHeight: 1.5 }}>
+            Không tải được thông tin phòng. {loadError}
+          </p>
+          <Button variant="outline" size="sm" onClick={() => setReloadToken((n) => n + 1)} data-testid="edit-room-retry-btn">
+            Thử lại
+          </Button>
+        </div>
       ) : notFound ? (
         <p data-testid="edit-room-not-found" style={{ fontFamily: font, fontSize: 14, color: C.textSecondary, textAlign: "center", padding: "24px 0", margin: 0 }}>
           Không tìm thấy phòng này. Có thể phòng đã bị xóa ở một tab khác.

@@ -3,11 +3,9 @@ import { createClient } from "npm:@supabase/supabase-js@2.110.0";
 type Action = "send" | "verify";
 type RpcResult = { ok: boolean; reason?: string; retry_after?: number };
 
-const DEFAULT_ORIGINS = [
-  "https://tronhanh.vercel.app",
-  "http://localhost:5173",
-  "http://127.0.0.1:5173",
-];
+// Chỉ origin production. Môi trường khác khai báo qua secret
+// PHONE_VERIFICATION_ALLOWED_ORIGINS (danh sách phân tách bằng dấu phẩy).
+const DEFAULT_ORIGINS = ["https://tronhanh.vercel.app"];
 
 function json(body: object, status: number, origin: string) {
   return new Response(JSON.stringify(body), {

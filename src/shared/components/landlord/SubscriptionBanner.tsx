@@ -12,7 +12,7 @@ export function SubscriptionBanner({ status, trialDaysLeft, onUpgrade }: Subscri
     return (
       <div
         style={{
-          background: "#FEF6EC",
+          background: C.cream,
           borderBottom: `1px solid ${C.border}`,
           padding: "10px 20px",
           display: "flex",
@@ -22,7 +22,7 @@ export function SubscriptionBanner({ status, trialDaysLeft, onUpgrade }: Subscri
         }}
       >
         <p style={{ fontFamily: font, fontSize: 13, color: C.primary, margin: 0, fontWeight: 700 }}>
-          ⚡ Bạn đang sử dụng bản dùng thử SaaS. Còn {trialDaysLeft} ngày dùng thử.
+          Bạn đang dùng thử gói Quản lý vận hành — còn {trialDaysLeft} ngày.
         </p>
         {onUpgrade && <button
           onClick={onUpgrade}
@@ -48,8 +48,8 @@ export function SubscriptionBanner({ status, trialDaysLeft, onUpgrade }: Subscri
     return (
       <div
         style={{
-          background: "#FCECEC",
-          borderBottom: `1px solid #FFEBEB`,
+          background: C.errorBg,
+          borderBottom: `1px solid ${C.errorBorder}`,
           padding: "10px 20px",
           display: "flex",
           alignItems: "center",
@@ -58,7 +58,7 @@ export function SubscriptionBanner({ status, trialDaysLeft, onUpgrade }: Subscri
         }}
       >
         <p style={{ fontFamily: font, fontSize: 13, color: C.repairing, margin: 0, fontWeight: 700 }}>
-          ⚠️ Gói dịch vụ đã hết hạn. Hệ thống đang ở chế độ Chỉ đọc (Read-Only). Bạn không thể thực hiện lưu/xóa dữ liệu.
+          Gói dịch vụ đã hết hạn — đang ở chế độ chỉ xem. Dữ liệu của bạn vẫn được giữ nguyên; gia hạn để tiếp tục thêm, sửa.
         </p>
         {onUpgrade && <button
           onClick={onUpgrade}

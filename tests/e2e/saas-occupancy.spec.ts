@@ -33,8 +33,8 @@ async function bestEffortCleanup(
       const occupantRow = page.getByRole("row").filter({ hasText: targetOccupantName });
       const endButton = occupantRow.getByTestId("end-contract-btn");
       if (await endButton.isVisible().catch(() => false)) {
-        page.once("dialog", (dialog) => dialog.accept());
         await endButton.click();
+        await page.getByTestId("confirm-end-contract-btn").click();
         await expect(page.getByTestId("occupancy-toast")).toContainText("Đã kết thúc hợp đồng");
       }
     }
@@ -82,7 +82,7 @@ test("tạo phòng, thêm khách, hiện khách trên thẻ phòng, kết thúc 
     await page.getByTestId("contract-rent-input").fill("3000000");
     await page.getByTestId("occupancy-submit-btn").click();
     await expect(page.getByTestId("occupancy-submit-btn")).toBeHidden();
-    await expect(page.getByTestId("occupancy-toast")).toContainText("Thêm người ở và tạo hợp đồng thành công");
+    await expect(page.getByTestId("occupancy-toast")).toContainText("Đã thêm người ở và tạo hợp đồng");
     await expect(page.getByText(occupantName, { exact: true })).toBeVisible();
 
     // This cross-check exercises the nested PostgREST relation used by room cards.
@@ -93,9 +93,9 @@ test("tạo phòng, thêm khách, hiện khách trên thẻ phòng, kết thúc 
 
     await go(page, "/chu-tro/quan-ly-phong?tab=occupants");
     expect(await selectProperty(page, propertyName)).toBe(true);
-    page.once("dialog", (dialog) => dialog.accept());
     await page.getByTestId("end-contract-btn").click();
-    await expect(page.getByTestId("occupancy-toast")).toContainText("Đã kết thúc hợp đồng thành công");
+    await page.getByTestId("confirm-end-contract-btn").click();
+    await expect(page.getByTestId("occupancy-toast")).toContainText("Đã kết thúc hợp đồng");
     await expect(page.getByTestId("end-contract-btn")).toHaveCount(0);
 
     await go(page, "/chu-tro/quan-ly-phong");
