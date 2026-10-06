@@ -13,6 +13,7 @@ import {
 import { C, font, shadow } from "../../../shared/theme";
 import { Badge } from "../../../shared/components/common";
 import type { RoomStatus } from "../../../shared/types/status";
+import { normalizeRoomStatus } from "../../../shared/utils/statusMaps";
 import { useCanWrite, useWriteBlockReason } from "../../../shared/contexts/SubscriptionContext";
 
 /* ══════════════════════════════════════════
@@ -165,11 +166,12 @@ export function SegmentedBar({ rooms, propertyId }: { rooms: any[]; propertyId: 
 
   const total = activeRooms.length;
 
+  const countByStatus = (status: RoomStatus) => activeRooms.filter(r => normalizeRoomStatus(r.status) === status).length;
   const data = [
-    { label: "Trống", value: activeRooms.filter(r => r.status === "Available" || r.status === "available").length, color: C.available },
-    { label: "Đã cọc", value: activeRooms.filter(r => r.status === "Deposited" || r.status === "deposited" || r.status === "Đã cọc" || r.status === "đã cọc").length, color: C.secondary },
-    { label: "Đang thuê", value: activeRooms.filter(r => r.status === "Rented" || r.status === "rented").length, color: C.rented },
-    { label: "Đã ẩn", value: activeRooms.filter(r => r.status === "Hidden" || r.status === "hidden").length, color: C.repairing },
+    { label: "Trống", value: countByStatus("available"), color: C.available },
+    { label: "Đã cọc", value: countByStatus("deposited"), color: C.secondary },
+    { label: "Đang thuê", value: countByStatus("rented"), color: C.rented },
+    { label: "Đã ẩn", value: countByStatus("hidden"), color: C.repairing },
   ];
 
   return (

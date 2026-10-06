@@ -64,8 +64,10 @@ export async function getMySubscription(userId: string | undefined): Promise<Sub
   let trialDaysLeft = 0;
 
   if (status === "TRIAL" && data.expire_date) {
-    // A date-only value expires at the end of that day, not at 00:00 UTC.
-    const exp = new Date(`${data.expire_date}T23:59:59.999Z`);
+    // Ngày hết hạn (kiểu date) hết hiệu lực vào CUỐI ngày đó theo giờ địa phương.
+    // Bản cũ dùng "T23:59:59.999Z" = 6h59 sáng hôm sau ở VN ⇒ số ngày còn lại lệch.
+    const [year, month, day] = String(data.expire_date).slice(0, 10).split("-").map(Number);
+    const exp = new Date(year!, month! - 1, day!, 23, 59, 59, 999);
     const now = new Date();
     const diffTime = exp.getTime() - now.getTime();
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));

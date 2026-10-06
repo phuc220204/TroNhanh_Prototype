@@ -12,6 +12,7 @@
  */
 import { supabase } from "../../shared/supabaseClient";
 import { withErrorHandling } from "../../shared/services/supabase-error";
+import { getDaysUntilDue } from "./invoice-due";
 
 export type UtilityType = "Electricity" | "Water";
 
@@ -167,7 +168,9 @@ export async function getRoomHistory(roomId: string): Promise<RoomHistory> {
         0,
       );
       const remaining = Math.max(0, total - paid);
-      const due = new Date(inv.due_date);
+      // `due_date` là ngày địa phương: `new Date("YYYY-MM-DD")` là 0h UTC = 7h sáng ở VN,
+      // nên hóa đơn bị tính quá hạn từ 7h sáng NGÀY đến hạn. Dùng chung logic invoice-due.
+      const daysUntilDue = inv.due_date ? getDaysUntilDue(inv.due_date, today) : null;
       return {
         id: inv.id,
         period: inv.period,
@@ -176,7 +179,7 @@ export async function getRoomHistory(roomId: string): Promise<RoomHistory> {
         paidAmount: paid,
         remaining,
         status: inv.status,
-        isOverdue: remaining > 0 && !Number.isNaN(due.getTime()) && due < today,
+        isOverdue: remaining > 0 && daysUntilDue !== null && daysUntilDue < 0,
         items: (inv.invoice_items ?? []).map((it: any) => ({
           type: it.type,
           description: it.description,
