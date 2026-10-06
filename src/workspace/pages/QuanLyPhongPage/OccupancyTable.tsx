@@ -1,6 +1,6 @@
 import { Users, UserPlus, CalendarPlus } from "lucide-react";
 import { C, font, radius } from "../../../shared/theme";
-import { Badge, Button } from "../../../shared/components/common";
+import { Badge, Button, Skeleton } from "../../../shared/components/common";
 import { formatDate, formatVnd } from "../../../shared/utils/format";
 import type { Property } from "../../types/room";
 import type { OccupancyItem } from "../../services/occupancy-service";
@@ -156,9 +156,7 @@ export function OccupancyTable({
 }: OccupancyTableProps) {
   if (loading) {
     return (
-      <p role="status" style={{ fontFamily: font, fontSize: 13.5, color: C.textSecondary, textAlign: "center", padding: "32px 0" }}>
-        Đang tải thông tin người ở...
-      </p>
+      <Skeleton variant="row" count={4} label="Đang tải thông tin người ở" style={{ padding: "16px 0" }} />
     );
   }
 

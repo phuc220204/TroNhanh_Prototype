@@ -7,7 +7,7 @@ import { useSubscriptionContext } from "../contexts/SubscriptionContext";
 import { SubscriptionBanner } from "./landlord/SubscriptionBanner";
 import { Sidebar, MobileHeader, MobileTabBar, SAAS_NAV_IDS, ROOM_PAGE_TABS, type LandlordNavId } from "./landlord/SidebarNav";
 import { TrialRegisterModal } from "./landlord/TrialModal";
-import { Button } from "./common";
+import { Button, Skeleton } from "./common";
 
 export type { LandlordNavId };
 
@@ -103,9 +103,7 @@ export function LandlordShell({
     // màn khóa nháy lên mỗi lần tải lại trang.
     if (isSaaSTab && isSubscriptionLoading) {
       return (
-        <div role="status" data-testid="landlord-shell-loading" style={{ minHeight: "calc(100vh - 160px)", display: "grid", placeItems: "center", color: C.textSecondary, fontFamily: font, fontSize: 14, fontWeight: 600 }}>
-          Đang tải...
-        </div>
+        <Skeleton data-testid="landlord-shell-loading" variant="row" count={6} style={{ padding: "24px 0" }} />
       );
     }
     if (isSaaSBlocked) {

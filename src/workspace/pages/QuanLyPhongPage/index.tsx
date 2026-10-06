@@ -12,7 +12,7 @@ import { useCanWrite } from "../../../shared/contexts/SubscriptionContext";
 import { getPropertiesByOwnerOrThrow } from "../../services/property-service";
 import { getRoomsByOwnerOrThrow } from "../../services/room-service";
 import { logError } from "../../../shared/services/supabase-error";
-import { Button } from "../../../shared/components/common";
+import { Button, Skeleton } from "../../../shared/components/common";
 import { RoomsView } from "./RoomsView";
 import { OccupantsView } from "./OccupantsView";
 import { SettingsView } from "./SettingsView";
@@ -278,9 +278,7 @@ export function QuanLyPhongPage() {
 
         {/* View Component by Tab */}
         {loading ? (
-          <p style={{ fontFamily: font, fontSize: 14, color: C.textSecondary, textAlign: "center", padding: "48px 0" }}>
-            Đang tải dữ liệu...
-          </p>
+          <Skeleton variant="row" count={6} label="Đang tải danh sách phòng" style={{ padding: "16px 0" }} />
         ) : loadError ? (
           <div role="alert" data-testid="rooms-load-error" style={{ maxWidth: 520, margin: "40px auto", padding: 24, textAlign: "center", background: C.white, border: `1px solid ${C.errorBorder}`, borderRadius: 16, fontFamily: font }}>
             <p style={{ fontSize: 15, fontWeight: 700, color: C.textPrimary, margin: "0 0 6px" }}>Chưa tải được dữ liệu khu trọ</p>

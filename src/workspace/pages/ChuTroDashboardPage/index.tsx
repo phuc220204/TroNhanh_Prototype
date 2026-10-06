@@ -9,7 +9,7 @@ import { useBreakpoint } from "../../../shared/components/useBreakpoint";
 import { LandlordShell } from "../../../shared/components/LandlordShell";
 import { formatVnd } from "../../../shared/utils/format";
 import type { RoomStatus } from "../../../shared/types/status";
-import { EmptyState, Button, Toast } from "../../../shared/components/common";
+import { EmptyState, Button, Toast, Skeleton } from "../../../shared/components/common";
 import { logError } from "../../../shared/services/supabase-error";
 import { useAuth } from "../../../shared/contexts/AuthContext";
 import { useCanWrite } from "../../../shared/contexts/SubscriptionContext";
@@ -221,7 +221,7 @@ export function ChuTroDashboardPage() {
   if (loading) {
     return (
       <LandlordShell active="overview" mobileTitle="Dashboard">
-        <div role="status" style={{ minHeight: "55vh", display: "grid", placeItems: "center", color: C.textSecondary, fontFamily: font, fontWeight: 600 }}>Đang tải dữ liệu dashboard...</div>
+        <Skeleton variant="row" count={6} label="Đang tải tổng quan" style={{ padding: "24px 0" }} />
       </LandlordShell>
     );
   }

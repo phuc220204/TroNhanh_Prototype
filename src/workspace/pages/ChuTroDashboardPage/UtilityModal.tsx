@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { C, font } from "../../../shared/theme";
 import { ModalShell } from "../../../shared/components/common/ModalShell";
+import { Skeleton } from "../../../shared/components/common";
 import { logError, toUserMessage } from "../../../shared/services/supabase-error";
 import { useCanWrite, useWriteBlockReason } from "../../../shared/contexts/SubscriptionContext";
 import { formatPeriod, formatVnd, toLocalPeriod } from "../../../shared/utils/format";
@@ -222,7 +223,7 @@ export function UtilityModal({ onClose, properties, rooms, onSaved }: {
       </div>
 
       {roomId && previous.kind === "loading" && (
-        <p role="status" style={{ fontFamily: font, fontSize: 13, color: C.textSecondary, margin: "0 0 16px" }}>Đang tải chỉ số cũ...</p>
+        <Skeleton variant="text" count={2} label="Đang tải chỉ số cũ" style={{ margin: "0 0 16px" }} />
       )}
 
       {roomId && previous.kind === "error" && (

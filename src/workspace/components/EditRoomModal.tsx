@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { C, font, radius } from "../../shared/theme";
 import { ModalShell } from "../../shared/components/common/ModalShell";
-import { Button } from "../../shared/components/common";
+import { Button, Skeleton } from "../../shared/components/common";
 import { Field } from "../../shared/components/common/FormField";
 import { toUserMessage } from "../../shared/services/supabase-error";
 import { useCanWrite, useWriteBlockReason } from "../../shared/contexts/SubscriptionContext";
@@ -208,9 +208,7 @@ export function EditRoomModal({ roomId, propertyPrices, onClose, onUpdated }: Ed
       )}
 
       {loading ? (
-        <p style={{ fontFamily: font, fontSize: 14, color: C.textSecondary, textAlign: "center", padding: "24px 0", margin: 0 }}>
-          Đang tải thông tin phòng...
-        </p>
+        <Skeleton variant="row" count={4} label="Đang tải thông tin phòng" style={{ padding: "8px 0" }} />
       ) : loadError ? (
         <div data-testid="edit-room-load-error" style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 12, padding: "24px 0", textAlign: "center" }}>
           <p style={{ fontFamily: font, fontSize: 14, color: C.error, margin: 0, lineHeight: 1.5 }}>

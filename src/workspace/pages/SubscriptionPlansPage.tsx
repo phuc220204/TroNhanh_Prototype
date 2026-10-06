@@ -193,7 +193,7 @@ export function SubscriptionPlansPage() {
             <Crown size={20} color={C.primary} />
             <div>
               <div style={{ fontSize: 14.5, fontWeight: 800, color: C.textPrimary }}>
-                {isSubscriptionLoading ? "Đang tải…" : STATUS_LABEL[status] ?? status}
+                {isSubscriptionLoading ? <Skeleton variant="text" label="Đang tải gói hiện tại" style={{ width: 160 }} /> : STATUS_LABEL[status] ?? status}
                 {currentPlan?.name && status !== "NONE" ? ` · ${currentPlan.name}` : ""}
               </div>
               {expireDate && status !== "NONE" && (
