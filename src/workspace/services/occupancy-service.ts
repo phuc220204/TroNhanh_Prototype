@@ -155,3 +155,17 @@ export async function linkRenterAccount(occupancyId: string, email: string): Pro
     throw err;
   }
 }
+
+/**
+ * Hủy yêu cầu liên kết ĐANG CHỜ (gõ nhầm email). Liên kết đã xác nhận không gỡ ở đây.
+ * Gửi lại tới email khác thì dùng `linkRenterAccount` (ghi đè, đặt lại Pending).
+ */
+export async function cancelOccupancyLink(occupancyId: string): Promise<void> {
+  try {
+    const { error } = await supabase.rpc("cancel_occupancy_link", { p_occupancy_id: occupancyId });
+    if (error) throw error;
+  } catch (err) {
+    logError("occupancy-service.cancelOccupancyLink", err);
+    throw err;
+  }
+}

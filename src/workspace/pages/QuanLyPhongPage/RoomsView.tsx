@@ -4,6 +4,7 @@ import { C, font, shadow } from "../../../shared/theme";
 import { Badge, Button } from "../../../shared/components/common";
 import type { Room, Property } from "../../types/room";
 import type { RoomStatus } from "../../../shared/types/status";
+import { RoomActions, type RoomActionType } from "./RoomActions";
 
 const FILTER_CHIPS: { label: string; value: RoomStatus | "all" }[] = [
   { label: "Tất cả", value: "all" },
@@ -29,9 +30,11 @@ interface RoomsViewProps {
   sort: string;
   setSort: (s: string) => void;
   onSelectRoom: (room: Room) => void;
-  onOpenActionModal: (type: any, room: Room) => void;
+  onOpenActionModal: (type: RoomActionType, room: Room) => void;
   onAddRoom: () => void;
   onAddProperty: () => void;
+  /** Mở tab Cài đặt khu — dùng cho lời nhắc khi khu chưa có đơn giá/tài khoản nhận tiền. */
+  onOpenSettings?: () => void;
   isReadOnly?: boolean;
   mobile?: boolean;
 }
@@ -49,6 +52,7 @@ export function RoomsView({
   onOpenActionModal,
   onAddRoom,
   onAddProperty,
+  onOpenSettings,
   isReadOnly,
   mobile,
 }: RoomsViewProps) {
@@ -119,6 +123,16 @@ export function RoomsView({
           </Button>
         </div>
       </div>
+
+      {/* Thiếu đơn giá/tài khoản thì hóa đơn không tính được tiền điện nước và không có mã VietQR. */}
+      {property && onOpenSettings && (property.electricity_unit_price == null || property.water_unit_price == null || !property.bank_account_number) && (
+        <div data-testid="property-setup-reminder" role="status" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 10, background: C.warningBg, border: `1px solid ${C.warningBorder}`, borderRadius: 12, padding: "12px 16px", fontFamily: font }}>
+          <span style={{ fontSize: 13.5, color: C.textPrimary, lineHeight: 1.5 }}>
+            <strong>{property.name}</strong> chưa cài đủ đơn giá điện nước và tài khoản nhận tiền — hóa đơn sẽ không tự tính được.
+          </span>
+          <Button variant="outline" size="sm" onClick={onOpenSettings} data-testid="property-setup-btn">Cài đặt ngay</Button>
+        </div>
+      )}
 
       {/* Rooms Grid.
           BA trạng thái rỗng khác nhau, bản cũ gộp cả ba thành "Thử đổi từ khóa
@@ -212,12 +226,7 @@ export function RoomsView({
 
               {/* Action Toolbar */}
               <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: 10, display: "flex", justifyContent: "space-between", gap: 6 }} onClick={(e) => e.stopPropagation()}>
-                <Button variant="outline" size="sm" requiresWrite icon={<Zap size={13} />} onClick={() => onOpenActionModal("utility", room)} data-testid="room-utility-btn" style={{ flex: 1, justifyContent: "center" }}>
-                  Điện nước
-                </Button>
-                <Button variant="outline" size="sm" requiresWrite icon={<FileText size={13} />} onClick={() => onOpenActionModal("invoice", room)} data-testid="room-invoice-btn" style={{ flex: 1, justifyContent: "center" }}>
-                  Hóa đơn
-                </Button>
+                <RoomActions room={room} onAction={onOpenActionModal} />
               </div>
             </div>
           ))}

@@ -1460,6 +1460,10 @@ export type Database = {
         Returns: boolean
       }
       can_write_saas: { Args: never; Returns: boolean }
+      cancel_occupancy_link: {
+        Args: { p_occupancy_id: string }
+        Returns: undefined
+      }
       complete_contact_phone_verification: {
         Args: { p_otp_hash: string; p_user_id: string }
         Returns: Json

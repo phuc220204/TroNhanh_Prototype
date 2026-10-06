@@ -3,7 +3,8 @@ import { X, Pencil } from "lucide-react";
 import { C, font, radius, shadow } from "../../../shared/theme";
 import { useBreakpoint } from "../../../shared/components/useBreakpoint";
 import { Button } from "../../../shared/components/common";
-import type { Room } from "../../types/room";
+import type { Property, Room } from "../../types/room";
+import { RoomActions, type RoomActionType } from "./RoomActions";
 import { RoomDetailTabs } from "../../components/RoomDetailTabs";
 
 /**
@@ -22,12 +23,14 @@ import { RoomDetailTabs } from "../../components/RoomDetailTabs";
 interface RoomDetailModalProps {
   room: Room | null;
   onClose: () => void;
-  onOpenActionModal?: (type: any, room: Room) => void;
+  onOpenActionModal?: (type: RoomActionType, room: Room) => void;
+  /** Khu của phòng — để hiện đúng đơn giá đang áp (trước đây luôn "Chưa cấu hình"). */
+  property?: Property | null;
   /** Mở form sửa phòng. Không truyền ⇒ không hiện nút (chỗ chỉ để xem). */
   onEdit?: (room: Room) => void;
 }
 
-export function RoomDetailModal({ room, onClose, onEdit }: RoomDetailModalProps) {
+export function RoomDetailModal({ room, onClose, onEdit, onOpenActionModal, property }: RoomDetailModalProps) {
   const { isMobile } = useBreakpoint();
 
   // Esc để đóng: modal chiếm gần hết màn hình nên tìm nút X mất công hơn drawer.
@@ -129,8 +132,20 @@ export function RoomDetailModal({ room, onClose, onEdit }: RoomDetailModalProps)
         </div>
 
         <div style={{ flex: 1, overflowY: "auto", padding: isMobile ? 16 : 26 }}>
-          <RoomDetailTabs room={room} />
+          <RoomDetailTabs
+            room={room}
+            electricityUnitPrice={property?.electricity_unit_price}
+            waterUnitPrice={property?.water_unit_price}
+            serviceFee={property?.service_fee}
+          />
         </div>
+
+        {/* Làm việc ngay từ chi tiết phòng — trước đây đây là ngõ cụt, phải đóng rồi tìm lại thẻ. */}
+        {onOpenActionModal && (
+          <div data-testid="room-detail-actions" style={{ display: "flex", gap: 8, padding: isMobile ? "12px 16px calc(12px + env(safe-area-inset-bottom))" : "14px 26px", borderTop: `1px solid ${C.border}`, flexShrink: 0 }}>
+            <RoomActions room={room} onAction={onOpenActionModal} size="md" />
+          </div>
+        )}
       </div>
     </div>
   );

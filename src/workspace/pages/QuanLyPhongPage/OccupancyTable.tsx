@@ -15,6 +15,8 @@ interface OccupancyTableProps {
   /** Điện thoại: hiện dạng thẻ thay vì bảng 9 cột phải kéo ngang (nút thao tác bị khuất). */
   mobile?: boolean;
   onOpenLinkModal: (occ: OccupancyItem) => void;
+  /** Hủy yêu cầu liên kết đang chờ. */
+  onCancelLink: (occ: OccupancyItem) => void;
   onAddCoOccupant: (target: { contractId: string; roomLabel: string; primaryName: string }) => void;
   onEndContract: (contractId: string) => void;
   onExtendContract: (contractId: string, currentEndDate: string) => void;
@@ -48,14 +50,35 @@ function contractPeriod(row: OccupancyRow): string {
     : formatDate(row.occ.start_date);
 }
 
-function LinkStatus({ row, onOpenLinkModal }: { row: OccupancyRow; onOpenLinkModal: (occ: OccupancyItem) => void }) {
-  if (row.occ.link_status === "Confirmed" || row.occ.link_status === "Pending") {
-    return <Badge kind="link" status={row.occ.link_status} data-testid={`occupancy-link-${row.occ.link_status.toLowerCase()}`} />;
+function LinkStatus({ row, onOpenLinkModal, onCancelLink }: {
+  row: OccupancyRow;
+  onOpenLinkModal: (occ: OccupancyItem) => void;
+  onCancelLink: (occ: OccupancyItem) => void;
+}) {
+  const status = row.occ.link_status;
+  if (status === "Confirmed") {
+    return <Badge kind="link" status={status} data-testid="occupancy-link-confirmed" />;
+  }
+  if (!row.occ.is_active) return <span style={{ fontSize: 12.5, color: C.textSecondary }}>—</span>;
+  if (status === "Pending") {
+    // Gõ nhầm email thì trước đây kẹt "Chờ xác nhận" mãi — giờ đổi email hoặc hủy được.
+    return (
+      <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 4 }}>
+        <Badge kind="link" status={status} data-testid="occupancy-link-pending" />
+        <div style={{ display: "flex", gap: 4 }}>
+          <Button variant="ghost" size="sm" requiresWrite onClick={() => onOpenLinkModal(row.occ)} data-testid="link-change-email-btn">Đổi email</Button>
+          <Button variant="ghost" size="sm" requiresWrite onClick={() => onCancelLink(row.occ)} data-testid="link-cancel-btn">Hủy yêu cầu</Button>
+        </div>
+      </div>
+    );
   }
   return (
-    <Button variant="ghost" size="sm" requiresWrite onClick={() => onOpenLinkModal(row.occ)} data-testid="link-occupant-account-btn">
-      Gắn tài khoản
-    </Button>
+    <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 4 }}>
+      {status === "Rejected" && <Badge kind="link" status={status} />}
+      <Button variant="ghost" size="sm" requiresWrite onClick={() => onOpenLinkModal(row.occ)} data-testid="link-occupant-account-btn">
+        {status === "Rejected" ? "Gắn lại" : "Gắn tài khoản"}
+      </Button>
+    </div>
   );
 }
 
@@ -96,6 +119,14 @@ function ContractActions({ row, onAddCoOccupant, onEndContract, onExtendContract
   );
 }
 
+function LeftTag() {
+  return (
+    <span data-testid="occupancy-left-tag" style={{ fontFamily: font, fontSize: 10.5, fontWeight: 700, color: C.textSecondary, background: C.bg, border: `1px solid ${C.border}`, borderRadius: radius.pill, padding: "1px 7px", marginLeft: 6 }}>
+      đã rời
+    </span>
+  );
+}
+
 function CoOccupantTag() {
   return (
     <span
@@ -118,6 +149,7 @@ export function OccupancyTable({
   contractById,
   mobile,
   onOpenLinkModal,
+  onCancelLink,
   onAddCoOccupant,
   onEndContract,
   onExtendContract,
@@ -157,12 +189,13 @@ export function OccupancyTable({
                 <div style={{ fontSize: 14.5, fontWeight: 800, color: C.textPrimary }}>
                   {row.occ.full_name}
                   {row.occ.is_primary === false && <CoOccupantTag />}
+                  {!row.occ.is_active && <LeftTag />}
                 </div>
                 <div style={{ fontSize: 12.5, color: C.textSecondary, marginTop: 2 }}>
                   Phòng {row.roomLabel} · {row.occ.occupant_count} người{row.occ.phone_number ? ` · ${row.occ.phone_number}` : ""}
                 </div>
               </div>
-              <LinkStatus row={row} onOpenLinkModal={onOpenLinkModal} />
+              <LinkStatus row={row} onOpenLinkModal={onOpenLinkModal} onCancelLink={onCancelLink} />
             </div>
             <div style={{ display: "flex", justifyContent: "space-between", gap: 10, marginTop: 8, fontSize: 12.5, color: C.textSecondary }}>
               <span>{contractPeriod(row)}</span>
@@ -200,13 +233,14 @@ export function OccupancyTable({
               <td style={{ ...cellStyle, fontSize: 13.5, fontWeight: 600, color: C.textPrimary }}>
                 {row.occ.full_name}
                 {row.occ.is_primary === false && <CoOccupantTag />}
+                {!row.occ.is_active && <LeftTag />}
               </td>
               <td style={cellStyle}>{row.occ.phone_number || "—"}</td>
               <td style={cellStyle}>{row.occ.occupant_count} người</td>
               <td style={{ ...cellStyle, fontSize: 12.5 }}>{contractPeriod(row)}</td>
               <td style={{ ...cellStyle, color: C.textPrimary }}>{row.contract ? formatVnd(row.contract.deposit) : "—"}</td>
               <td style={{ ...cellStyle, fontSize: 13.5, fontWeight: 700, color: C.primary }}>{row.contract ? formatVnd(row.contract.rent_price) : "—"}</td>
-              <td style={cellStyle}><LinkStatus row={row} onOpenLinkModal={onOpenLinkModal} /></td>
+              <td style={cellStyle}><LinkStatus row={row} onOpenLinkModal={onOpenLinkModal} onCancelLink={onCancelLink} /></td>
               <td style={cellStyle}><ContractActions row={row} {...actionProps} /></td>
             </tr>
           ))}

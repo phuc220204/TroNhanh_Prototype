@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { CalendarClock, NotebookPen } from "lucide-react";
 import { C, font, radius } from "../../shared/theme";
+import { toLocalISODate } from "../../shared/utils/format";
 import { qk } from "../../shared/query/keys";
 import { toUserMessage } from "../../shared/services/supabase-error";
 import { useCanWrite } from "../../shared/contexts/SubscriptionContext";
@@ -56,12 +57,17 @@ function NoteForm({ initial, submitLabel, isSaving, onSubmit, onCancel, testIdPr
           <button
             key={quickReason}
             type="button"
-            onClick={() => setReason(quickReason)}
+            // Không ghi đè chữ đã gõ: ô trống thì điền, có chữ rồi thì nối thêm.
+            onClick={() => setReason((current) => {
+              const typed = current.trim();
+              if (!typed) return quickReason;
+              return typed.includes(quickReason) ? current : `${typed}; ${quickReason}`;
+            })}
             style={{
               fontFamily: font, fontSize: 12, fontWeight: 600, cursor: "pointer", padding: "4px 10px", borderRadius: radius.pill,
-              border: `1px solid ${reason === quickReason ? C.primary : C.border}`,
-              background: reason === quickReason ? C.cream : C.white,
-              color: reason === quickReason ? C.primary : C.textSecondary,
+              border: `1px solid ${reason.includes(quickReason) ? C.primary : C.border}`,
+              background: reason.includes(quickReason) ? C.cream : C.white,
+              color: reason.includes(quickReason) ? C.primary : C.textSecondary,
             }}
           >
             {quickReason}
@@ -83,6 +89,7 @@ function NoteForm({ initial, submitLabel, isSaving, onSubmit, onCancel, testIdPr
           Hẹn thu lại
           <input
             type="date"
+            min={toLocalISODate()}
             value={followUpDate}
             onChange={e => setFollowUpDate(e.target.value)}
             data-testid={`${testIdPrefix}-date`}

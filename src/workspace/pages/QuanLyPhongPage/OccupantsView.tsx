@@ -7,6 +7,7 @@ import {
   listOccupancies,
   endOccupancy,
   linkRenterAccount,
+  cancelOccupancyLink,
   addOccupantToContract,
   type OccupancyItem,
 } from "../../services/occupancy-service";
@@ -42,6 +43,10 @@ export function OccupantsView({ property, mobile, isReadOnly, onRefreshData }: O
   const [toastMsg, setToastMsg] = useState("");
   // Lỗi tải danh sách — tách khỏi lỗi trong modal để lỗi mạng không trông như "Chưa có người ở".
   const [loadError, setLoadError] = useState("");
+  // Mặc định chỉ người đang ở — người đã rời phòng lẫn vào làm danh sách khó đọc.
+  const [showFormer, setShowFormer] = useState(false);
+  // Lỗi của thao tác ngoài modal (hủy liên kết) — hiện kiểu lỗi, không dùng ô xanh "thành công".
+  const [actionError, setActionError] = useState("");
 
   const showToast = (msg: string) => {
     setToastMsg(msg);
@@ -149,6 +154,21 @@ export function OccupantsView({ property, mobile, isReadOnly, onRefreshData }: O
     }
   };
 
+  const handleCancelLink = async (occ: OccupancyItem) => {
+    if (isReadOnly) return;
+    setActionError("");
+    try {
+      await cancelOccupancyLink(occ.id);
+      refreshAfterWrite(`Đã hủy yêu cầu liên kết của ${occ.full_name}.`);
+    } catch (err: unknown) {
+      setToastMsg("");
+      setActionError(`Chưa hủy được yêu cầu liên kết: ${toUserMessage(err)}`);
+    }
+  };
+
+  const formerCount = occupancies.filter((o) => !o.is_active).length;
+  const visibleOccupancies = showFormer ? occupancies : occupancies.filter((o) => o.is_active);
+
   // Gom hợp đồng theo id để hàng của người ở cùng tra ngược được.
   const contractById = new Map<string, NonNullable<OccupancyItem["contracts"]>[number]>();
   for (const item of occupancies) {
@@ -175,6 +195,16 @@ export function OccupantsView({ property, mobile, isReadOnly, onRefreshData }: O
         </div>
       )}
 
+      {actionError && (
+        <div data-testid="occupancy-action-error" role="alert" style={{ background: C.errorBg, border: `1px solid ${C.errorBorder}`, color: C.error, padding: "10px 16px", borderRadius: 10, fontFamily: font, fontSize: 13, fontWeight: 600, marginBottom: 16, display: "flex", alignItems: "center", gap: 8 }}>
+          <AlertCircle size={16} style={{ flexShrink: 0 }} />
+          <span style={{ flex: 1 }}>{actionError}</span>
+          <button type="button" aria-label="Đóng" onClick={() => setActionError("")} style={{ background: "none", border: "none", cursor: "pointer", padding: 0, display: "flex" }}>
+            <X size={16} color={C.error} />
+          </button>
+        </div>
+      )}
+
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: mobile ? "stretch" : "center", flexDirection: mobile ? "column" : "row", gap: 12, marginBottom: 20 }}>
         <div>
           <h2 style={{ fontFamily: font, fontSize: 17, fontWeight: 800, color: C.textPrimary, margin: "0 0 4px" }}>Người ở &amp; hợp đồng thuê</h2>
@@ -195,17 +225,26 @@ export function OccupantsView({ property, mobile, isReadOnly, onRefreshData }: O
           <Button variant="outline" size="sm" onClick={() => void fetchOccupanciesData()} data-testid="occupancy-retry-btn">Thử lại</Button>
         </div>
       ) : (
+        <>
+        {formerCount > 0 && (
+          <label style={{ display: "inline-flex", alignItems: "center", gap: 6, marginBottom: 12, fontFamily: font, fontSize: 13, color: C.textSecondary, cursor: "pointer" }}>
+            <input type="checkbox" checked={showFormer} onChange={(e) => setShowFormer(e.target.checked)} data-testid="occupancy-show-former" />
+            Hiện cả người đã rời phòng ({formerCount})
+          </label>
+        )}
         <OccupancyTable
           loading={loading}
-          occupancies={occupancies}
+          occupancies={visibleOccupancies}
           property={property}
           contractById={contractById}
           mobile={mobile}
           onOpenLinkModal={(occ) => { setErrorMsg(""); setLinkEmailInput(""); setLinkTarget(occ); }}
+          onCancelLink={(occ) => void handleCancelLink(occ)}
           onAddCoOccupant={(target) => { setErrorMsg(""); setCoOccupantTarget(target); }}
           onEndContract={(contractId) => { setErrorMsg(""); setEndTarget(describeContract(contractId)); }}
           onExtendContract={(contractId, currentEndDate) => { setErrorMsg(""); setExtendTarget({ ...describeContract(contractId), currentEndDate }); }}
         />
+        </>
       )}
 
       {isAddOpen && (

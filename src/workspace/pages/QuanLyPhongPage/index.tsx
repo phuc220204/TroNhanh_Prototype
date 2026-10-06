@@ -19,6 +19,8 @@ import { SettingsView } from "./SettingsView";
 import { RoomDetailModal } from "./RoomDetailModal";
 import { UtilityReadingForm } from "./UtilityReadingForm";
 import { InvoicePreview } from "./InvoicePreview";
+import { AddOccupantModal } from "./AddOccupantModal";
+import type { RoomActionType } from "./RoomActions";
 import { AddRoomModal } from "../../components/AddRoomModal";
 import { AddPropertyModal } from "../../components/AddPropertyModal";
 import { EditRoomModal } from "../../components/EditRoomModal";
@@ -100,7 +102,7 @@ export function QuanLyPhongPage() {
   const [sort, setSort] = useState("Mới cập nhật");
   const [detailRoom, setDetailRoom] = useState<Room | null>(null);
   const [switcherOpen, setSwitcherOpen] = useState(false);
-  const [actionModal, setActionModal] = useState<{ type: "utility" | "invoice"; room: Room } | null>(null);
+  const [actionModal, setActionModal] = useState<{ type: RoomActionType; room: Room } | null>(null);
   const [loading, setLoading] = useState(true);
   // Lỗi tải KHÁC "chưa có khu": trước đây lỗi bị nuốt và trang hiện "Bạn chưa có
   // khu trọ nào" + nút tạo khu ⇒ chủ trọ tưởng mất dữ liệu và tạo trùng.
@@ -301,6 +303,7 @@ export function QuanLyPhongPage() {
                 onOpenActionModal={(type, room) => setActionModal({ type, room })}
                 onAddRoom={() => setShowAddRoom(true)}
                 onAddProperty={() => setShowAddProperty(true)}
+                onOpenSettings={() => goToTab("settings")}
                 isReadOnly={isReadOnly}
                 mobile={isMobile}
               />
@@ -335,7 +338,12 @@ export function QuanLyPhongPage() {
         <RoomDetailModal
           room={detailRoom}
           onClose={() => setDetailRoom(null)}
-          onOpenActionModal={(type, room) => setActionModal({ type, room })}
+          property={selectedProperty}
+          onOpenActionModal={(type, room) => {
+            // Hai modal chồng nhau thì Esc đóng nhầm — đóng chi tiết trước khi mở thao tác.
+            setDetailRoom(null);
+            setActionModal({ type, room });
+          }}
           onEdit={(room) => {
             // Đóng modal chi tiết trước: hai modal chồng nhau thì Esc đóng nhầm cái
             // dưới, và người dùng không biết mình đang ở form nào.
@@ -365,6 +373,21 @@ export function QuanLyPhongPage() {
           onClose={() => setActionModal(null)}
           onSuccess={() => void loadDbData(false)}
           isReadOnly={isReadOnly}
+        />
+      )}
+
+      {actionModal?.type === "add-occupant" && (
+        <AddOccupantModal
+          property={selectedProperty}
+          mobile={isMobile}
+          initialRoomId={actionModal.room.id}
+          onClose={() => setActionModal(null)}
+          onCreated={() => {
+            setActionModal(null);
+            void loadDbData(false);
+            // Đưa sang tab Người ở để thấy ngay người vừa thêm.
+            goToTab("occupants");
+          }}
         />
       )}
 
