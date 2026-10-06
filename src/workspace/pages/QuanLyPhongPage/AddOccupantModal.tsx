@@ -89,7 +89,7 @@ export function AddOccupantModal({ property, mobile, initialRoomId, onClose, onC
       if (renterEmail.trim()) {
         try {
           await linkRenterAccount(result.occupancyId, renterEmail.trim());
-          message = `Đã thêm người ở. Đã gửi yêu cầu liên kết tới ${renterEmail.trim()} — người ở cần xác nhận.`;
+          message = `Đã thêm người ở và gửi yêu cầu liên kết tới ${renterEmail.trim()}. Nếu người ở chưa có tài khoản, yêu cầu sẽ chờ tới khi họ đăng ký và xác minh email này.`;
         } catch (linkErr: unknown) {
           message = `Đã thêm người ở nhưng chưa liên kết được tài khoản: ${toUserMessage(linkErr)}`;
         }

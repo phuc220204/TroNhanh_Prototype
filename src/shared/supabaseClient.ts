@@ -4,7 +4,7 @@ import type { Database } from "./types/database.types";
 
 /**
  * Supabase client dùng chung cho toàn app. Chỉ dùng anon key; RLS là cơ chế
- * multi-tenant thật sự (CLAUDE.md §3).
+ * cô lập dữ liệu giữa các chủ trọ thật sự (CLAUDE.md §3).
  *
  * Generic <Database> KHÔNG phải trang trí: nó là thứ biến
  *   .eq("id", user.id)        trên profiles   (đúng phải là user_id)

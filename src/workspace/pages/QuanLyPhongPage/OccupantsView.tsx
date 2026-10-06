@@ -148,7 +148,8 @@ export function OccupantsView({ property, mobile, isReadOnly, onRefreshData }: O
       setErrorMsg("");
       await linkRenterAccount(linkTarget.id, linkEmailInput.trim());
       setLinkTarget(null);
-      refreshAfterWrite(`Đã gửi yêu cầu liên kết tới ${linkEmailInput.trim()}. Người ở cần xác nhận để hoàn tất.`);
+      // Cùng một câu cho email đã/chưa có tài khoản (server không tiết lộ email nào đã đăng ký).
+      refreshAfterWrite(`Đã gửi yêu cầu liên kết tới ${linkEmailInput.trim()}. Nếu người ở chưa có tài khoản, yêu cầu sẽ chờ tới khi họ đăng ký và xác minh email này.`);
       setLinkEmailInput("");
     } catch (err: unknown) {
       setErrorMsg(toUserMessage(err));
