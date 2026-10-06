@@ -145,9 +145,11 @@ Tách bạch hai khái niệm:
 | Trạng thái | Điều kiện | Quyền |
 |---|---|---|
 | **NONE** | Chưa từng kích hoạt | Zone tin đăng dùng bình thường; vùng SaaS chỉ thấy màn mời dùng thử |
-| **TRIAL** | Bấm dùng thử (mỗi Seller 1 lần) | Dùng đầy đủ trong thời hạn dùng thử |
-| **ACTIVE** | Đã mua, còn hạn | Đầy đủ theo `max_properties` / `max_rooms` của gói |
+| **TRIAL** | Bấm dùng thử (mỗi Seller 1 lần) | Dùng đầy đủ trong **15 ngày** |
+| **ACTIVE** | Đã mua, còn hạn | Dùng đầy đủ — **không giới hạn số khu / số phòng** |
 | **READ_ONLY** | Hết hạn TRIAL/ACTIVE | Chỉ xem/xuất; **không** tạo/sửa/xóa; **dữ liệu giữ nguyên** (BR-015) |
+
+**Bảng giá (2026-10-06, migration `20261008090000`):** dùng thử 15 ngày miễn phí · Gói 1 năm 200.000đ · Gói 2 năm 350.000đ. Gia hạn cùng giá, thời gian cộng dồn. Cột `max_properties` / `max_rooms` còn trong bảng nhưng **không áp dụng**.
 
 > **Vì sao hết hạn là READ_ONLY chứ không phải khóa:** mất dữ liệu vận hành của chủ trọ là tối kỵ — đó là hợp đồng, hóa đơn, lịch sử thu tiền của họ. Khóa cứng biến việc quên gia hạn thành thảm họa và giết luôn khả năng họ quay lại.
 

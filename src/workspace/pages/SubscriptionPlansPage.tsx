@@ -6,6 +6,7 @@ import { LandlordShell } from "../../shared/components/LandlordShell";
 import { C, font, radius, shadow } from "../../shared/theme";
 import { useAuth } from "../../shared/contexts/AuthContext";
 import { useSubscriptionContext } from "../../shared/contexts/SubscriptionContext";
+import { TRIAL_DAYS } from "../../shared/services/subscription-service";
 import { useBreakpoint } from "../../shared/components/useBreakpoint";
 import { qk } from "../../shared/query/keys";
 import { Button, EmptyState, Skeleton } from "../../shared/components/common";
@@ -116,7 +117,7 @@ function PlanCard({ plan, isRenewal, isCurrent, isBuying, disabled, onBuy }: {
         </div>
       </div>
       <ul style={{ margin: 0, paddingLeft: 18, fontSize: 13, color: C.textSecondary, lineHeight: 1.7 }}>
-        <li>Tối đa {plan.max_properties} khu trọ, {plan.max_rooms} phòng</li>
+        <li>Không giới hạn số khu trọ và số phòng</li>
         <li>Người ở, hợp đồng, điện nước, hóa đơn & nhắc thu tiền</li>
         <li>Mua sớm khi còn hạn: thời gian được cộng dồn</li>
       </ul>
@@ -205,7 +206,7 @@ export function SubscriptionPlansPage() {
           </div>
           {status === "NONE" && (
             <Button variant="outline" loading={isActivatingTrial} onClick={() => void handleTrial()} data-testid="saas-start-trial-btn">
-              Dùng thử miễn phí 30 ngày
+              Dùng thử miễn phí {TRIAL_DAYS} ngày
             </Button>
           )}
         </div>

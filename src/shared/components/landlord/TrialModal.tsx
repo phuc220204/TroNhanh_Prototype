@@ -3,9 +3,10 @@ import { Building2 } from "lucide-react";
 import { C, font, radius } from "../../theme";
 import { Button, ModalShell } from "../common";
 import { toUserMessage } from "../../services/supabase-error";
+import { TRIAL_DAYS } from "../../services/subscription-service";
 
 /**
- * Mời dùng thử gói quản lý vận hành 30 ngày. Dùng ModalShell (Esc, focus trap);
+ * Mời dùng thử gói quản lý vận hành TRIAL_DAYS ngày. Dùng ModalShell (Esc, focus trap);
  * nút có trạng thái đang xử lý để không bấm 2 lần, lỗi kích hoạt được báo rõ.
  */
 export function TrialRegisterModal({
@@ -41,7 +42,7 @@ export function TrialRegisterModal({
         <>
           <Button variant="outline" onClick={onCancel} disabled={isActivating}>Để sau</Button>
           <Button variant="primary" loading={isActivating} onClick={() => void handleConfirm()} data-testid="trial-activate-btn">
-            Bắt đầu dùng thử 30 ngày
+            Bắt đầu dùng thử {TRIAL_DAYS} ngày
           </Button>
         </>
       }
@@ -52,7 +53,7 @@ export function TrialRegisterModal({
         </div>
         <p style={{ fontSize: 14, color: C.textSecondary, margin: 0, lineHeight: 1.6 }}>
           Quản lý phòng, người ở, hợp đồng, điện nước và hóa đơn ở một nơi. Dùng thử miễn phí trong{" "}
-          <strong style={{ color: C.primary }}>30 ngày</strong>, không cần thanh toán trước.
+          <strong style={{ color: C.primary }}>{TRIAL_DAYS} ngày</strong>, không cần thanh toán trước.
         </p>
         {errorMessage && (
           <p role="alert" style={{ margin: "14px 0 0", padding: "10px 12px", borderRadius: radius.sm, background: C.errorBg, border: `1px solid ${C.errorBorder}`, color: C.error, fontSize: 13 }}>

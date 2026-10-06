@@ -4,6 +4,7 @@ import { ChevronRight, Lock } from "lucide-react";
 import { C, font } from "../theme";
 import { useBreakpoint } from "./useBreakpoint";
 import { useSubscriptionContext } from "../contexts/SubscriptionContext";
+import { TRIAL_DAYS } from "../services/subscription-service";
 import { SubscriptionBanner } from "./landlord/SubscriptionBanner";
 import { Sidebar, MobileHeader, MobileTabBar, SAAS_NAV_IDS, ROOM_PAGE_TABS, type LandlordNavId } from "./landlord/SidebarNav";
 import { TrialRegisterModal } from "./landlord/TrialModal";
@@ -155,7 +156,7 @@ export function LandlordShell({
             }}
           >
             Quản lý khu trọ, ghi nhận chỉ số điện nước, và tự động tạo hóa đơn thanh toán qua VietQR.
-            Đăng ký dùng thử 30 ngày hoàn toàn miễn phí ngay!
+            Đăng ký dùng thử {TRIAL_DAYS} ngày hoàn toàn miễn phí ngay!
           </p>
           <div style={{ display: "flex", gap: 10, flexWrap: "wrap", justifyContent: "center" }}>
             <Button variant="primary" onClick={handleSaaSAccess} data-testid="paywall-trial-btn">Bắt đầu dùng thử miễn phí</Button>

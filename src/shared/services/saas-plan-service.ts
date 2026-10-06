@@ -15,8 +15,6 @@ export interface SubscriptionPlan {
   price: number;
   renewal_price: number;
   duration_months: number;
-  max_properties: number;
-  max_rooms: number;
 }
 
 export interface SaasCheckout {
@@ -33,7 +31,7 @@ export async function getSubscriptionPlans(): Promise<SubscriptionPlan[]> {
   try {
     const { data, error } = await supabase
       .from("subscription_plans")
-      .select("id, name, price, renewal_price, duration_months, max_properties, max_rooms")
+      .select("id, name, price, renewal_price, duration_months")
       .order("price", { ascending: true });
     if (error) throw error;
     return (data ?? []).map((plan) => ({
