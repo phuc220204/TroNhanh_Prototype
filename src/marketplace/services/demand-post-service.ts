@@ -174,7 +174,7 @@ export async function createDemandPost(payload: Partial<DemandPostItem>): Promis
         desired_ward_codes: payload.desired_ward_codes || [],
         price_min: payload.price_min || 0,
         price_max: payload.price_max || 0,
-        status: "Active", // Auto approved by default configuration
+        // Không gửi `status`: trigger `guard_demand_post_write` đặt theo cài đặt kiểm duyệt (§6.1).
         ...(payload.kind === "RoomWanted"
           ? {
               property_type: payload.property_type || null,

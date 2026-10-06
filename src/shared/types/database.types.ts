@@ -888,6 +888,7 @@ export type Database = {
           boost_payment_verified: boolean
           contact_name: string | null
           contact_phone: string | null
+          contact_phone_masked: string | null
           created_at: string
           deleted_at: string | null
           deposit: number | null
@@ -929,6 +930,7 @@ export type Database = {
           boost_payment_verified?: boolean
           contact_name?: string | null
           contact_phone?: string | null
+          contact_phone_masked?: string | null
           created_at?: string
           deleted_at?: string | null
           deposit?: number | null
@@ -970,6 +972,7 @@ export type Database = {
           boost_payment_verified?: boolean
           contact_name?: string | null
           contact_phone?: string | null
+          contact_phone_masked?: string | null
           created_at?: string
           deleted_at?: string | null
           deposit?: number | null

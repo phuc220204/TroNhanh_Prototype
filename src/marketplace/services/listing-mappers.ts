@@ -147,7 +147,8 @@ export function toListingCard(row: any): ListingCardItem {
     badge,
     img: imgs[0] || getListingImage(row?.id ? String(row.id) : "fallback"),
     // Không bịa số liên hệ cho row thiếu dữ liệu; UI sẽ vô hiệu hóa nút gọi.
-    contact_phone: row.contact_phone || "",
+    // Khách chưa đăng nhập chỉ đọc được số đã che (BR-014, migration 20261009100000).
+    contact_phone: row.contact_phone || row.contact_phone_masked || "",
     boost_expire_at: row.boost_expire_at || null,
     created_at: row.created_at || new Date().toISOString(),
     postedAt,
