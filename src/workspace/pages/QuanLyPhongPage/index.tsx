@@ -325,6 +325,11 @@ export function QuanLyPhongPage() {
                 mobile={isMobile}
                 isReadOnly={isReadOnly}
                 onRefreshData={() => loadDbData(false)}
+                // Khu vừa xóa không còn gì để cài đặt ⇒ về danh sách phòng của khu còn lại.
+                onDeleted={() => {
+                  goToTab("rooms");
+                  void loadDbData(false);
+                }}
               />
             )}
           </>

@@ -9,7 +9,8 @@ import { C, font, shadow } from "../../../shared/theme";
 import { useBreakpoint } from "../../../shared/components/useBreakpoint";
 import { LandlordShell } from "../../../shared/components/LandlordShell";
 import { formatVnd } from "../../../shared/utils/format";
-import { EmptyState, Button, Toast, Skeleton } from "../../../shared/components/common";
+import { EmptyState, Button, Skeleton } from "../../../shared/components/common";
+import { useToast } from "../../../shared/contexts/ToastContext";
 import { useAuth } from "../../../shared/contexts/AuthContext";
 import { useCanWrite } from "../../../shared/contexts/SubscriptionContext";
 import { DUE_SOON_DAYS } from "../../services/invoice-due";
@@ -50,7 +51,7 @@ export function ChuTroDashboardPage() {
 
   const [modal, setModal] = useState<null | "utility" | "room">(null);
   const [revealKPIs, setRevealKPIs] = useState(false);
-  const [toast, setToast] = useState<{ message: string; variant: "success" | "error" } | null>(null);
+  const { showToast } = useToast();
 
   // `canWrite` = BR-015, quyết định được GHI hay không (false cho cả NONE lẫn
   // READ_ONLY). READ_ONLY vẫn phải xem được dữ liệu. Trạng thái NONE (chưa kích
@@ -105,7 +106,7 @@ export function ChuTroDashboardPage() {
 
   const handleUtilitySaved = () => {
     setModal(null);
-    setToast({ message: "Đã lưu chỉ số điện nước.", variant: "success" });
+    showToast("Đã lưu chỉ số điện nước.", { testId: "dashboard-toast" });
     void queryClient.invalidateQueries({ queryKey: qk.billing.all });
     refreshAfterWrite();
   };
@@ -163,11 +164,6 @@ export function ChuTroDashboardPage() {
           onClose={() => setModal(null)}
           onCreated={refreshAfterWrite}
         />
-      )}
-      {toast && (
-        <div style={{ position: "fixed", top: 20, right: 20, left: isMobile ? 20 : undefined, zIndex: 1000, display: "flex", justifyContent: "flex-end" }}>
-          <Toast message={toast.message} variant={toast.variant} onClose={() => setToast(null)} data-testid="dashboard-toast" />
-        </div>
       )}
     </>
   );

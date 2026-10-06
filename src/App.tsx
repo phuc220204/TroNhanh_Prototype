@@ -4,6 +4,7 @@ import { queryClient } from "./shared/query/queryClient";
 import { router } from "./routes";
 import { AuthProvider } from "./shared/contexts/AuthContext";
 import { SubscriptionProvider } from "./shared/contexts/SubscriptionContext";
+import { ToastProvider } from "./shared/contexts/ToastContext";
 import { configError } from "./shared/config";
 import { MissingEnvScreen } from "./shared/components/MissingEnvScreen";
 
@@ -18,7 +19,9 @@ export default function App() {
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
         <SubscriptionProvider>
-          <RouterProvider router={router} />
+          <ToastProvider>
+            <RouterProvider router={router} />
+          </ToastProvider>
         </SubscriptionProvider>
       </AuthProvider>
     </QueryClientProvider>

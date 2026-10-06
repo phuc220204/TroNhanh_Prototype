@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Save, Trash2, AlertTriangle } from "lucide-react";
+import { useToast } from "../../../shared/contexts/ToastContext";
 import { C, font } from "../../../shared/theme";
 import { ModalShell } from "../../../shared/components/common/ModalShell";
 import { Button, VietQRBlock } from "../../../shared/components/common";
@@ -114,7 +115,7 @@ export function SettingsView({ property, mobile, isReadOnly, onRefreshData, onDe
   const [accountName, setAccountName] = useState(property?.bank_account_name || "");
 
   const [saving, setSaving] = useState(false);
-  const [toastMsg, setToastMsg] = useState("");
+  const { showToast } = useToast();
   const [errorMsg, setErrorMsg] = useState("");
 
   // ── BR-011: xóa khu ────────────────────────────────────────────────────────
@@ -129,7 +130,6 @@ export function SettingsView({ property, mobile, isReadOnly, onRefreshData, onDe
     if (!property || isReadOnly) return;
 
     setErrorMsg("");
-    setToastMsg("");
 
     const validationError = validatePropertySettings({
       elecPrice, waterPrice, serviceFee, accountNumber: accountNum, bankCode: bankName,
@@ -150,8 +150,7 @@ export function SettingsView({ property, mobile, isReadOnly, onRefreshData, onDe
         bank_account_name: accountName.trim(),
       });
 
-      setToastMsg("Đã cập nhật cấu hình khu trọ thành công!");
-      setTimeout(() => setToastMsg(""), 3000);
+      showToast("Đã lưu cấu hình khu trọ.", { testId: "settings-success" });
       if (onRefreshData) onRefreshData();
     } catch (err: unknown) {
       setErrorMsg(toUserMessage(err));
@@ -186,6 +185,7 @@ export function SettingsView({ property, mobile, isReadOnly, onRefreshData, onDe
       setDeleting(true);
       await softDeleteProperty(property.id);
       setConfirmOpen(false);
+      showToast(`Đã xóa khu "${property.name}".`);
       if (onDeleted) onDeleted(property.name);
       else if (onRefreshData) onRefreshData();
     } catch (err: unknown) {
@@ -209,11 +209,6 @@ export function SettingsView({ property, mobile, isReadOnly, onRefreshData, onDe
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 20, maxWidth: 640 }}>
       <div style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: 16, padding: mobile ? 16 : 22 }}>
-        {toastMsg && (
-          <div data-testid="settings-success" style={{ background: C.successBg, border: `1px solid ${C.successBorder}`, color: C.success, padding: "10px 16px", borderRadius: 10, fontFamily: font, fontSize: 13, fontWeight: 600, marginBottom: 16 }}>
-            {toastMsg}
-          </div>
-        )}
         {errorMsg && (
           <div data-testid="settings-error" style={{ background: C.errorBg, border: `1px solid ${C.errorBorder}`, color: C.error, padding: "10px 16px", borderRadius: 10, fontFamily: font, fontSize: 13, fontWeight: 600, marginBottom: 16 }}>
             {errorMsg}

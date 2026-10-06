@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
-import { Plus, AlertCircle, X, CheckCircle } from "lucide-react";
+import { Plus, AlertCircle, X } from "lucide-react";
+import { useToast } from "../../../shared/contexts/ToastContext";
 import { C, font, radius } from "../../../shared/theme";
 import { Button, ModalShell } from "../../../shared/components/common";
 import type { Property } from "../../types/room";
@@ -40,7 +41,7 @@ export function OccupantsView({ property, mobile, isReadOnly, onRefreshData }: O
   const [endTarget, setEndTarget] = useState<(ContractTarget & { startDate: string | null }) | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
-  const [toastMsg, setToastMsg] = useState("");
+  const { showToast: showGlobalToast } = useToast();
   // Lỗi tải danh sách — tách khỏi lỗi trong modal để lỗi mạng không trông như "Chưa có người ở".
   const [loadError, setLoadError] = useState("");
   // Mặc định chỉ người đang ở — người đã rời phòng lẫn vào làm danh sách khó đọc.
@@ -48,10 +49,7 @@ export function OccupantsView({ property, mobile, isReadOnly, onRefreshData }: O
   // Lỗi của thao tác ngoài modal (hủy liên kết) — hiện kiểu lỗi, không dùng ô xanh "thành công".
   const [actionError, setActionError] = useState("");
 
-  const showToast = (msg: string) => {
-    setToastMsg(msg);
-    setTimeout(() => setToastMsg(""), 4000);
-  };
+  const showToast = (msg: string) => showGlobalToast(msg, { testId: "occupancy-toast" });
 
   const fetchOccupanciesData = async () => {
     if (!property || !property.rooms || property.rooms.length === 0) {
@@ -161,7 +159,6 @@ export function OccupantsView({ property, mobile, isReadOnly, onRefreshData }: O
       await cancelOccupancyLink(occ.id);
       refreshAfterWrite(`Đã hủy yêu cầu liên kết của ${occ.full_name}.`);
     } catch (err: unknown) {
-      setToastMsg("");
       setActionError(`Chưa hủy được yêu cầu liên kết: ${toUserMessage(err)}`);
     }
   };
@@ -185,16 +182,6 @@ export function OccupantsView({ property, mobile, isReadOnly, onRefreshData }: O
 
   return (
     <div style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: 16, padding: mobile ? 16 : 22 }}>
-      {toastMsg && (
-        <div data-testid="occupancy-toast" role="status" style={{ background: C.successBg, border: `1px solid ${C.successBorder}`, color: C.success, padding: "10px 16px", borderRadius: 10, fontFamily: font, fontSize: 13, fontWeight: 600, marginBottom: 16, display: "flex", alignItems: "center", gap: 8 }}>
-          <CheckCircle size={16} style={{ flexShrink: 0 }} />
-          <span style={{ flex: 1 }}>{toastMsg}</span>
-          <button type="button" aria-label="Đóng thông báo" onClick={() => setToastMsg("")} style={{ background: "none", border: "none", cursor: "pointer", padding: 0, display: "flex" }}>
-            <X size={16} color={C.success} />
-          </button>
-        </div>
-      )}
-
       {actionError && (
         <div data-testid="occupancy-action-error" role="alert" style={{ background: C.errorBg, border: `1px solid ${C.errorBorder}`, color: C.error, padding: "10px 16px", borderRadius: 10, fontFamily: font, fontSize: 13, fontWeight: 600, marginBottom: 16, display: "flex", alignItems: "center", gap: 8 }}>
           <AlertCircle size={16} style={{ flexShrink: 0 }} />
