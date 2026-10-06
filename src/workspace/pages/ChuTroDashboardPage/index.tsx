@@ -8,7 +8,6 @@ import {
 import { C, font, shadow } from "../../../shared/theme";
 import { useBreakpoint } from "../../../shared/components/useBreakpoint";
 import { LandlordShell } from "../../../shared/components/LandlordShell";
-import { formatVnd } from "../../../shared/utils/format";
 import { EmptyState, Button, Skeleton } from "../../../shared/components/common";
 import { useToast } from "../../../shared/contexts/ToastContext";
 import { useAuth } from "../../../shared/contexts/AuthContext";
@@ -18,7 +17,7 @@ import { qk } from "../../../shared/query/keys";
 import { useDashboardData, toDashboardRoom } from "./useDashboardData";
 import {
   PrimaryBtn, GhostBtn, StatusChip, PayText, PropertySelector,
-  SegmentedBar, RoomTaskBtn, UtilityCard, ListingRow, Footer,
+  SegmentedBar, RoomTaskBtn, UtilityCard, Footer,
 } from "./atoms";
 import { UtilityModal } from "./UtilityModal";
 import { KpiGrid, type DashboardKpi } from "./KpiGrid";
@@ -45,7 +44,7 @@ export function ChuTroDashboardPage() {
   const queryClient = useQueryClient();
   const [property, setProperty] = useState("all");
   const {
-    properties, rooms, kpis: dbKpis, listings: realListings,
+    properties, rooms, kpis: dbKpis,
     isPending: loading, isError: dashboardError, isSwitchingProperty, refetchAll,
   } = useDashboardData(user?.id, property);
 
@@ -88,21 +87,6 @@ export function ChuTroDashboardPage() {
   // liệu mock, không có trong DB ⇒ cột "Người ở" và "Thanh toán" luôn trống.
   const displayRooms = useMemo(() => filteredRooms.slice(0, 4).map(toDashboardRoom), [filteredRooms]);
 
-  // Convert listings
-  // `getMyListings` chỉ trả tin Active dạng `ListingCardItem` (`type`, `loc`,
-  // `priceNum`, `views_count`, `postedAt`) — map đúng các trường đó.
-  const displayListings = useMemo(() => {
-    return realListings.map(l => ({
-      id: l.id as string,
-      title: l.title,
-      sub: [l.type || "Tin cho thuê", l.loc, `${formatVnd(l.priceNum)}/tháng`].filter(Boolean).join(" · "),
-      status: "active",
-      views: l.views_count ?? null,
-      createdAt: l.postedAt ?? l.created_at ?? null,
-    }));
-  }, [realListings]);
-  const viewListing = (listingId: string) => navigate(`/phong/${listingId}`);
-  const editListing = (listingId: string) => navigate(`/dang-tin-cho-thue/${listingId}`);
 
   const handleUtilitySaved = () => {
     setModal(null);
@@ -281,13 +265,6 @@ export function ChuTroDashboardPage() {
             </button>
           </div>
 
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
-            <span style={{ fontFamily: font, fontSize: 15, fontWeight: 800, color: C.textPrimary }}>Tin đăng gần đây</span>
-            <button onClick={toListings} style={{ fontFamily: font, fontSize: 12.5, fontWeight: 700, color: C.primary, background: "none", border: "none", cursor: "pointer" }}>Tất cả</button>
-          </div>
-          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-            {displayListings.slice(0, 2).map(l => <ListingRow key={l.id} l={l} onClick={toListings} onView={() => viewListing(l.id)} onEdit={() => editListing(l.id)} />)}
-          </div>
         </div>
 
         <button
@@ -404,26 +381,6 @@ export function ChuTroDashboardPage() {
             </div>
             <p style={{ fontFamily: font, fontSize: 12, color: C.textSecondary, margin: "14px 0 0", fontStyle: "italic" }}>Đây chỉ là bản xem nhanh. Quản lý đầy đủ trong “Khu trọ &amp; Phòng”.</p>
           </div>
-
-          {/* Recent listings */}
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
-            <h2 style={{ fontFamily: font, fontSize: 17, fontWeight: 800, color: C.textPrimary, margin: 0 }}>Tin đăng gần đây</h2>
-            {displayListings.length > 0 && (
-              <button onClick={toListings} style={{ fontFamily: font, fontSize: 13, fontWeight: 700, color: C.primary, background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: 4 }}>Tất cả tin đăng <ChevronRight size={15} /></button>
-            )}
-          </div>
-          {displayListings.length === 0 ? (
-            <div style={{ background: C.white, border: `1.5px dashed ${C.border}`, borderRadius: 16, padding: "28px 24px", textAlign: "center" }}>
-              <FileText size={24} color={C.textSecondary} style={{ marginBottom: 10, opacity: 0.7 }} />
-              <p style={{ fontFamily: font, fontSize: 14, fontWeight: 700, color: C.textPrimary, margin: "0 0 4px" }}>Bạn chưa có tin đăng nào</p>
-              <p style={{ fontFamily: font, fontSize: 12.5, color: C.textSecondary, margin: "0 0 14px", lineHeight: 1.5 }}>Đăng tin phòng trống lên Marketplace để tiếp cận hàng nghìn người thuê trọ.</p>
-              <PrimaryBtn onClick={toPost} small><Plus size={14} /> Đăng tin ngay</PrimaryBtn>
-            </div>
-          ) : (
-            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-              {displayListings.map(l => <ListingRow key={l.id} l={l} onClick={toListings} onView={() => viewListing(l.id)} onEdit={() => editListing(l.id)} />)}
-            </div>
-          )}
 
           <Footer />
         </main>

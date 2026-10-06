@@ -5,7 +5,6 @@ import { getRoomsByOwnerOrThrow, type RoomItem } from "../../services/room-servi
 import type { RoomStatus } from "../../../shared/types/status";
 import { normalizeContractStatus, normalizeInvoiceStatus, normalizeRoomStatus } from "../../../shared/utils/statusMaps";
 import { getDashboardMetrics } from "../../services/dashboard-service";
-import { getMyListings } from "../../../marketplace/services/listing-queries";
 
 /**
  * Dữ liệu dashboard chủ trọ qua React Query.
@@ -42,23 +41,14 @@ export function useDashboardData(ownerId: string | undefined, propertyId: string
     placeholderData: keepPreviousData,
   });
 
-  // TODO(proposal): dashboard (workspace) đang đọc tin đăng qua service của
-  // marketplace — trái §2.1. Nên chuyển sang một hàm tóm tắt ở `shared/services`
-  // giống `vacancy-service`.
-  const listingsQuery = useQuery({
-    queryKey: qk.listings.mine(ownerId),
-    queryFn: () => getMyListings(ownerId!),
-    enabled,
-    staleTime: 0,
-  });
-
-  const coreQueries = [propertiesQuery, roomsQuery, metricsQuery, listingsQuery];
+  // Không đọc tin đăng ở đây: `rental_listings` thuộc marketplace (§2.1) —
+  // dashboard chỉ có nút sang /tai-khoan/tin-cho-thue.
+  const coreQueries = [propertiesQuery, roomsQuery, metricsQuery];
 
   return {
     properties: propertiesQuery.data ?? [],
     rooms: roomsQuery.data ?? [],
     kpis: metricsQuery.data ?? null,
-    listings: (listingsQuery.data ?? []).slice(0, 3),
     /** Chỉ lần tải đầu (chưa có gì để hiện). Tải lại ngầm không bật khung chờ. */
     isPending: coreQueries.some((q) => q.isPending),
     /** Lỗi khi chưa có dữ liệu. Làm mới ngầm lỗi thì giữ số đang hiện. */

@@ -8,12 +8,11 @@
  */
 import React, { useState } from "react";
 import {
-  Building2, ChevronDown, ChevronRight, Eye, Pencil, Calendar,
+  Building2, ChevronDown, ChevronRight,
 } from "lucide-react";
 import { C, font, shadow } from "../../../shared/theme";
 import { Badge } from "../../../shared/components/common";
 import type { RoomStatus } from "../../../shared/types/status";
-import { formatDate } from "../../../shared/utils/format";
 import { useCanWrite, useWriteBlockReason } from "../../../shared/contexts/SubscriptionContext";
 
 /* ══════════════════════════════════════════
@@ -249,50 +248,6 @@ export function UtilityCard({
         <img src={bgImage} alt="" style={{ position: "absolute", bottom: -8, right: -8, width: 85, height: 85, objectFit: "contain", opacity: 0.85, zIndex: 1, pointerEvents: "none" }} />
       )}
     </div>
-  );
-}
-
-/**
- * Một dòng tin đăng gần đây. Chỉ có 2 nút: xem tin công khai và sửa tin.
- * Không có nút xóa ở dashboard — xóa/ẩn tin thuộc trang "Quản lý tin đăng".
- */
-export function ListingRow({ l, onClick, onView, onEdit }: {
-  l: { title: string; sub: string; status: string; views?: number | null; createdAt?: string | null };
-  onClick: () => void;
-  onView: () => void;
-  onEdit: () => void;
-}) {
-  return (
-    <div onClick={onClick} data-testid="dashboard-listing-row" style={{ display: "flex", alignItems: "center", gap: 14, padding: "14px 18px", background: C.white, border: `1px solid ${C.border}`, borderRadius: 12, cursor: "pointer", justifyContent: "space-between", flexWrap: "wrap", transition: "border-color 0.15s" }}>
-      <div style={{ flex: "1 1 220px", minWidth: 0 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 9, marginBottom: 4, flexWrap: "wrap" }}>
-          <span style={{ fontFamily: font, fontSize: 14, fontWeight: 700, color: C.textPrimary }}>{l.title}</span>
-          <Badge kind="listing" status={l.status} />
-        </div>
-        <p style={{ fontFamily: font, fontSize: 12.5, color: C.textSecondary, margin: 0 }}>{l.sub}</p>
-      </div>
-      <div style={{ display: "flex", alignItems: "center", gap: 16, flexShrink: 0 }}>
-        <span title="Lượt xem" style={{ display: "inline-flex", alignItems: "center", gap: 5, fontFamily: font, fontSize: 12, color: C.textSecondary }}>
-          <Eye size={14} /> {l.views != null && Number.isFinite(Number(l.views)) ? Number(l.views).toLocaleString("vi-VN") : "—"}
-        </span>
-        <span title="Ngày đăng" style={{ display: "inline-flex", alignItems: "center", gap: 5, fontFamily: font, fontSize: 12, color: C.textSecondary }}>
-          <Calendar size={14} /> {formatDate(l.createdAt)}
-        </span>
-        <div style={{ display: "flex", gap: 6 }} onClick={e => e.stopPropagation()}>
-          <IconBtn label="Xem tin công khai" onClick={onView} testId="dashboard-listing-view-btn"><Eye size={14} /></IconBtn>
-          <IconBtn label="Sửa tin đăng" onClick={onEdit} testId="dashboard-listing-edit-btn"><Pencil size={14} /></IconBtn>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function IconBtn({ children, label, onClick, testId }: { children: React.ReactNode; label: string; onClick: () => void; testId?: string }) {
-  return (
-    <button type="button" aria-label={label} title={label} onClick={onClick} data-testid={testId}
-      style={{ width: 32, height: 32, borderRadius: 8, border: `1px solid ${C.border}`, background: C.white, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: C.textSecondary }}>
-      {children}
-    </button>
   );
 }
 
