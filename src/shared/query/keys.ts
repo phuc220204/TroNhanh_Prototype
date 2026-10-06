@@ -110,6 +110,8 @@ export const qk = {
     /** Các kỳ thật sự có hóa đơn — dựng dropdown lọc kỳ ở /chu-tro/hoa-don. */
     periods: (ownerId: string | undefined) => ["billing", "periods", ownerId] as const,
     invoiceDetail: (id: string) => ["billing", "invoice", id] as const,
+    /** Nháp hóa đơn (tiền phòng + điện nước + dịch vụ) của một phòng theo kỳ. */
+    invoiceDraft: (roomId: string, period: string) => ["billing", "invoiceDraft", roomId, period] as const,
     /** Nhật ký thu tiền của một hóa đơn (lý do chưa thu được + ngày hẹn). */
     collectionNotes: (invoiceId: string) => ["billing", "collectionNotes", invoiceId] as const,
   },

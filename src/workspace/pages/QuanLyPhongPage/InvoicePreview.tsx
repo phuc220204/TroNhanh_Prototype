@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { AlertCircle, AlertTriangle } from "lucide-react";
 import { C, font, radius } from "../../../shared/theme";
 import { Button, ModalShell, Skeleton, VietQRBlock } from "../../../shared/components/common";
@@ -12,6 +13,7 @@ import {
   type UtilityLine,
 } from "../../services/invoice-draft";
 import { toUserMessage } from "../../../shared/services/supabase-error";
+import { qk } from "../../../shared/query/keys";
 import { addDaysToISODate, formatPeriod, formatVnd, toLocalISODate, toLocalPeriod } from "../../../shared/utils/format";
 
 interface InvoicePreviewProps {
@@ -21,11 +23,6 @@ interface InvoicePreviewProps {
   onSuccess?: () => void;
   isReadOnly?: boolean;
 }
-
-type DraftState =
-  | { status: "pending" }
-  | { status: "error"; message: string }
-  | { status: "ready"; draft: InvoiceDraft };
 
 interface AmountInputs {
   rent: string;
@@ -95,46 +92,36 @@ export function InvoicePreview({ room, property, onClose, onSuccess, isReadOnly 
   const roomId = room?.id ?? "";
   const [period, setPeriod] = useState(() => toLocalPeriod());
   const [dueDate, setDueDate] = useState(() => addDaysToISODate(toLocalISODate(), 5));
-  const [draftState, setDraftState] = useState<DraftState>({ status: "pending" });
-  const [reloadToken, setReloadToken] = useState(0);
   const [amounts, setAmounts] = useState<AmountInputs>(EMPTY_AMOUNTS);
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
 
-  // TODO(proposal): chuyển sang useQuery khi keys.ts có `qk.billing.invoiceDraft(roomId, period)`.
+  const isValidPeriod = PERIOD_PATTERN.test(period);
+  // Key nằm dưới `qk.billing.all`: ghi chỉ số / tạo hóa đơn ở nơi khác tự làm mới nháp.
+  const draftQuery = useQuery({
+    queryKey: qk.billing.invoiceDraft(roomId, period),
+    queryFn: async (): Promise<InvoiceDraft> => buildInvoiceDraft(await getInvoiceDraftSources(roomId, period), period),
+    enabled: Boolean(roomId) && isValidPeriod,
+    staleTime: 0,
+  });
+  const loadedDraft = draftQuery.data;
+
+  // Đổi kỳ = dựng lại nháp từ đầu; số chủ trọ sửa tay chỉ áp cho kỳ đang xem.
   useEffect(() => {
-    if (!roomId || !PERIOD_PATTERN.test(period)) return;
-    let isCancelled = false;
-    setDraftState({ status: "pending" });
-    const load = async () => {
-      try {
-        const sources = await getInvoiceDraftSources(roomId, period);
-        if (isCancelled) return;
-        const draft = buildInvoiceDraft(sources, period);
-        setDraftState({ status: "ready", draft });
-        // Đổi kỳ = dựng lại nháp từ đầu; số chủ trọ sửa tay chỉ áp cho kỳ đang xem.
-        setAmounts({
-          rent: draft.rent === null ? "" : String(draft.rent),
-          electricity: String(draft.electricity.amount),
-          water: String(draft.water.amount),
-          service: draft.serviceFee === null ? "" : String(draft.serviceFee),
-        });
-      } catch (err) {
-        if (!isCancelled) setDraftState({ status: "error", message: toUserMessage(err) });
-      }
-    };
-    void load();
-    return () => {
-      isCancelled = true;
-    };
-  }, [roomId, period, reloadToken]);
+    if (!loadedDraft) return;
+    setAmounts({
+      rent: loadedDraft.rent === null ? "" : String(loadedDraft.rent),
+      electricity: String(loadedDraft.electricity.amount),
+      water: String(loadedDraft.water.amount),
+      service: loadedDraft.serviceFee === null ? "" : String(loadedDraft.serviceFee),
+    });
+  }, [loadedDraft]);
 
   // Guard SAU mọi hook (Rules of Hooks).
   if (!room) return null;
 
-  const isValidPeriod = PERIOD_PATTERN.test(period);
   // Nháp phải khớp kỳ đang chọn (kỳ bị xóa trống thì không tải lại → không được gửi).
-  const draft = draftState.status === "ready" && draftState.draft.period === period ? draftState.draft : null;
+  const draft = loadedDraft && loadedDraft.period === period ? loadedDraft : null;
   const hasContract = Boolean(draft?.contractId);
   const finalAmounts = {
     rent: toAmount(amounts.rent),
@@ -218,12 +205,12 @@ export function InvoicePreview({ room, property, onClose, onSuccess, isReadOnly 
 
         {!isValidPeriod && <Notice tone="warning">Vui lòng chọn kỳ hóa đơn.</Notice>}
 
-        {isValidPeriod && draftState.status === "pending" && <Skeleton variant="row" count={4} data-testid="invoice-draft-loading" />}
+        {isValidPeriod && draftQuery.isPending && <Skeleton variant="row" count={4} data-testid="invoice-draft-loading" />}
 
-        {draftState.status === "error" && (
+        {isValidPeriod && draftQuery.isError && (
           <Notice tone="error" testId="invoice-draft-error">
-            <p style={{ margin: "0 0 8px" }}>Không tải được dữ liệu để lập hóa đơn. {draftState.message}</p>
-            <Button size="sm" variant="outline" onClick={() => setReloadToken((n) => n + 1)}>Thử lại</Button>
+            <p style={{ margin: "0 0 8px" }}>Không tải được dữ liệu để lập hóa đơn. {toUserMessage(draftQuery.error)}</p>
+            <Button size="sm" variant="outline" onClick={() => void draftQuery.refetch()}>Thử lại</Button>
           </Notice>
         )}
 
