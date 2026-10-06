@@ -121,6 +121,9 @@ export const qk = {
 
   dashboard: {
     summary: (ownerId: string | undefined) => ["dashboard", "summary", ownerId] as const,
+    /** KPI theo khu. Nằm dưới `summary(ownerId)` ⇒ invalidate summary là làm mới mọi khu. */
+    metrics: (ownerId: string | undefined, propertyId?: string) =>
+      ["dashboard", "summary", ownerId, "metrics", propertyId ?? "all"] as const,
   },
 
   // ── Shared kernel ─────────────────────────────────────────────────────────

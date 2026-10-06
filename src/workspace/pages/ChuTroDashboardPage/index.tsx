@@ -1,4 +1,5 @@
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useMemo } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router";
 import {
   Building2, FileText, Plus, Zap, ChevronRight,
@@ -8,16 +9,12 @@ import { C, font, shadow } from "../../../shared/theme";
 import { useBreakpoint } from "../../../shared/components/useBreakpoint";
 import { LandlordShell } from "../../../shared/components/LandlordShell";
 import { formatVnd } from "../../../shared/utils/format";
-import type { RoomStatus } from "../../../shared/types/status";
 import { EmptyState, Button, Toast, Skeleton } from "../../../shared/components/common";
-import { logError } from "../../../shared/services/supabase-error";
 import { useAuth } from "../../../shared/contexts/AuthContext";
 import { useCanWrite } from "../../../shared/contexts/SubscriptionContext";
-import { getPropertiesByOwnerOrThrow } from "../../services/property-service";
-import { getRoomsByOwnerOrThrow } from "../../services/room-service";
-import { getDashboardMetrics, type DashboardKPIs } from "../../services/dashboard-service";
 import { DUE_SOON_DAYS } from "../../services/invoice-due";
-import { getMyListings } from "../../../marketplace/services/listing-queries";
+import { qk } from "../../../shared/query/keys";
+import { useDashboardData, toDashboardRoom } from "./useDashboardData";
 import {
   PrimaryBtn, GhostBtn, StatusChip, PayText, PropertySelector,
   SegmentedBar, RoomTaskBtn, UtilityCard, ListingRow, Footer,
@@ -44,13 +41,13 @@ export function ChuTroDashboardPage() {
   const { user, profile } = useAuth();
   const displayName = profile?.full_name || user?.email?.split("@")[0] || "Chủ trọ";
 
-  const [properties, setProperties] = useState<any[]>([]);
-  const [rooms, setRooms] = useState<any[]>([]);
-  const [realListings, setRealListings] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [dashboardError, setDashboardError] = useState(false);
-
+  const queryClient = useQueryClient();
   const [property, setProperty] = useState("all");
+  const {
+    properties, rooms, kpis: dbKpis, listings: realListings,
+    isPending: loading, isError: dashboardError, isSwitchingProperty, refetchAll,
+  } = useDashboardData(user?.id, property);
+
   const [modal, setModal] = useState<null | "utility" | "room">(null);
   const [revealKPIs, setRevealKPIs] = useState(false);
   const [toast, setToast] = useState<{ message: string; variant: "success" | "error" } | null>(null);
@@ -66,38 +63,12 @@ export function ChuTroDashboardPage() {
   const toListings = () => navigate("/tai-khoan/tin-cho-thue");
   const toPost = () => navigate("/dang-tin-cho-thue");
 
-  const [dbKpis, setDbKpis] = useState<DashboardKPIs | null>(null);
+  const handlePropertyChange = (value: string) => setProperty(value);
 
-  const loadDashboardData = useCallback(async (propertyId?: string) => {
-    if (!user) return;
-    try {
-      setLoading(true);
-      setDashboardError(false);
-      const [props, rms, kpis, listings] = await Promise.all([
-        getPropertiesByOwnerOrThrow(user.id),
-        getRoomsByOwnerOrThrow(user.id),
-        getDashboardMetrics(user.id, propertyId),
-        getMyListings(user.id),
-      ]);
-      setProperties(props);
-      setRooms(rms);
-      setDbKpis(kpis);
-      setRealListings(listings ? listings.slice(0, 3) : []);
-    } catch (err) {
-      logError("ChuTroDashboardPage.loadDashboardData", err);
-      setDashboardError(true);
-    } finally {
-      setLoading(false);
-    }
-  }, [user]);
-
-  useEffect(() => {
-    void loadDashboardData();
-  }, [loadDashboardData]);
-
-  const handlePropertyChange = (value: string) => {
-    setProperty(value);
-    void loadDashboardData(value === "all" ? undefined : value);
+  /** Làm mới sau thao tác ghi: phòng + mọi KPI của chủ trọ này. */
+  const refreshAfterWrite = () => {
+    void queryClient.invalidateQueries({ queryKey: qk.rooms.all });
+    void queryClient.invalidateQueries({ queryKey: qk.dashboard.summary(user?.id) });
   };
 
   const displayProperties = useMemo(() => {
@@ -112,27 +83,9 @@ export function ChuTroDashboardPage() {
     return [];
   }, [rooms, property]);
 
-  const activeRoomsList = useMemo(() => {
-    return filteredRooms;
-  }, [filteredRooms]);
-
-  // Convert rooms data
-  const displayRooms = useMemo(() => {
-    return activeRoomsList.slice(0, 4).map(r => ({
-      code: r.room_code || r.code || "",
-      property: r.properties?.name || r.property || "Khu trọ",
-      status: (r.status === "Available" ? "available" : r.status === "Deposited" ? "deposited" : r.status === "Rented" ? "rented" : r.status === "Hidden" ? "hidden" : r.status === "available" ? "available" : r.status === "deposited" ? "deposited" : r.status === "rented" ? "rented" : "available") as RoomStatus,
-      occupant: r.occupant_name || (r.occupant ? r.occupant.name : null),
-      paid: r.payment_status === "Paid" ? true : r.payment_status === "Unpaid" ? false : (r.bill ? r.bill.paid : null),
-      task: r.status === "Available" || r.status === "available"
-        ? "Tạo tin đăng"
-        : (r.status === "Rented" || r.status === "rented") && (r.payment_status === "Unpaid" || (r.bill && !r.bill.paid))
-          ? "Xem hóa đơn"
-          : (r.status === "Deposited" || r.status === "deposited" || r.status === "Đã cọc" || r.status === "đã cọc")
-            ? "Xem hợp đồng"
-            : null
-    }));
-  }, [activeRoomsList]);
+  // Bản cũ đọc `occupant_name` / `payment_status` / `bill` — các trường của dữ
+  // liệu mock, không có trong DB ⇒ cột "Người ở" và "Thanh toán" luôn trống.
+  const displayRooms = useMemo(() => filteredRooms.slice(0, 4).map(toDashboardRoom), [filteredRooms]);
 
   // Convert listings
   // `getMyListings` chỉ trả tin Active dạng `ListingCardItem` (`type`, `loc`,
@@ -153,7 +106,8 @@ export function ChuTroDashboardPage() {
   const handleUtilitySaved = () => {
     setModal(null);
     setToast({ message: "Đã lưu chỉ số điện nước.", variant: "success" });
-    void loadDashboardData(property === "all" ? undefined : property);
+    void queryClient.invalidateQueries({ queryKey: qk.billing.all });
+    refreshAfterWrite();
   };
 
   const totalRoomsCount = dbKpis?.totalRoomsCount ?? 0;
@@ -207,7 +161,7 @@ export function ChuTroDashboardPage() {
         <AddRoomModal
           properties={properties.map((p: any) => ({ id: p.id, name: p.name }))}
           onClose={() => setModal(null)}
-          onCreated={() => void loadDashboardData(property === "all" ? undefined : property)}
+          onCreated={refreshAfterWrite}
         />
       )}
       {toast && (
@@ -233,7 +187,7 @@ export function ChuTroDashboardPage() {
           <AlertTriangle size={30} color={C.repairing} />
           <h1 style={{ fontSize: 18, color: C.textPrimary, margin: "12px 0 6px" }}>Chưa tải được dữ liệu dashboard</h1>
           <p style={{ color: C.textSecondary, fontSize: 13.5, lineHeight: 1.5 }}>Không thể đọc khu trọ, phòng hoặc hóa đơn. Dữ liệu chưa bị thay đổi; hãy thử tải lại.</p>
-          <PrimaryBtn onClick={() => void loadDashboardData(property === "all" ? undefined : property)}>Thử tải lại</PrimaryBtn>
+          <PrimaryBtn onClick={() => void refetchAll()}>Thử tải lại</PrimaryBtn>
         </div>
       </LandlordShell>
     );
@@ -279,7 +233,7 @@ export function ChuTroDashboardPage() {
             </div>
           ) : null}
 
-          <KpiGrid kpis={dynamicKPIS} isRevealed={revealKPIs} onToggleReveal={() => setRevealKPIs(!revealKPIs)} isMobile />
+          <div aria-busy={isSwitchingProperty} style={{ opacity: isSwitchingProperty ? 0.55 : 1, transition: "opacity 150ms" }}><KpiGrid kpis={dynamicKPIS} isRevealed={revealKPIs} onToggleReveal={() => setRevealKPIs(!revealKPIs)} isMobile /></div>
 
           <DueInvoicesPanel invoices={reminderInvoices} onOpenInvoice={openInvoice} onViewAll={toInvoices} />
 
@@ -414,7 +368,7 @@ export function ChuTroDashboardPage() {
             </div>
           ) : null}
 
-          <KpiGrid kpis={dynamicKPIS} isRevealed={revealKPIs} onToggleReveal={() => setRevealKPIs(!revealKPIs)} />
+          <div aria-busy={isSwitchingProperty} style={{ opacity: isSwitchingProperty ? 0.55 : 1, transition: "opacity 150ms" }}><KpiGrid kpis={dynamicKPIS} isRevealed={revealKPIs} onToggleReveal={() => setRevealKPIs(!revealKPIs)} /></div>
 
           <DueInvoicesPanel invoices={reminderInvoices} onOpenInvoice={openInvoice} onViewAll={toInvoices} />
 
