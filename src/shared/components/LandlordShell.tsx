@@ -59,7 +59,7 @@ export function LandlordShell({
 }) {
   const { isMobile } = useBreakpoint();
   const location = useLocation();
-  const { status: subStatus, trialDaysLeft, activateTrial } = useSubscriptionContext();
+  const { status: subStatus, trialDaysLeft, activateTrial, isLoading: isSubscriptionLoading } = useSubscriptionContext();
 
   const [showTrialRegister, setShowTrialRegister] = useState(false);
 
@@ -95,6 +95,15 @@ export function LandlordShell({
   const isSaaSBlocked = subStatus === "NONE" && isSaaSTab;
 
   const renderContent = () => {
+    // Đang tải gói: status tạm là "NONE" ⇒ nếu không chờ, người ĐÃ có gói thấy
+    // màn khóa nháy lên mỗi lần tải lại trang.
+    if (isSaaSTab && isSubscriptionLoading) {
+      return (
+        <div role="status" data-testid="landlord-shell-loading" style={{ minHeight: "calc(100vh - 160px)", display: "grid", placeItems: "center", color: C.textSecondary, fontFamily: font, fontSize: 14, fontWeight: 600 }}>
+          Đang tải...
+        </div>
+      );
+    }
     if (isSaaSBlocked) {
       return (
         <div

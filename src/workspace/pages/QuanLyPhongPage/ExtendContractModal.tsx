@@ -2,6 +2,9 @@ import { useState } from "react";
 import { C, font, radius } from "../../../shared/theme";
 import { ModalShell } from "../../../shared/components/common/ModalShell";
 import { Button } from "../../../shared/components/common";
+// `addMonthsToISODate` tính theo giờ địa phương — bản cũ dùng `toISOString()`
+// (UTC) nên ở UTC+7 ra sớm 1 ngày.
+import { addMonthsToISODate, formatDate } from "../../../shared/utils/format";
 
 interface ExtendContractModalProps {
   /** Ngày kết thúc hiện tại (`YYYY-MM-DD`). */
@@ -12,15 +15,6 @@ interface ExtendContractModalProps {
   errorMessage?: string | null;
   onCancel: () => void;
   onSubmit: (newEndDate: string) => void;
-}
-
-/** Cộng `months` tháng vào một ngày `YYYY-MM-DD`, trả về cùng định dạng. */
-function addMonths(dateStr: string, months: number): string {
-  const base = new Date(`${dateStr}T00:00:00`);
-  if (Number.isNaN(base.getTime())) return dateStr;
-  const target = new Date(base);
-  target.setMonth(target.getMonth() + months);
-  return target.toISOString().split("T")[0] ?? dateStr;
 }
 
 const QUICK_OPTIONS = [3, 6, 12];
@@ -36,7 +30,7 @@ const QUICK_OPTIONS = [3, 6, 12];
 export function ExtendContractModal({
   currentEndDate, occupantName, roomLabel, submitting, errorMessage, onCancel, onSubmit,
 }: ExtendContractModalProps) {
-  const [newEndDate, setNewEndDate] = useState(() => addMonths(currentEndDate, 6));
+  const [newEndDate, setNewEndDate] = useState(() => addMonthsToISODate(currentEndDate, 6));
 
   const isLater = newEndDate > currentEndDate;
 
@@ -63,14 +57,14 @@ export function ExtendContractModal({
       <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
         <p style={{ fontFamily: font, fontSize: 13.5, color: C.textPrimary, margin: 0, lineHeight: 1.55 }}>
           Hợp đồng của <strong>{occupantName}</strong> đang kết thúc ngày{" "}
-          <strong>{currentEndDate}</strong>. Gia hạn sẽ dời ngày kết thúc và giữ nguyên
+          <strong>{formatDate(currentEndDate)}</strong>. Gia hạn sẽ dời ngày kết thúc và giữ nguyên
           người ở, tiền cọc cùng toàn bộ hóa đơn đã lập.
         </p>
 
         {errorMessage && (
           <div
             data-testid="extend-contract-error"
-            style={{ background: C.white, border: `1px solid ${C.error}`, color: C.error, borderRadius: radius.sm, padding: "10px 14px", fontFamily: font, fontSize: 13, fontWeight: 600 }}
+            style={{ background: C.errorBg, border: `1px solid ${C.errorBorder}`, color: C.error, borderRadius: radius.sm, padding: "10px 14px", fontFamily: font, fontSize: 13, fontWeight: 600 }}
           >
             {errorMessage}
           </div>
@@ -82,7 +76,7 @@ export function ExtendContractModal({
           </p>
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
             {QUICK_OPTIONS.map((months) => {
-              const value = addMonths(currentEndDate, months);
+              const value = addMonthsToISODate(currentEndDate, months);
               const isActive = newEndDate === value;
               return (
                 <button
@@ -133,9 +127,13 @@ export function ExtendContractModal({
               boxSizing: "border-box",
             }}
           />
-          {!isLater && (
+          {isLater ? (
+            <p data-testid="extend-new-end-date-text" style={{ fontFamily: font, fontSize: 12, color: C.textSecondary, margin: "6px 0 0" }}>
+              Hợp đồng sẽ kết thúc ngày <strong>{formatDate(newEndDate)}</strong>.
+            </p>
+          ) : (
             <p style={{ fontFamily: font, fontSize: 12, color: C.error, margin: "6px 0 0" }}>
-              Ngày kết thúc mới phải muộn hơn {currentEndDate}.
+              Ngày kết thúc mới phải muộn hơn {formatDate(currentEndDate)}.
             </p>
           )}
         </div>

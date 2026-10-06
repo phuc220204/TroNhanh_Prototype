@@ -16,6 +16,7 @@ import { ExtendContractModal } from "./ExtendContractModal";
 import { toUserMessage } from "../../../shared/services/supabase-error";
 import { AddCoOccupantModal } from "./AddCoOccupantModal";
 import { OccupancyTable } from "./OccupancyTable";
+import { toLocalISODate, addMonthsToISODate, formatDate } from "../../../shared/utils/format";
 
 interface OccupantsViewProps {
   property: Property | null;
@@ -40,11 +41,10 @@ export function OccupantsView({
   const [fullName, setFullName] = useState("");
   const [phoneNumber, setPhoneNumber] = useState("");
   const [occupantCount, setOccupantCount] = useState("1");
-  const [startDate, setStartDate] = useState(new Date().toISOString().split("T")[0] || "");
-  
-  // Default end date: 1 year from today
-  const defaultEndDate = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().split("T")[0] || "";
-  const [endDate, setEndDate] = useState(defaultEndDate);
+  // Ngày theo giờ địa phương — `toISOString()` (UTC) trước 7h sáng ra hôm qua.
+  const [startDate, setStartDate] = useState(() => toLocalISODate());
+  // Mặc định hợp đồng 12 tháng kể từ ngày bắt đầu.
+  const [endDate, setEndDate] = useState(() => addMonthsToISODate(toLocalISODate(), 12));
   const [rentPrice, setRentPrice] = useState("");
   const [deposit, setDeposit] = useState("");
   const [renterEmail, setRenterEmail] = useState("");
@@ -57,6 +57,11 @@ export function OccupantsView({
   const [submitting, setSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
   const [toastMsg, setToastMsg] = useState("");
+  // Lỗi tải danh sách — tách khỏi `errorMsg` (chỉ hiện trong modal) để lỗi mạng
+  // không trông giống "Chưa có người ở".
+  const [loadError, setLoadError] = useState("");
+  // Lỗi của thao tác ngoài modal (kết thúc hợp đồng) — hiện kiểu lỗi, không xanh.
+  const [actionError, setActionError] = useState("");
 
   const showToast = (msg: string) => {
     setToastMsg(msg);
@@ -66,21 +71,19 @@ export function OccupantsView({
   const fetchOccupanciesData = async () => {
     if (!property || !property.rooms || property.rooms.length === 0) {
       setOccupancies([]);
+      setLoadError("");
       return;
     }
     try {
       setLoading(true);
+      setLoadError("");
       const roomIds = property.rooms.map((r) => r.id);
-      // `(): OccupancyItem[] => []` chứ không `() => []`: mảng rỗng không có kiểu
-      // phần tử, nên `allResults` sẽ là `any[][]` và `setOccupancies(flattened)`
-      // hết kiểm kiểu — đúng chỗ mà một field đổi tên sẽ trôi qua im lặng.
-      const allResults = await Promise.all(
-        roomIds.map((id) => listOccupancies(id).catch((): OccupancyItem[] => []))
-      );
-      const flattened = allResults.flat();
-      setOccupancies(flattened);
-    } catch (err: any) {
-      setErrorMsg(toUserMessage(err));
+      // KHÔNG `.catch(() => [])` từng phòng: một phòng lỗi sẽ bị nuốt và danh
+      // sách hiện thiếu người mà không ai biết. Lỗi thì báo lỗi, cho thử lại.
+      const allResults = await Promise.all(roomIds.map((id) => listOccupancies(id)));
+      setOccupancies(allResults.flat());
+    } catch (err: unknown) {
+      setLoadError(toUserMessage(err));
     } finally {
       setLoading(false);
     }
@@ -104,6 +107,9 @@ export function OccupantsView({
     setPhoneNumber("");
     setOccupantCount("1");
     setRenterEmail("");
+    const today = toLocalISODate();
+    setStartDate(today);
+    setEndDate(addMonthsToISODate(today, 12));
     setModalOpen(true);
   };
 
@@ -183,7 +189,7 @@ export function OccupantsView({
       await addOccupantToContract(coOccupantTarget.contractId, {
         full_name: input.full_name,
         phone_number: input.phone_number,
-        start_date: new Date().toISOString().split("T")[0] || "",
+        start_date: toLocalISODate(),
       });
       setCoOccupantTarget(null);
       showToast("Đã thêm người ở cùng vào hợp đồng.");
@@ -203,7 +209,7 @@ export function OccupantsView({
       setExtendSubmitting(true);
       await extendContract(extendTarget.contractId, newEndDate);
       setExtendTarget(null);
-      showToast(`Đã gia hạn hợp đồng đến ${newEndDate}.`);
+      showToast(`Đã gia hạn hợp đồng đến ${formatDate(newEndDate)}.`);
       fetchOccupanciesData();
       if (onRefreshData) onRefreshData();
     } catch (err: unknown) {
@@ -218,14 +224,16 @@ export function OccupantsView({
     if (!window.confirm("Bạn có chắc chắn muốn kết thúc hợp đồng này? Phòng sẽ quay về trạng thái Trống.")) {
       return;
     }
+    setActionError("");
     try {
       setLoading(true);
       await endOccupancy(contractId);
       showToast("Đã kết thúc hợp đồng thành công. Phòng hiện đã trống.");
       fetchOccupanciesData();
       if (onRefreshData) onRefreshData();
-    } catch (err: any) {
-      showToast("Lỗi khi kết thúc hợp đồng: " + toUserMessage(err));
+    } catch (err: unknown) {
+      setToastMsg("");
+      setActionError(`Chưa kết thúc được hợp đồng: ${toUserMessage(err)}`);
     } finally {
       setLoading(false);
     }
@@ -260,9 +268,18 @@ export function OccupantsView({
     <div style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: 16, padding: mobile ? 16 : 22 }}>
       {/* Toast Banner */}
       {toastMsg && (
-        <div data-testid="occupancy-toast" style={{ background: C.cream, border: `1px solid ${C.success}`, color: C.success, padding: "10px 16px", borderRadius: 10, fontFamily: font, fontSize: 13, fontWeight: 600, marginBottom: 16, display: "flex", alignItems: "center", gap: 8 }}>
+        <div data-testid="occupancy-toast" style={{ background: C.successBg, border: `1px solid ${C.successBorder}`, color: C.success, padding: "10px 16px", borderRadius: 10, fontFamily: font, fontSize: 13, fontWeight: 600, marginBottom: 16, display: "flex", alignItems: "center", gap: 8 }}>
           <CheckCircle size={16} />
           {toastMsg}
+        </div>
+      )}
+      {actionError && (
+        <div data-testid="occupancy-action-error" role="alert" style={{ background: C.errorBg, border: `1px solid ${C.errorBorder}`, color: C.error, padding: "10px 16px", borderRadius: 10, fontFamily: font, fontSize: 13, fontWeight: 600, marginBottom: 16, display: "flex", alignItems: "center", gap: 8 }}>
+          <AlertCircle size={16} style={{ flexShrink: 0 }} />
+          <span style={{ flex: 1 }}>{actionError}</span>
+          <button type="button" aria-label="Đóng" onClick={() => setActionError("")} style={{ background: "none", border: "none", cursor: "pointer", padding: 0, display: "flex" }}>
+            <X size={16} color={C.error} />
+          </button>
         </div>
       )}
 
@@ -302,6 +319,16 @@ export function OccupantsView({
       </div>
 
       {/* Bảng người ở — tách ra OccupancyTable.tsx (§8.2) */}
+      {loadError ? (
+        <div data-testid="occupancy-load-error" role="alert" style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 12, padding: "32px 16px", textAlign: "center", background: C.errorBg, border: `1px solid ${C.errorBorder}`, borderRadius: 12 }}>
+          <p style={{ fontFamily: font, fontSize: 14, color: C.error, fontWeight: 600, margin: 0, lineHeight: 1.5 }}>
+            Không tải được danh sách người ở. {loadError}
+          </p>
+          <Button variant="outline" size="sm" onClick={() => void fetchOccupanciesData()} data-testid="occupancy-retry-btn">
+            Thử lại
+          </Button>
+        </div>
+      ) : (
       <OccupancyTable
         loading={loading}
         occupancies={occupancies}
@@ -323,6 +350,7 @@ export function OccupantsView({
           });
         }}
       />
+      )}
 
       {/* Modal "Thêm người ở" */}
       {modalOpen && (

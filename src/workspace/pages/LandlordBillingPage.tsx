@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from "react";
 import { useSearchParams } from "react-router";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { FileText } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { FileText, TriangleAlert } from "lucide-react";
 import { LandlordShell } from "../../shared/components/LandlordShell";
 import { C, font, radius } from "../../shared/theme";
 import { useAuth } from "../../shared/contexts/AuthContext";
@@ -9,7 +9,6 @@ import { qk } from "../../shared/query/keys";
 import {
   getInvoices,
   getInvoicePeriods,
-  recordPayment,
   getPaidAmount,
   getRemainingAmount,
   getLatestCollectionNote,
@@ -30,6 +29,8 @@ import {
 import { INVOICE_STATUS_META } from "../../shared/utils/statusMaps";
 import { classifyInvoiceDue, formatDueLabel, getDaysUntilDue } from "../services/invoice-due";
 import { CollectionLogSection } from "../components/CollectionLogSection";
+import { RecordPaymentModal } from "../components/RecordPaymentModal";
+import { formatDate, formatPeriod, formatVnd } from "../../shared/utils/format";
 
 function toInvoiceStatusKey(status: string): keyof typeof INVOICE_STATUS_META {
   const map: Record<string, keyof typeof INVOICE_STATUS_META> = {
@@ -77,13 +78,13 @@ const ITEM_TYPE_LABELS: Record<string, string> = {
 
 export function LandlordBillingPage() {
   const { user } = useAuth();
-  const queryClient = useQueryClient();
   const [searchParams, setSearchParams] = useSearchParams();
 
   const [selectedPeriod, setSelectedPeriod] = useState<string>("all");
   const [selectedStatus, setSelectedStatus] = useState<string>("");
   const [selectedInvoice, setSelectedInvoice] = useState<InvoiceItem | null>(null);
-  const [recordingPayment, setRecordingPayment] = useState(false);
+  const [isRecordPaymentOpen, setIsRecordPaymentOpen] = useState(false);
+  const [isLinkedInvoiceMissing, setIsLinkedInvoiceMissing] = useState(false);
   const [actionMessage, setActionMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
   const { data: periods = [] } = useQuery({
@@ -94,11 +95,11 @@ export function LandlordBillingPage() {
 
   const periodOptions = useMemo(() => {
     const opts = [{ label: "Tất cả kỳ", value: "all" }];
-    periods.forEach((p) => opts.push({ label: `Kỳ ${p}`, value: p }));
+    periods.forEach((p) => opts.push({ label: formatPeriod(p), value: p }));
     return opts;
   }, [periods]);
 
-  const { data: properties = [] } = useQuery({
+  const { data: properties = [], isError: isPropertiesError } = useQuery({
     queryKey: qk.properties.mine(user?.id),
     queryFn: () => getPropertiesByOwner(user?.id),
     enabled: !!user?.id,
@@ -109,6 +110,8 @@ export function LandlordBillingPage() {
     isPending,
     isError,
     error,
+    refetch,
+    isRefetching,
   } = useQuery({
     queryKey: qk.billing.invoices(user?.id, selectedPeriod, selectedStatus),
     queryFn: () =>
@@ -126,11 +129,14 @@ export function LandlordBillingPage() {
     if (!linkedInvoiceId || isPending) return;
     const linkedInvoice = invoices.find((inv) => inv.id === linkedInvoiceId);
     if (linkedInvoice) setSelectedInvoice(linkedInvoice);
+    // Không tìm thấy (đã xóa, hoặc link cũ) ⇒ báo rõ thay vì lặng lẽ bỏ qua.
+    // Lỗi tải danh sách thì đã có khối lỗi riêng, không báo trùng.
+    else if (!isError) setIsLinkedInvoiceMissing(true);
     setSearchParams((params) => {
       params.delete("hoa-don");
       return params;
     }, { replace: true });
-  }, [linkedInvoiceId, isPending, invoices, setSearchParams]);
+  }, [linkedInvoiceId, isPending, isError, invoices, setSearchParams]);
 
   const invoiceProperty = useMemo(() => {
     if (!selectedInvoice?.rooms?.property_id) return null;
@@ -140,24 +146,10 @@ export function LandlordBillingPage() {
   const paidAmount = selectedInvoice ? getPaidAmount(selectedInvoice) : 0;
   const remainingAmount = selectedInvoice ? getRemainingAmount(selectedInvoice) : 0;
 
-  const handleRecordPayment = async () => {
-    if (!selectedInvoice || remainingAmount <= 0) return;
-    setRecordingPayment(true);
+  const closeInvoiceDetail = () => {
+    setSelectedInvoice(null);
+    setIsRecordPaymentOpen(false);
     setActionMessage(null);
-    try {
-      // Gửi số CÒN THIẾU, không phải `total_amount`: `record_payment` chỉ cộng
-      // dồn payments và không chặn thu vượt, nên hóa đơn đã thu một phần mà gửi
-      // nguyên tổng sẽ ghi nhận nhiều hơn số tiền thật của hóa đơn.
-      const newStatus = await recordPayment(selectedInvoice.id, remainingAmount);
-      const newPayments = [...(selectedInvoice.payments ?? []), { amount: remainingAmount }];
-      setSelectedInvoice((prev) => (prev ? { ...prev, status: newStatus, payments: newPayments } : null));
-      setActionMessage({ type: "success", text: "Đã ghi nhận thanh toán thành công." });
-      queryClient.invalidateQueries({ queryKey: qk.billing.all });
-    } catch (err) {
-      setActionMessage({ type: "error", text: toUserMessage(err) });
-    } finally {
-      setRecordingPayment(false);
-    }
   };
 
   return (
@@ -214,15 +206,34 @@ export function LandlordBillingPage() {
           </div>
         </div>
 
+        {isLinkedInvoiceMissing && (
+          <div
+            data-testid="linked-invoice-missing"
+            role="status"
+            style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 12, background: C.warningBg, border: `1px solid ${C.warningBorder}`, borderRadius: radius.md, padding: "10px 14px", marginBottom: 16, fontFamily: font, fontSize: 13, color: C.textPrimary }}
+          >
+            <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
+              <TriangleAlert size={15} color={C.warning} style={{ flexShrink: 0 }} />
+              Không tìm thấy hóa đơn. Có thể hóa đơn đã bị xóa hoặc đường dẫn đã cũ.
+            </span>
+            <Button variant="ghost" size="sm" onClick={() => setIsLinkedInvoiceMissing(false)}>
+              Đóng
+            </Button>
+          </div>
+        )}
+
         {isPending ? (
           <div style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: 16, padding: 24 }}>
             <Skeleton variant="row" count={6} />
           </div>
         ) : isError ? (
           <div style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: 16, padding: "48px 24px", textAlign: "center" }}>
-            <p style={{ fontFamily: font, fontSize: 15, fontWeight: 600, color: C.error, margin: 0 }}>
+            <p style={{ fontFamily: font, fontSize: 15, fontWeight: 600, color: C.error, margin: "0 0 16px" }}>
               {toUserMessage(error) || "Có lỗi xảy ra khi tải danh sách hóa đơn. Vui lòng thử lại."}
             </p>
+            <Button variant="outline" loading={isRefetching} onClick={() => refetch()} data-testid="invoices-retry">
+              Thử lại
+            </Button>
           </div>
         ) : invoices.length === 0 ? (
           <div style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: 16, padding: "48px 24px" }}>
@@ -267,14 +278,14 @@ export function LandlordBillingPage() {
                       onMouseEnter={(e) => (e.currentTarget.style.background = C.cream)}
                       onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
                     >
-                      <td style={{ padding: "14px 16px", fontWeight: 700, color: C.textPrimary }}>Kỳ {inv.period}</td>
+                      <td style={{ padding: "14px 16px", fontWeight: 700, color: C.textPrimary }}>{formatPeriod(inv.period)}</td>
                       <td style={{ padding: "14px 16px", fontWeight: 600, color: C.primary }}>{inv.rooms?.room_code || "-"}</td>
                       <td style={{ padding: "14px 16px", color: C.textPrimary }}>{inv.rooms?.properties?.name || "-"}</td>
                       <td style={{ padding: "14px 16px", textAlign: "right", fontWeight: 800, color: C.primary }}>
-                        {inv.total_amount?.toLocaleString("vi-VN")}đ
+                        {formatVnd(inv.total_amount)}
                       </td>
                       <td style={{ padding: "14px 16px", textAlign: "center", color: C.textSecondary, fontSize: 13 }}>
-                        {inv.due_date ? new Date(inv.due_date).toLocaleDateString("vi-VN") : "-"}
+                        {inv.due_date ? formatDate(inv.due_date) : "-"}
                         {isDueSoon && daysUntilDue !== null && (
                           <div style={{ fontSize: 11.5, fontWeight: 700, color: C.warning, marginTop: 2 }}>{formatDueLabel(daysUntilDue)}</div>
                         )}
@@ -300,24 +311,33 @@ export function LandlordBillingPage() {
           </div>
         )}
 
-        {selectedInvoice && (
+        {selectedInvoice && isRecordPaymentOpen && (
+          <RecordPaymentModal
+            invoiceId={selectedInvoice.id}
+            remainingAmount={remainingAmount}
+            roomCode={selectedInvoice.rooms?.room_code}
+            period={selectedInvoice.period}
+            onClose={() => setIsRecordPaymentOpen(false)}
+            onRecorded={({ amount, newStatus }) => {
+              setSelectedInvoice((prev) =>
+                prev ? { ...prev, status: newStatus, payments: [...(prev.payments ?? []), { amount }] } : null
+              );
+              setIsRecordPaymentOpen(false);
+              setActionMessage({ type: "success", text: `Đã ghi nhận thu ${formatVnd(amount)}.` });
+            }}
+          />
+        )}
+
+        {/* Hai ModalShell cùng mở thì Esc đóng cả hai ⇒ khi đang ghi nhận thu thì tạm ẩn modal chi tiết. */}
+        {selectedInvoice && !isRecordPaymentOpen && (
           <ModalShell
             title={`Chi tiết hóa đơn - Phòng ${selectedInvoice.rooms?.room_code ?? ""}`}
-            onClose={() => {
-              setSelectedInvoice(null);
-              setActionMessage(null);
-            }}
+            onClose={closeInvoiceDetail}
             footer={
               <div style={{ display: "flex", width: "100%", justifyContent: "space-between", alignItems: "center" }}>
                 <Badge kind="invoice" status={toDisplayStatusKey(selectedInvoice)} />
                 <div style={{ display: "flex", gap: 10 }}>
-                  <Button
-                    variant="outline"
-                    onClick={() => {
-                      setSelectedInvoice(null);
-                      setActionMessage(null);
-                    }}
-                  >
+                  <Button variant="outline" onClick={closeInvoiceDetail}>
                     Đóng
                   </Button>
                   <Button
@@ -325,12 +345,12 @@ export function LandlordBillingPage() {
                     requiresWrite
                     data-testid="mark-paid-btn"
                     disabled={remainingAmount <= 0}
-                    loading={recordingPayment}
-                    onClick={handleRecordPayment}
+                    onClick={() => {
+                      setActionMessage(null);
+                      setIsRecordPaymentOpen(true);
+                    }}
                   >
-                    {remainingAmount <= 0
-                      ? "Đã thanh toán đủ"
-                      : `Đã thu ${remainingAmount.toLocaleString("vi-VN")}đ`}
+                    {remainingAmount <= 0 ? "Đã thanh toán đủ" : "Ghi nhận đã thu"}
                   </Button>
                 </div>
               </div>
@@ -342,8 +362,8 @@ export function LandlordBillingPage() {
                   style={{
                     padding: "10px 14px",
                     borderRadius: radius.md,
-                    background: C.white,
-                    border: `1px solid ${actionMessage.type === "success" ? C.success : C.error}`,
+                    background: actionMessage.type === "success" ? C.successBg : C.errorBg,
+                    border: `1px solid ${actionMessage.type === "success" ? C.successBorder : C.errorBorder}`,
                     color: actionMessage.type === "success" ? C.success : C.error,
                     fontSize: 13,
                     fontWeight: 600,
@@ -360,16 +380,16 @@ export function LandlordBillingPage() {
                 </div>
                 <div>
                   <div style={{ fontSize: 12, color: C.textSecondary }}>Kỳ thanh toán</div>
-                  <div style={{ fontSize: 14, fontWeight: 700, color: C.textPrimary }}>Kỳ {selectedInvoice.period}</div>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: C.textPrimary }}>{formatPeriod(selectedInvoice.period)}</div>
                 </div>
                 <div>
                   <div style={{ fontSize: 12, color: C.textSecondary }}>Tổng tiền</div>
-                  <div style={{ fontSize: 16, fontWeight: 800, color: C.primary }}>{selectedInvoice.total_amount?.toLocaleString("vi-VN")}đ</div>
+                  <div style={{ fontSize: 16, fontWeight: 800, color: C.primary }}>{formatVnd(selectedInvoice.total_amount)}</div>
                 </div>
                 <div>
                   <div style={{ fontSize: 12, color: C.textSecondary }}>Hạn thanh toán</div>
                   <div style={{ fontSize: 14, fontWeight: 600, color: C.textPrimary }}>
-                    {selectedInvoice.due_date ? new Date(selectedInvoice.due_date).toLocaleDateString("vi-VN") : "-"}
+                    {selectedInvoice.due_date ? formatDate(selectedInvoice.due_date) : "-"}
                   </div>
                 </div>
                 {paidAmount > 0 && (
@@ -377,13 +397,13 @@ export function LandlordBillingPage() {
                     <div>
                       <div style={{ fontSize: 12, color: C.textSecondary }}>Đã thu</div>
                       <div data-testid="invoice-paid-amount" style={{ fontSize: 14, fontWeight: 700, color: C.success }}>
-                        {paidAmount.toLocaleString("vi-VN")}đ
+                        {formatVnd(paidAmount)}
                       </div>
                     </div>
                     <div>
                       <div style={{ fontSize: 12, color: C.textSecondary }}>Còn thiếu</div>
                       <div data-testid="invoice-remaining-amount" style={{ fontSize: 14, fontWeight: 700, color: remainingAmount > 0 ? C.error : C.success }}>
-                        {remainingAmount.toLocaleString("vi-VN")}đ
+                        {formatVnd(remainingAmount)}
                       </div>
                     </div>
                   </>
@@ -392,27 +412,39 @@ export function LandlordBillingPage() {
 
               <CollectionLogSection invoiceId={selectedInvoice.id} isSettled={remainingAmount <= 0} />
 
-              <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: 14 }}>
-                <h4 style={{ fontFamily: font, fontSize: 14, fontWeight: 700, margin: "0 0 10px", color: C.textPrimary }}>
-                  Mã VietQR thanh toán
-                </h4>
-                {/* Số tiền trên QR là số CÒN THIẾU — hóa đơn đã thu một phần mà
-                    quét ra tổng gốc thì người ở chuyển thừa. */}
-                <VietQRBlock
-                  bankCode={invoiceProperty?.bank_name}
-                  accountNumber={invoiceProperty?.bank_account_number}
-                  accountName={invoiceProperty?.bank_account_name}
-                  amount={remainingAmount}
-                  purpose={`Tien phong ${selectedInvoice.rooms?.room_code ?? ""} ky ${selectedInvoice.period}`}
-                />
-              </div>
+              {/* Đã thu đủ thì không còn gì để quét. */}
+              {remainingAmount > 0 && (
+                <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: 14 }}>
+                  <h4 style={{ fontFamily: font, fontSize: 14, fontWeight: 700, margin: "0 0 10px", color: C.textPrimary }}>
+                    Mã VietQR thanh toán
+                  </h4>
+                  {isPropertiesError && (
+                    <div
+                      data-testid="vietqr-property-error"
+                      style={{ display: "flex", alignItems: "center", gap: 8, background: C.warningBg, border: `1px solid ${C.warningBorder}`, borderRadius: radius.md, padding: "8px 12px", marginBottom: 10, fontSize: 12.5, color: C.textPrimary }}
+                    >
+                      <TriangleAlert size={14} color={C.warning} style={{ flexShrink: 0 }} />
+                      Không tải được thông tin tài khoản ngân hàng của khu trọ, nên chưa tạo được mã QR. Hãy tải lại trang.
+                    </div>
+                  )}
+                  {/* Số tiền trên QR là số CÒN THIẾU — hóa đơn đã thu một phần mà
+                      quét ra tổng gốc thì người ở chuyển thừa. */}
+                  <VietQRBlock
+                    bankCode={invoiceProperty?.bank_name}
+                    accountNumber={invoiceProperty?.bank_account_number}
+                    accountName={invoiceProperty?.bank_account_name}
+                    amount={remainingAmount}
+                    purpose={`Tien phong ${selectedInvoice.rooms?.room_code ?? ""} ky ${selectedInvoice.period}`}
+                  />
+                </div>
+              )}
 
               <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: 14 }}>
                 <h4 style={{ fontFamily: font, fontSize: 14, fontWeight: 700, margin: "0 0 10px", color: C.textPrimary }}>
                   Chi tiết khoản thu ({selectedInvoice.invoice_items?.length || 0})
                 </h4>
                 {(!selectedInvoice.invoice_items || selectedInvoice.invoice_items.length === 0) ? (
-                  <p style={{ fontSize: 13, color: C.textSecondary, margin: 0 }}>Khấu trừ / Phụ phí chưa liệt kê chi tiết.</p>
+                  <p style={{ fontSize: 13, color: C.textSecondary, margin: 0 }}>Hóa đơn chưa có khoản thu chi tiết.</p>
                 ) : (
                   <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                     {selectedInvoice.invoice_items.map((item: any, idx: number) => (
@@ -435,12 +467,12 @@ export function LandlordBillingPage() {
                           <span style={{ color: C.textSecondary }}>{item.description || "-"}</span>
                           {item.quantity && item.unit_price ? (
                             <span style={{ fontSize: 11.5, color: C.textSecondary, marginLeft: 6 }}>
-                              ({item.quantity} x {item.unit_price.toLocaleString("vi-VN")}đ)
+                              ({item.quantity} x {formatVnd(item.unit_price)})
                             </span>
                           ) : null}
                         </div>
                         <div style={{ fontWeight: 700, color: C.textPrimary, flexShrink: 0, marginLeft: 8 }}>
-                          {item.amount?.toLocaleString("vi-VN")}đ
+                          {formatVnd(item.amount)}
                         </div>
                       </div>
                     ))}

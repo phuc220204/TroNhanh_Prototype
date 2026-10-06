@@ -45,7 +45,25 @@ export const C = {
   error:         "#B5503C",
   warning:       "#C8861A",
   success:       "#4A7A34",
+
+  /* ── Nền nhạt cho banner/ô thông báo theo ngữ nghĩa ─────────────── */
+  errorBg:       "#FBEDE9",
+  errorBorder:   "#EBC9C0",
+  successBg:     "#EDF2E7",
+  successBorder: "#C6D8C1",
+  warningBg:     "#FBF1DD",
+  warningBorder: "#EBD3A6",
+
+  /** Nền mờ phía sau modal. */
+  overlay:       "rgba(42,26,12,0.5)",
 };
+
+/** Đổ bóng chuẩn — dùng thay rgba rời rạc. */
+export const shadow = {
+  sm: "0 2px 10px rgba(42,26,12,0.04)",
+  md: "0 8px 24px rgba(92,70,50,0.12)",
+  lg: "0 20px 60px rgba(42,26,12,0.25)",
+} as const;
 
 export const font = "'Be Vietnam Pro', Inter, system-ui, sans-serif";
 

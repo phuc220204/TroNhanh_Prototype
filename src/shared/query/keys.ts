@@ -81,6 +81,8 @@ export const qk = {
   rooms: {
     all: ["rooms"] as const,
     byProperty: (propertyId: string) => ["rooms", "property", propertyId] as const,
+    /** Mọi phòng của chủ trọ kèm hợp đồng/hóa đơn — màn /chu-tro/quan-ly-phong. */
+    mine: (ownerId: string | undefined) => ["rooms", "mine", ownerId] as const,
     detail: (id: string) => ["rooms", "detail", id] as const,
     vacant: (ownerId: string | undefined) => ["rooms", "vacant", ownerId] as const,
   },

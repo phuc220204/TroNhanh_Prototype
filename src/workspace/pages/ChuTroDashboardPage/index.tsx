@@ -2,11 +2,12 @@ import { useState, useEffect, useMemo, useCallback } from "react";
 import { useNavigate } from "react-router";
 import {
   Building2, FileText, Plus, Zap, ChevronRight,
-  Lock, Home, Users, CheckSquare, AlertTriangle, TrendingUp, KeyRound, CalendarClock,
+  Home, Users, CheckSquare, AlertTriangle, TrendingUp, KeyRound, CalendarClock,
 } from "lucide-react";
 import { C, font } from "../../../shared/theme";
 import { useBreakpoint } from "../../../shared/components/useBreakpoint";
-import { LandlordShell, useLandlordShell } from "../../../shared/components/LandlordShell";
+import { LandlordShell } from "../../../shared/components/LandlordShell";
+import { formatVnd } from "../../../shared/utils/format";
 import type { RoomStatus } from "../../../shared/types/status";
 import { EmptyState, Button, Toast } from "../../../shared/components/common";
 import { logError } from "../../../shared/services/supabase-error";
@@ -38,7 +39,6 @@ const SUPPORT_EMAIL = "tronhanh2026@gmail.com";
 const SUPPORT_EMAIL_HREF = `mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent("[Trọ Nhanh] Yêu cầu hỗ trợ")}`;
 
 export function ChuTroDashboardPage() {
-  const { subStatus } = useLandlordShell();
   const navigate = useNavigate();
   const { isMobile } = useBreakpoint();
   const { user, profile } = useAuth();
@@ -55,19 +55,14 @@ export function ChuTroDashboardPage() {
   const [revealKPIs, setRevealKPIs] = useState(false);
   const [toast, setToast] = useState<{ message: string; variant: "success" | "error" } | null>(null);
 
-  // `isLocked` = chưa từng kích hoạt gói ⇒ khóa cả đường VÀO module SaaS.
   // `canWrite` = BR-015, quyết định được GHI hay không (false cho cả NONE lẫn
-  // READ_ONLY). Hai thứ khác nhau: READ_ONLY vẫn phải xem được dữ liệu.
-  const isLocked = subStatus === "NONE";
+  // READ_ONLY). READ_ONLY vẫn phải xem được dữ liệu. Trạng thái NONE (chưa kích
+  // hoạt gói) do `LandlordShell` chặn bằng màn mời dùng thử — trang này không tự
+  // kiểm tra lại. (Trước đây trang đọc `useLandlordShell()` NGOÀI Provider nên
+  // luôn nhận "NONE": người đã trả tiền vẫn thấy banner khóa và bị chặn chuyển trang.)
   const canWrite = useCanWrite();
 
-  const toRooms = () => {
-    if (isLocked) {
-      setToast({ message: "Vui lòng kích hoạt dùng thử hoặc đăng ký gói SaaS ở góc dưới Sidebar để truy cập tính năng Quản lý trọ.", variant: "error" });
-      return;
-    }
-    navigate("/chu-tro/quan-ly-phong");
-  };
+  const toRooms = () => navigate("/chu-tro/quan-ly-phong");
   const toListings = () => navigate("/tai-khoan/tin-cho-thue");
   const toPost = () => navigate("/dang-tin-cho-thue");
 
@@ -140,16 +135,26 @@ export function ChuTroDashboardPage() {
   }, [activeRoomsList]);
 
   // Convert listings
+  // `getMyListings` chỉ trả tin Active dạng `ListingCardItem` (`type`, `loc`,
+  // `priceNum`, `views_count`, `postedAt`) — map đúng các trường đó.
   const displayListings = useMemo(() => {
     return realListings.map(l => ({
+      id: l.id as string,
       title: l.title,
-      sub: `${l.property_type || "Tin cho thuê"} · ${l.district || ""} · ${Number(l.price || 0).toLocaleString("vi-VN")}đ`,
-      status: (l.status === "Active" ? "active" : l.status === "Inactive" ? "hidden" : l.status) as any,
-      views: l.view_count ?? l.views,
-      createdAt: l.created_at,
-      canDelete: true
+      sub: [l.type || "Tin cho thuê", l.loc, `${formatVnd(l.priceNum)}/tháng`].filter(Boolean).join(" · "),
+      status: "active",
+      views: l.views_count ?? null,
+      createdAt: l.postedAt ?? l.created_at ?? null,
     }));
   }, [realListings]);
+  const viewListing = (listingId: string) => navigate(`/phong/${listingId}`);
+  const editListing = (listingId: string) => navigate(`/dang-tin-cho-thue/${listingId}`);
+
+  const handleUtilitySaved = () => {
+    setModal(null);
+    setToast({ message: "Đã lưu chỉ số điện nước.", variant: "success" });
+    void loadDashboardData(property === "all" ? undefined : property);
+  };
 
   const totalRoomsCount = dbKpis?.totalRoomsCount ?? 0;
   const rentedRoomsCount = dbKpis?.rentedRoomsCount ?? 0;
@@ -197,13 +202,18 @@ export function ChuTroDashboardPage() {
 
   const Modals = (
     <>
-      {modal === "utility" && <UtilityModal onClose={() => setModal(null)} properties={properties} onSave={() => void loadDashboardData(property === "all" ? undefined : property)} />}
+      {modal === "utility" && <UtilityModal onClose={() => setModal(null)} properties={properties} rooms={rooms} onSaved={handleUtilitySaved} />}
       {modal === "room" && (
         <AddRoomModal
           properties={properties.map((p: any) => ({ id: p.id, name: p.name }))}
           onClose={() => setModal(null)}
           onCreated={() => void loadDashboardData(property === "all" ? undefined : property)}
         />
+      )}
+      {toast && (
+        <div style={{ position: "fixed", top: 20, right: 20, left: isMobile ? 20 : undefined, zIndex: 1000, display: "flex", justifyContent: "flex-end" }}>
+          <Toast message={toast.message} variant={toast.variant} onClose={() => setToast(null)} data-testid="dashboard-toast" />
+        </div>
       )}
     </>
   );
@@ -253,16 +263,6 @@ export function ChuTroDashboardPage() {
     return (
       <LandlordShell active="overview" mobileTitle="Dashboard">
         <div style={{ padding: "16px 16px 100px" }}>
-          {isLocked && (
-            <div style={{ background: "#FEF6EC", border: `1.5px dashed ${C.primary}`, borderRadius: 14, padding: 16, marginBottom: 16, display: "flex", gap: 12, alignItems: "flex-start" }}>
-              <Lock size={20} color={C.primary} style={{ flexShrink: 0, marginTop: 2 }} />
-              <div>
-                <h4 style={{ fontFamily: font, fontSize: 14, fontWeight: 800, color: C.textPrimary, margin: "0 0 4px" }}>Gói SaaS chưa kích hoạt</h4>
-                <p style={{ fontFamily: font, fontSize: 12, color: C.textSecondary, margin: "0 0 10px", lineHeight: 1.4 }}>Hãy bắt đầu dùng thử gói SaaS Quản lý vận hành 30 ngày ở dropdown chân Sidebar để mở khóa đầy đủ tính năng.</p>
-              </div>
-            </div>
-          )}
-
           <p style={{ fontFamily: font, fontSize: 19, fontWeight: 800, color: C.textPrimary, margin: "0 0 4px" }}>Chào {displayName} 👋</p>
           <p style={{ fontFamily: font, fontSize: 13, color: C.textSecondary, margin: "0 0 14px" }}>Mọi thứ trong tầm kiểm soát. Chúc bạn một ngày làm việc hiệu quả!</p>
 
@@ -289,7 +289,7 @@ export function ChuTroDashboardPage() {
           </div>
           <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 22 }}>
             {displayRooms.slice(0, 3).map((r, i) => (
-              <div key={i} onClick={toRooms} style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: 12, padding: 14, cursor: isLocked ? "default" : "pointer" }}>
+              <div key={i} onClick={toRooms} style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: 12, padding: 14, cursor: "pointer" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
                   <span style={{ fontFamily: font, fontSize: 15, fontWeight: 800, color: C.textPrimary }}>{r.code} <span style={{ fontWeight: 500, fontSize: 12.5, color: C.textSecondary }}>· {r.property}</span></span>
                   <StatusChip status={r.status} />
@@ -324,7 +324,7 @@ export function ChuTroDashboardPage() {
             <button onClick={toListings} style={{ fontFamily: font, fontSize: 12.5, fontWeight: 700, color: C.primary, background: "none", border: "none", cursor: "pointer" }}>Tất cả</button>
           </div>
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-            {displayListings.slice(0, 2).map((l, i) => <ListingRow key={i} l={l} onClick={toListings} />)}
+            {displayListings.slice(0, 2).map(l => <ListingRow key={l.id} l={l} onClick={toListings} onView={() => viewListing(l.id)} onEdit={() => editListing(l.id)} />)}
           </div>
         </div>
 
@@ -347,16 +347,6 @@ export function ChuTroDashboardPage() {
 
         {/* MAIN COLUMN */}
         <main style={{ flex: 1, minWidth: 0 }}>
-          {isLocked && (
-            <div style={{ background: "#FEF6EC", border: `1.5px dashed ${C.primary}`, borderRadius: 14, padding: 18, marginBottom: 20, display: "flex", gap: 14, alignItems: "center" }}>
-              <Lock size={24} color={C.primary} style={{ flexShrink: 0 }} />
-              <div style={{ flex: 1 }}>
-                <h4 style={{ fontFamily: font, fontSize: 15, fontWeight: 800, color: C.textPrimary, margin: "0 0 4px" }}>Trải nghiệm đầy đủ tính năng Quản lý vận hành (SaaS)</h4>
-                <p style={{ fontFamily: font, fontSize: 13, color: C.textSecondary, margin: 0 }}>Các tính năng quản lý khu trọ, hóa đơn, người ở đang bị khóa. Hãy chọn trạng thái **Dùng thử (TRIAL)** hoặc **Kích hoạt (ACTIVE)** ở góc dưới Sidebar để trải nghiệm.</p>
-              </div>
-            </div>
-          )}
-
           {/* Greeting Header Block with Illustration */}
           <div style={{
             display: "flex", justifyContent: "space-between", alignItems: "center",
@@ -469,7 +459,7 @@ export function ChuTroDashboardPage() {
             </div>
           ) : (
             <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-              {displayListings.map((l, i) => <ListingRow key={i} l={l} onClick={toListings} />)}
+              {displayListings.map(l => <ListingRow key={l.id} l={l} onClick={toListings} onView={() => viewListing(l.id)} onEdit={() => editListing(l.id)} />)}
             </div>
           )}
 
@@ -514,11 +504,6 @@ export function ChuTroDashboardPage() {
         </aside>
       </div>
       {Modals}
-      {toast && (
-        <div style={{ position: "fixed", top: 20, right: 20, zIndex: 1000 }}>
-          <Toast message={toast.message} variant={toast.variant} onClose={() => setToast(null)} />
-        </div>
-      )}
     </LandlordShell>
   );
 }

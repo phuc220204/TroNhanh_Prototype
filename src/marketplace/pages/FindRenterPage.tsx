@@ -1,22 +1,44 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useMemo } from "react";
 import { useNavigate } from "react-router";
-import { Users, Filter, Sparkles, Building2 } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { Users, Filter, Sparkles, Building2, TriangleAlert } from "lucide-react";
 import { C, font, radius, space } from "../../shared/theme";
 import { LandlordShell } from "../../shared/components/LandlordShell";
-import { EmptyState } from "../../shared/components/common/EmptyState";
-import { getMyVacantRoomSummaries, scoreDemandMatch, type VacantRoomSummary } from "../../shared/services/vacancy-service";
-import { listActiveDemandPosts, type DemandPostItem } from "../services/demand-post-service";
+import { getMyVacantRoomSummaries, scoreDemandMatch } from "../../shared/services/vacancy-service";
+import { listActiveDemandPosts } from "../services/demand-post-service";
 import { startConversation } from "../../shared/services/messaging-service";
 import { DemandPostCard } from "../components/DemandPostCard";
-import { AreaSelect } from "../../shared/components/common";
+import { AreaSelect, Button, EmptyState, Skeleton } from "../../shared/components/common";
 import { logError, toUserMessage } from "../../shared/services/supabase-error";
+import { useAuth } from "../../shared/contexts/AuthContext";
+import { qk } from "../../shared/query/keys";
 
 export function FindRenterPage() {
   const navigate = useNavigate();
+  const { user } = useAuth();
 
-  const [vacantRooms, setVacantRooms] = useState<VacantRoomSummary[]>([]);
-  const [demandPosts, setDemandPosts] = useState<DemandPostItem[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  // `getMyVacantRoomSummaries()` dựa vào RLS để chỉ trả phòng của người gọi;
+  // `user?.id` chỉ làm query key (cùng key với LinkRoomModal).
+  const vacantRoomsQuery = useQuery({
+    queryKey: qk.rooms.vacant(user?.id),
+    queryFn: () => getMyVacantRoomSummaries(),
+    enabled: !!user?.id,
+  });
+  const demandPostsQuery = useQuery({
+    queryKey: qk.demandPosts.matches(user?.id),
+    queryFn: () => listActiveDemandPosts(),
+    enabled: !!user?.id,
+  });
+
+  const vacantRooms = useMemo(() => vacantRoomsQuery.data ?? [], [vacantRoomsQuery.data]);
+  const demandPosts = useMemo(() => demandPostsQuery.data ?? [], [demandPostsQuery.data]);
+  const isLoading = vacantRoomsQuery.isPending || demandPostsQuery.isPending;
+  const loadError = vacantRoomsQuery.error ?? demandPostsQuery.error;
+  const isRetrying = vacantRoomsQuery.isRefetching || demandPostsQuery.isRefetching;
+  const retryLoad = () => {
+    if (vacantRoomsQuery.isError) void vacantRoomsQuery.refetch();
+    if (demandPostsQuery.isError) void demandPostsQuery.refetch();
+  };
 
   // Filter states
   const [filterKind, setFilterKind] = useState<"all" | "RoomWanted" | "RoommateWanted">("all");
@@ -25,31 +47,6 @@ export function FindRenterPage() {
     wardCode: null,
   });
   const [filterPriceRange, setFilterPriceRange] = useState<string>("all");
-
-  useEffect(() => {
-    let isMounted = true;
-    async function loadData() {
-      setIsLoading(true);
-      try {
-        const [rooms, posts] = await Promise.all([
-          getMyVacantRoomSummaries(),
-          listActiveDemandPosts(),
-        ]);
-        if (isMounted) {
-          setVacantRooms(rooms);
-          setDemandPosts(posts);
-        }
-      } catch (err) {
-        logError("FindRenterPage.loadData", err);
-      } finally {
-        if (isMounted) setIsLoading(false);
-      }
-    }
-    loadData();
-    return () => {
-      isMounted = false;
-    };
-  }, []);
 
   const [contactError, setContactError] = useState<string | null>(null);
 
@@ -111,6 +108,34 @@ export function FindRenterPage() {
       })
       .sort((a, b) => b.score - a.score);
   }, [demandPosts, vacantRooms, filterKind, filterArea.provinceCode, filterArea.wardCode, filterPriceRange]);
+
+  // Lỗi tải KHÔNG được trông như "chưa có phòng trống" — người dùng sẽ tưởng mất dữ liệu.
+  if (loadError) {
+    return (
+      <LandlordShell active="overview" mobileTitle="Tìm người thuê">
+        <div style={{ maxWidth: 1200, margin: "0 auto", padding: `${space[8]}px ${space[4]}px` }}>
+          <h1 style={{ fontFamily: font, fontSize: 24, fontWeight: 800, color: C.textPrimary, marginBottom: space[5] }}>
+            Tìm người thuê phù hợp
+          </h1>
+          <div
+            data-testid="find-renter-error"
+            style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: radius.xl, padding: `${space[10]}px ${space[6]}px` }}
+          >
+            <EmptyState
+              icon={TriangleAlert}
+              title="Không tải được dữ liệu"
+              description={toUserMessage(loadError)}
+              action={
+                <Button variant="outline" loading={isRetrying} onClick={retryLoad} data-testid="find-renter-retry">
+                  Thử lại
+                </Button>
+              }
+            />
+          </div>
+        </div>
+      </LandlordShell>
+    );
+  }
 
   if (!isLoading && vacantRooms.length === 0) {
     return (
@@ -275,8 +300,10 @@ export function FindRenterPage() {
 
         {/* Results Section */}
         {isLoading ? (
-          <div style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: radius.xl, padding: 40, textAlign: "center", fontFamily: font, fontSize: 14, color: C.textSecondary }}>
-            Đang tìm kiếm & xếp hạng tin nhu cầu phù hợp...
+          <div data-testid="find-renter-loading" aria-busy="true" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))", gap: 20 }}>
+            {[0, 1, 2].map((i) => (
+              <Skeleton key={i} variant="card" />
+            ))}
           </div>
         ) : matchedItems.length === 0 ? (
           <div style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: radius.xl, padding: 48, textAlign: "center" }}>

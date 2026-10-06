@@ -8,8 +8,10 @@ import type { Room, Property } from "../../types/room";
 import type { RoomStatus } from "../../../shared/types/status";
 import { useAuth } from "../../../shared/contexts/AuthContext";
 import { useCanWrite } from "../../../shared/contexts/SubscriptionContext";
-import { getPropertiesByOwner } from "../../services/property-service";
-import { getRoomsByOwner } from "../../services/room-service";
+import { getPropertiesByOwnerOrThrow } from "../../services/property-service";
+import { getRoomsByOwnerOrThrow } from "../../services/room-service";
+import { logError } from "../../../shared/services/supabase-error";
+import { Button } from "../../../shared/components/common";
 import { RoomsView } from "./RoomsView";
 import { OccupantsView } from "./OccupantsView";
 import { PaymentsView } from "./PaymentsView";
@@ -89,6 +91,9 @@ export function QuanLyPhongPage() {
   const [switcherOpen, setSwitcherOpen] = useState(false);
   const [actionModal, setActionModal] = useState<{ type: "utility" | "invoice"; room: Room } | null>(null);
   const [loading, setLoading] = useState(true);
+  // Lỗi tải KHÁC "chưa có khu": trước đây lỗi bị nuốt và trang hiện "Bạn chưa có
+  // khu trọ nào" + nút tạo khu ⇒ chủ trọ tưởng mất dữ liệu và tạo trùng.
+  const [loadError, setLoadError] = useState(false);
   const [showAddRoom, setShowAddRoom] = useState(false);
   const [showAddProperty, setShowAddProperty] = useState(false);
   // Giữ ID chứ không giữ cả `Room`: form sửa cần giá trị THÔ, mà `Room` đã format
@@ -101,8 +106,11 @@ export function QuanLyPhongPage() {
       // Keep the active tab mounted during background refreshes. Unmounting
       // OccupantsView here discarded success/error toasts immediately after an RPC.
       if (showLoading) setLoading(true);
-      const props = await getPropertiesByOwner(user.id);
-      const rms = await getRoomsByOwner(user.id);
+      const [props, rms] = await Promise.all([
+        getPropertiesByOwnerOrThrow(user.id),
+        getRoomsByOwnerOrThrow(user.id),
+      ]);
+      setLoadError(false);
 
       if (props && props.length > 0) {
         const mapped: Property[] = props.map((p: any) => {
@@ -114,10 +122,12 @@ export function QuanLyPhongPage() {
             name: p.name,
             address: p.address,
             district: p.district,
-            electricity_unit_price: Number(p.electricity_unit_price) || 3500,
-            water_unit_price: Number(p.water_unit_price) || 15000,
-            service_fee: Number(p.service_fee) || 100000,
-            bank_name: p.bank_name || "MB",
+            // Chưa cấu hình thì để trống — KHÔNG điền giá/ngân hàng bịa (trước đây
+            // 3.500 / 15.000 / 100.000 / "MB" lọt vào hóa đơn và mã VietQR).
+            electricity_unit_price: p.electricity_unit_price == null ? undefined : Number(p.electricity_unit_price),
+            water_unit_price: p.water_unit_price == null ? undefined : Number(p.water_unit_price),
+            service_fee: p.service_fee == null ? undefined : Number(p.service_fee),
+            bank_name: p.bank_name || "",
             bank_account_number: p.bank_account_number || "",
             bank_account_name: p.bank_account_name || "",
             rooms: propertyRooms,
@@ -132,7 +142,10 @@ export function QuanLyPhongPage() {
         setProperties([]);
       }
     } catch (err) {
-      // Error handling
+      logError("QuanLyPhongPage.loadDbData", err);
+      // Làm mới ngầm thất bại thì giữ dữ liệu đang hiện; chỉ báo lỗi toàn trang
+      // khi chưa có gì để hiện.
+      if (showLoading || properties.length === 0) setLoadError(true);
     } finally {
       setLoading(false);
     }
@@ -233,6 +246,12 @@ export function QuanLyPhongPage() {
           <p style={{ fontFamily: font, fontSize: 14, color: C.textSecondary, textAlign: "center", padding: "48px 0" }}>
             Đang tải dữ liệu...
           </p>
+        ) : loadError ? (
+          <div role="alert" data-testid="rooms-load-error" style={{ maxWidth: 520, margin: "40px auto", padding: 24, textAlign: "center", background: C.white, border: `1px solid ${C.errorBorder}`, borderRadius: 16, fontFamily: font }}>
+            <p style={{ fontSize: 15, fontWeight: 700, color: C.textPrimary, margin: "0 0 6px" }}>Chưa tải được dữ liệu khu trọ</p>
+            <p style={{ fontSize: 13.5, color: C.textSecondary, margin: "0 0 16px", lineHeight: 1.5 }}>Dữ liệu của bạn vẫn an toàn. Kiểm tra kết nối mạng rồi thử lại.</p>
+            <Button variant="primary" onClick={() => void loadDbData(true)}>Thử lại</Button>
+          </div>
         ) : (
           <>
             {activeTab === "rooms" && (
@@ -273,6 +292,9 @@ export function QuanLyPhongPage() {
 
             {activeTab === "settings" && (
               <SettingsView
+                // key theo khu: form khởi tạo từ `property` một lần — không có key thì
+                // đổi khu vẫn giữ giá/STK khu cũ và bấm Lưu sẽ ghi đè sang khu mới.
+                key={selectedProperty?.id ?? "none"}
                 property={selectedProperty}
                 mobile={isMobile}
                 isReadOnly={isReadOnly}
@@ -307,7 +329,7 @@ export function QuanLyPhongPage() {
             service: selectedProperty?.service_fee,
           }}
           onClose={() => setEditRoomId(null)}
-          onUpdated={loadDbData}
+          onUpdated={() => void loadDbData(false)}
         />
       )}
 
@@ -316,7 +338,7 @@ export function QuanLyPhongPage() {
         <UtilityReadingForm
           room={actionModal.room}
           onClose={() => setActionModal(null)}
-          onSuccess={loadDbData}
+          onSuccess={() => void loadDbData(false)}
           isReadOnly={isReadOnly}
         />
       )}
@@ -326,7 +348,7 @@ export function QuanLyPhongPage() {
           room={actionModal.room}
           property={selectedProperty}
           onClose={() => setActionModal(null)}
-          onSuccess={loadDbData}
+          onSuccess={() => void loadDbData(false)}
           isReadOnly={isReadOnly}
         />
       )}
@@ -336,7 +358,7 @@ export function QuanLyPhongPage() {
           properties={properties.map((p) => ({ id: p.id, name: p.name }))}
           defaultPropertyId={selectedId}
           onClose={() => setShowAddRoom(false)}
-          onCreated={loadDbData}
+          onCreated={() => void loadDbData(false)}
         />
       )}
 

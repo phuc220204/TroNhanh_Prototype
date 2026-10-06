@@ -7,6 +7,7 @@ import { EmptyState, Skeleton, Button } from "../../shared/components/common";
 import { C, font, radius, space } from "../../shared/theme";
 import { useAuth } from "../../shared/contexts/AuthContext";
 import { toUserMessage } from "../../shared/services/supabase-error";
+import { formatDate } from "../../shared/utils/format";
 import {
   getMyPropertiesReviewSummary,
   setPublicProfile,
@@ -72,6 +73,19 @@ export function LandlordReviewsPage() {
 
         {propertiesQuery.isPending ? (
           <Skeleton variant="card" count={2} />
+        ) : propertiesQuery.isError ? (
+          // Lỗi tải không được rơi xuống "Bạn chưa có khu trọ nào".
+          <EmptyState
+            icon={TriangleAlert}
+            title="Không tải được danh sách khu trọ"
+            description={toUserMessage(propertiesQuery.error)}
+            data-testid="reviews-properties-error"
+            action={
+              <Button variant="outline" loading={propertiesQuery.isRefetching} onClick={() => propertiesQuery.refetch()}>
+                Thử lại
+              </Button>
+            }
+          />
         ) : properties.length === 0 ? (
           <EmptyState icon={Star} title="Bạn chưa có khu trọ nào" description="Tạo khu trọ trước để nhận đánh giá từ người ở." />
         ) : (
@@ -133,7 +147,16 @@ export function LandlordReviewsPage() {
             {reviewsQuery.isPending ? (
               <Skeleton variant="card" count={2} />
             ) : reviewsQuery.isError ? (
-              <EmptyState icon={TriangleAlert} title="Không tải được đánh giá" description={toUserMessage(reviewsQuery.error)} />
+              <EmptyState
+                icon={TriangleAlert}
+                title="Không tải được đánh giá"
+                description={toUserMessage(reviewsQuery.error)}
+                action={
+                  <Button variant="outline" loading={reviewsQuery.isRefetching} onClick={() => reviewsQuery.refetch()}>
+                    Thử lại
+                  </Button>
+                }
+              />
             ) : reviews.length === 0 ? (
               <EmptyState
                 icon={Star}
@@ -149,7 +172,7 @@ export function LandlordReviewsPage() {
                         <Star key={n} size={14} color={n <= r.rating ? C.warning : C.border} fill={n <= r.rating ? C.warning : "none"} />
                       ))}
                       <span style={{ fontFamily: font, fontSize: 12.5, color: C.textSecondary, marginLeft: 6 }}>
-                        {new Date(r.created_at).toLocaleDateString("vi-VN")}
+                        {formatDate(r.created_at)}
                       </span>
                     </div>
                     {r.content && (

@@ -8,10 +8,11 @@
  */
 import React, { useState } from "react";
 import {
-  Building2, ChevronDown, ChevronRight, Eye, Pencil, Trash2, Calendar,
+  Building2, ChevronDown, ChevronRight, Eye, Pencil, Calendar,
 } from "lucide-react";
 import { C, font } from "../../../shared/theme";
 import type { RoomStatus } from "../../../shared/types/status";
+import { formatDate } from "../../../shared/utils/format";
 import { useCanWrite, useWriteBlockReason } from "../../../shared/contexts/SubscriptionContext";
 
 /* ══════════════════════════════════════════
@@ -277,54 +278,66 @@ export function UtilityCard({
   );
 }
 
-export function ListingRow({ l, onClick }: { l: any; onClick: () => void }) {
+/**
+ * Một dòng tin đăng gần đây. Chỉ có 2 nút: xem tin công khai và sửa tin.
+ * Không có nút xóa ở dashboard — xóa/ẩn tin thuộc trang "Quản lý tin đăng".
+ */
+export function ListingRow({ l, onClick, onView, onEdit }: {
+  l: { title: string; sub: string; status: string; views?: number | null; createdAt?: string | null };
+  onClick: () => void;
+  onView: () => void;
+  onEdit: () => void;
+}) {
   const statusLabels: Record<string, string> = {
     active: "Đang hiển thị",
     hidden: "Đã ẩn",
     PendingApproval: "Chờ duyệt",
     Expired: "Hết hạn",
   };
-  const date = l.createdAt ? new Date(l.createdAt) : null;
-  const formattedDate = date && !Number.isNaN(date.getTime()) ? date.toLocaleDateString("vi-VN") : "—";
+  const isActive = l.status === "active";
   return (
-    <div onClick={onClick} data-testid="dashboard-listing-row" style={{ display: "flex", alignItems: "center", gap: 14, padding: "14px 18px", background: C.white, border: `1px solid ${C.border}`, borderRadius: 12, cursor: "pointer", justifyContent: "space-between", transition: "border-color 0.15s" }}>
-      <div style={{ flex: 1, minWidth: 0 }}>
+    <div onClick={onClick} data-testid="dashboard-listing-row" style={{ display: "flex", alignItems: "center", gap: 14, padding: "14px 18px", background: C.white, border: `1px solid ${C.border}`, borderRadius: 12, cursor: "pointer", justifyContent: "space-between", flexWrap: "wrap", transition: "border-color 0.15s" }}>
+      <div style={{ flex: "1 1 220px", minWidth: 0 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 9, marginBottom: 4, flexWrap: "wrap" }}>
           <span style={{ fontFamily: font, fontSize: 14, fontWeight: 700, color: C.textPrimary }}>{l.title}</span>
-          <span style={{ fontFamily: font, fontSize: 10.5, fontWeight: 700, color: l.status === "active" ? "#4F7A4A" : "#8C6A4E", background: l.status === "active" ? "#EBF2E8" : "#F5EFE6", borderRadius: 6, padding: "2px 8px" }}>{statusLabels[l.status] ?? "Chưa rõ trạng thái"}</span>
+          <span style={{ fontFamily: font, fontSize: 10.5, fontWeight: 700, color: isActive ? C.available : C.textSecondary, background: isActive ? C.successBg : C.caramelSoft, borderRadius: 6, padding: "2px 8px" }}>{statusLabels[l.status] ?? "Chưa rõ trạng thái"}</span>
         </div>
         <p style={{ fontFamily: font, fontSize: 12.5, color: C.textSecondary, margin: 0 }}>{l.sub}</p>
       </div>
       <div style={{ display: "flex", alignItems: "center", gap: 16, flexShrink: 0 }}>
-        <span style={{ display: "inline-flex", alignItems: "center", gap: 5, fontFamily: font, fontSize: 12, color: C.textSecondary }}>
-          <Eye size={14} /> {l.views != null && l.views !== "" && Number.isFinite(Number(l.views)) ? Number(l.views) : "—"}
+        <span title="Lượt xem" style={{ display: "inline-flex", alignItems: "center", gap: 5, fontFamily: font, fontSize: 12, color: C.textSecondary }}>
+          <Eye size={14} /> {l.views != null && Number.isFinite(Number(l.views)) ? Number(l.views).toLocaleString("vi-VN") : "—"}
         </span>
-        <span style={{ display: "inline-flex", alignItems: "center", gap: 5, fontFamily: font, fontSize: 12, color: C.textSecondary }}>
-          <Calendar size={14} /> {formattedDate}
+        <span title="Ngày đăng" style={{ display: "inline-flex", alignItems: "center", gap: 5, fontFamily: font, fontSize: 12, color: C.textSecondary }}>
+          <Calendar size={14} /> {formatDate(l.createdAt)}
         </span>
         <div style={{ display: "flex", gap: 6 }} onClick={e => e.stopPropagation()}>
-          <IconBtn><Eye size={14} /></IconBtn>
-          <IconBtn><Pencil size={14} /></IconBtn>
-          <IconBtn><Trash2 size={14} /></IconBtn>
+          <IconBtn label="Xem tin công khai" onClick={onView} testId="dashboard-listing-view-btn"><Eye size={14} /></IconBtn>
+          <IconBtn label="Sửa tin đăng" onClick={onEdit} testId="dashboard-listing-edit-btn"><Pencil size={14} /></IconBtn>
         </div>
       </div>
     </div>
   );
 }
 
-function IconBtn({ children }: { children: React.ReactNode }) {
-  return <button style={{ width: 30, height: 30, borderRadius: 8, border: `1px solid ${C.border}`, background: C.white, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: C.textSecondary }}>{children}</button>;
+function IconBtn({ children, label, onClick, testId }: { children: React.ReactNode; label: string; onClick: () => void; testId?: string }) {
+  return (
+    <button type="button" aria-label={label} title={label} onClick={onClick} data-testid={testId}
+      style={{ width: 32, height: 32, borderRadius: 8, border: `1px solid ${C.border}`, background: C.white, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: C.textSecondary }}>
+      {children}
+    </button>
+  );
 }
 
+/**
+ * Chân trang dashboard. Trước đây có 3 "link" (Chính sách bảo mật / Điều khoản
+ * dịch vụ / Trung tâm hỗ trợ) là <span> trỏ chuột nhưng không đi đâu — app chưa
+ * có route nào cho chúng, nên bỏ hẳn thay vì giữ link giả.
+ */
 export function Footer() {
   return (
-    <footer style={{ borderTop: `1px solid ${C.border}`, padding: "20px 0", marginTop: 32, display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 12 }}>
+    <footer style={{ borderTop: `1px solid ${C.border}`, padding: "20px 0", marginTop: 32 }}>
       <span style={{ fontFamily: font, fontSize: 13, color: C.textSecondary }}><b style={{ color: C.primary }}>Trọ Nhanh</b> · © 2026 Trọ Nhanh</span>
-      <div style={{ display: "flex", gap: 18 }}>
-        {["Chính sách bảo mật", "Điều khoản dịch vụ", "Trung tâm hỗ trợ"].map(t => (
-          <span key={t} style={{ fontFamily: font, fontSize: 12.5, color: C.textSecondary, cursor: "pointer" }}>{t}</span>
-        ))}
-      </div>
     </footer>
   );
 }
