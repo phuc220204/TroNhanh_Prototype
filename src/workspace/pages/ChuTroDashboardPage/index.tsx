@@ -137,6 +137,8 @@ export function ChuTroDashboardPage() {
   const reminderInvoices = dbKpis?.reminderInvoices ?? [];
   const openInvoice = (invoiceId: string) => navigate(`/chu-tro/hoa-don?hoa-don=${invoiceId}`);
   const toInvoices = () => navigate("/chu-tro/hoa-don");
+  /** "Hóa đơn cần nhắc" gồm cả quá hạn lẫn sắp đến hạn ⇒ mở sẵn lọc "Chưa thu đủ". */
+  const toOutstandingInvoices = () => navigate("/chu-tro/hoa-don?trang-thai=Outstanding");
 
   const handleRoomTask = (task: string) => {
     if (task === "Tạo tin đăng") {
@@ -231,7 +233,7 @@ export function ChuTroDashboardPage() {
 
           <div aria-busy={isSwitchingProperty} style={{ opacity: isSwitchingProperty ? 0.55 : 1, transition: "opacity 150ms" }}><KpiGrid kpis={dynamicKPIS} isRevealed={revealKPIs} onToggleReveal={() => setRevealKPIs(!revealKPIs)} isMobile /></div>
 
-          <DueInvoicesPanel invoices={reminderInvoices} onOpenInvoice={openInvoice} onViewAll={toInvoices} />
+          <DueInvoicesPanel invoices={reminderInvoices} onOpenInvoice={openInvoice} onViewAll={toOutstandingInvoices} />
 
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
             <span style={{ fontFamily: font, fontSize: 15, fontWeight: 800, color: C.textPrimary }}>Tình trạng phòng</span>
@@ -366,7 +368,7 @@ export function ChuTroDashboardPage() {
 
           <div aria-busy={isSwitchingProperty} style={{ opacity: isSwitchingProperty ? 0.55 : 1, transition: "opacity 150ms" }}><KpiGrid kpis={dynamicKPIS} isRevealed={revealKPIs} onToggleReveal={() => setRevealKPIs(!revealKPIs)} /></div>
 
-          <DueInvoicesPanel invoices={reminderInvoices} onOpenInvoice={openInvoice} onViewAll={toInvoices} />
+          <DueInvoicesPanel invoices={reminderInvoices} onOpenInvoice={openInvoice} onViewAll={toOutstandingInvoices} />
 
           {/* Room operations */}
           <div style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: 16, padding: "20px 22px", marginBottom: 28, boxShadow: shadow.sm }}>

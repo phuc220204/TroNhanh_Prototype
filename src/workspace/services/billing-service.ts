@@ -67,7 +67,8 @@ function toLocalDateString(date: Date): string {
 }
 
 /** BR-004 — đúng 4 trạng thái hóa đơn. Không có giá trị nào khác. */
-export type InvoiceStatusFilter = "Unpaid" | "PartiallyPaid" | "Paid" | "Overdue";
+/** `Outstanding` = mọi hóa đơn chưa thu đủ (chưa thanh toán, thu một phần, quá hạn). */
+export type InvoiceStatusFilter = "Unpaid" | "PartiallyPaid" | "Paid" | "Overdue" | "Outstanding";
 
 export interface GetInvoicesParams {
   /** Bắt buộc — chủ sở hữu hóa đơn. */
@@ -155,7 +156,9 @@ export async function getInvoices(params: GetInvoicesParams): Promise<InvoiceIte
     // Unpaid → Overdue (BR-004) nên lọc theo status sẽ bỏ sót hóa đơn quá hạn.
     // Hai lọc "chưa thu" loại hóa đơn đã quá hạn để khớp badge hiển thị.
     const today = toLocalDateString(new Date());
-    if (status === "Overdue") {
+    if (status === "Outstanding") {
+      q = q.neq("status", "Paid");
+    } else if (status === "Overdue") {
       q = q.neq("status", "Paid").lt("due_date", today);
     } else if (status === "Unpaid" || status === "PartiallyPaid") {
       q = q.eq("status", status).gte("due_date", today);
