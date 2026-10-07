@@ -67,7 +67,7 @@ export function MyReviewsPage() {
                   <p style={{ fontFamily: font, fontSize: 12, color: C.textSecondary, margin: 0 }}>
                     {editable
                       ? "Còn trong 7 ngày — bạn có thể sửa ở mục Phòng của tôi."
-                      : "Đã quá 7 ngày nên không sửa được nữa (BR-023)."}
+                      : "Đã quá 7 ngày nên không sửa được nữa."}
                   </p>
 
                   {r.seller_reply && (

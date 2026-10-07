@@ -121,7 +121,7 @@ export function LandlordReviewsPage() {
                       <Globe size={15} color={C.primary} /> Trang khu trọ công khai
                     </p>
                     <p style={{ fontFamily: font, fontSize: 13, color: C.textSecondary, margin: 0, lineHeight: 1.55 }}>
-                      Bật thì đánh giá của khu mới hiển thị công khai và tin đăng mới có huy hiệu điểm sao (BR-024).
+                      Bật thì đánh giá của khu mới hiển thị công khai và tin đăng mới có huy hiệu điểm sao.
                       Tắt đi là mọi đánh giá lập tức ẩn khỏi trang công khai.
                     </p>
                     {activeProperty.is_public_profile && activeProperty.public_slug && (
