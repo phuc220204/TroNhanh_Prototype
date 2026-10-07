@@ -26,7 +26,11 @@ export function LandlordBillingPage() {
   const [searchParams, setSearchParams] = useSearchParams();
 
   const [selectedPeriod, setSelectedPeriod] = useState<string>(ALL);
-  const [selectedStatus, setSelectedStatus] = useState<string>("");
+  // Bộ lọc mở sẵn từ link, ví dụ dashboard "Xem tất cả" → ?trang-thai=Outstanding.
+  const [selectedStatus, setSelectedStatus] = useState<string>(() => {
+    const fromUrl = searchParams.get("trang-thai") ?? "";
+    return STATUS_OPTIONS.some((option) => option.value === fromUrl) ? fromUrl : "";
+  });
   const [selectedPropertyId, setSelectedPropertyId] = useState<string>(ALL);
   const [roomSearch, setRoomSearch] = useState("");
   const [selectedInvoice, setSelectedInvoice] = useState<InvoiceItem | null>(null);

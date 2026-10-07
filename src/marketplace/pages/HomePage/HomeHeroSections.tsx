@@ -379,7 +379,7 @@ export function QuickFilterChips({ onSearch, mobile }: { onSearch?: () => void; 
   const navigate = useNavigate();
   const [active, setActive] = useState("Tất cả");
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", marginBottom: mobile ? 20 : 24, overflowX: "auto", paddingBottom: 4 }} className="tn-scroll-x">
+    <div style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", marginBottom: mobile ? 20 : 24, overflowX: "auto", paddingBottom: 4, scrollbarWidth: "none", WebkitOverflowScrolling: "touch" }}>
       {CHIPS.map(chip => {
         const isActive = active === chip;
         return (

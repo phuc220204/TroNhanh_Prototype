@@ -8,6 +8,9 @@ import { useBreakpoint } from "../../shared/components/useBreakpoint";
 import { useAuth } from "../../shared/contexts/AuthContext";
 import { getDemandPostById, type DemandPostItem } from "../services/demand-post-service";
 import { startConversation } from "../../shared/services/messaging-service";
+import { Button } from "../../shared/components/common";
+import { useToast } from "../../shared/contexts/ToastContext";
+import { toUserMessage } from "../../shared/services/supabase-error";
 
 export function DemandDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -17,22 +20,29 @@ export function DemandDetailPage() {
 
   const [post, setPost] = useState<DemandPostItem | null>(null);
   const [loading, setLoading] = useState(true);
+  // Lỗi mạng KHÁC "không tìm thấy" — trước đây cả hai đều hiện "Không tìm thấy tin".
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);
+  const { showToast } = useToast();
 
   useEffect(() => {
     if (!id) return;
+    let cancelled = false;
     const fetchDetail = async () => {
       try {
         setLoading(true);
+        setLoadError(null);
         const data = await getDemandPostById(id);
-        setPost(data);
-      } catch (_) {
-        setPost(null);
+        if (!cancelled) setPost(data);
+      } catch (err) {
+        if (!cancelled) setLoadError(toUserMessage(err));
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     };
-    fetchDetail();
-  }, [id]);
+    void fetchDetail();
+    return () => { cancelled = true; };
+  }, [id, reloadKey]);
 
   const handleMessage = async () => {
     if (!post) return;
@@ -44,8 +54,8 @@ export function DemandDetailPage() {
     try {
       const convId = await startConversation("DemandPost", post.id);
       navigate(`/tin-nhan/${convId}`);
-    } catch (_) {
-      // Handled
+    } catch (err) {
+      showToast(`Chưa mở được cuộc trò chuyện: ${toUserMessage(err)}`, { variant: "error" });
     }
   };
 
@@ -57,6 +67,21 @@ export function DemandDetailPage() {
         <PublicNavbar />
         <div style={{ maxWidth: 800, margin: "40px auto", padding: 20, textAlign: "center", color: C.textSecondary }}>
           Đang tải chi tiết tin nhu cầu...
+        </div>
+      </div>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <div style={{ minHeight: "100vh", background: C.bg, fontFamily: font }}>
+        <PublicNavbar />
+        <div role="alert" style={{ maxWidth: 800, margin: "40px auto", padding: 20 }}>
+          <EmptyState
+            title="Chưa tải được tin nhu cầu"
+            description={loadError}
+            action={<Button variant="outline" onClick={() => setReloadKey((key) => key + 1)}>Thử lại</Button>}
+          />
         </div>
       </div>
     );

@@ -3,6 +3,28 @@ import { logError } from "../../shared/services/supabase-error";
 import { loadVnWards, normalizeVi, searchWards } from "../../shared/utils/vn-regions";
 import { toListingCard, ListingCardItem } from "./listing-mappers";
 
+/**
+ * BR-014: khách (anon) KHÔNG có quyền đọc cột `contact_phone` — chỉ cột đã che
+ * `contact_phone_masked` (migration 20261009100000). `select("*")` khi chưa
+ * đăng nhập sẽ bị "permission denied", nên khách chọn đúng các cột công khai.
+ * Thêm cột công khai mới vào `rental_listings` ⇒ thêm vào đây VÀ grant cho anon.
+ */
+const LISTING_PUBLIC_COLUMNS = [
+  "id", "seller_id", "room_id", "title", "property_type", "price", "district", "area", "status",
+  "boost_expire_at", "created_at", "updated_at", "deleted_at", "contact_name", "address",
+  "description", "rejection_reason", "approved_at", "expire_at", "moderated_by", "moderated_at",
+  "view_count", "property_id", "electricity_price", "water_price", "water_unit", "service_price",
+  "deposit", "access_policy", "access_open_time", "access_close_time", "latitude", "longitude",
+  "metadata", "province_code", "ward_code", "boost_payment_verified", "first_published_at",
+  "contact_phone_masked",
+].join(", ");
+
+/** Cột của tin theo người xem: đã đăng nhập thấy đủ, khách thấy bản che số. */
+async function getListingColumns(): Promise<string> {
+  const { data } = await supabase.auth.getSession();
+  return data.session ? "*" : LISTING_PUBLIC_COLUMNS;
+}
+
 export interface ListingQueryParams {
   /**
    * Từ khóa tự do của ô tìm kiếm. Khớp tiêu đề, tên phường/xã (`district`)
@@ -160,9 +182,11 @@ async function buildKeywordFilter(
  */
 export async function searchListings(params: ListingQueryParams = {}): Promise<SearchListingsResult> {
   try {
+    const columns = await getListingColumns();
     let q = supabase
       .from("rental_listings")
-      .select("*, listing_amenities(amenity), listing_media(storage_path, sort_order)", { count: "exact" })
+      // Ép kiểu về chuỗi đầy đủ để giữ type của row; khách nhận ít cột hơn (không có contact_phone).
+      .select(`${columns}, listing_amenities(amenity), listing_media(storage_path, sort_order)` as "*, listing_amenities(amenity), listing_media(storage_path, sort_order)", { count: "exact" })
       .is("deleted_at", null);
 
     const statusFilter = params.status || "Active";
@@ -391,15 +415,17 @@ export async function getListingStatus(id: string): Promise<string | null> {
  */
 export async function getListingById(id: string) {
   try {
+    const columns = await getListingColumns();
     const { data, error } = await supabase
       .from("rental_listings")
-      .select("*, listing_amenities(*), listing_media(*), properties(*)")
+      .select(`${columns}, listing_amenities(*), listing_media(*), properties(*)` as "*, listing_amenities(*), listing_media(*), properties(*)")
       .eq("id", id)
       .is("deleted_at", null)
       .maybeSingle();
 
     if (error) throw error;
-    return data;
+    if (!data) return data;
+    return { ...data, contact_phone: data.contact_phone ?? data.contact_phone_masked ?? null };
   } catch (err) {
     logError("listing-queries.getListingById", err);
     return null;

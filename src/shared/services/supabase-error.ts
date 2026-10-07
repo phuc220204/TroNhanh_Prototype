@@ -73,6 +73,8 @@ const ERROR_MESSAGES: Record<string, string> = {
   EXTEND_DATE_NOT_LATER:
     "Ngày kết thúc mới phải muộn hơn ngày kết thúc hiện tại.",
   USER_NOT_FOUND_BY_EMAIL: "Không tìm thấy tài khoản người dùng với email này.",
+  INVALID_EMAIL: "Email chưa đúng định dạng.",
+  MEDIA_PATH_NOT_OWNED: "Ảnh này không thuộc tài khoản của bạn. Vui lòng tải ảnh lên lại.",
   OCCUPANCY_NOT_FOUND: "Không tìm thấy người ở này. Có thể dữ liệu đã thay đổi — hãy tải lại trang.",
   OCCUPANCY_NOT_OWNED: "Bạn không có quyền thao tác với người ở này.",
   OCCUPANCY_LINK_NOT_PENDING: "Yêu cầu liên kết không còn ở trạng thái chờ xác nhận.",
@@ -83,6 +85,9 @@ const ERROR_MESSAGES: Record<string, string> = {
   INVALID_READING_TYPE: "Loại chỉ số không hợp lệ.",
   INVOICE_PERIOD_EXISTS: "Kỳ này đã có hóa đơn.",
   INVALID_INVOICE_ITEM_TYPE: "Loại mục hóa đơn không hợp lệ.",
+  INVALID_INVOICE_ITEM_AMOUNT: "Số tiền mỗi khoản phải lớn hơn hoặc bằng 0.",
+  INVOICE_ITEMS_REQUIRED: "Hóa đơn cần ít nhất một khoản thu.",
+  DEMAND_STATUS_TRANSITION_INVALID: "Tin này đang chờ duyệt hoặc đã bị từ chối nên chưa thể hiện lại.",
   INVALID_PAYMENT_METHOD: "Phương thức thanh toán không hợp lệ.",
 
   // Review

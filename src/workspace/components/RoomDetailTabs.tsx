@@ -466,14 +466,7 @@ function StayHistoryTab({ history }: { history: RoomHistory }) {
                   <span style={{ fontFamily: font, fontSize: 13.5, fontWeight: 700, color: C.textPrimary }}>
                     {vnd(c.rentPrice)}/tháng
                   </span>
-                  <span style={{
-                    fontFamily: font, fontSize: 11, fontWeight: 700,
-                    color: c.status === "Active" ? C.success : C.textSecondary,
-                  }}>
-                    {c.status === "Active" ? "Đang hiệu lực"
-                      : c.status === "Expired" ? "Hết hạn"
-                      : c.status === "Terminated" ? "Đã chấm dứt" : c.status}
-                  </span>
+                  <Badge kind="contract" status={c.status} />
                 </div>
                 <p style={{ fontFamily: font, fontSize: 12, color: C.textSecondary, margin: 0 }}>
                   {dateLabel(c.startDate)} → {dateLabel(c.endDate)} · cọc {vnd(c.deposit)}

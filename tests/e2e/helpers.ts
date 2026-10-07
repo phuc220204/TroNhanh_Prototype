@@ -48,7 +48,7 @@ export async function login(
   password: string = DEMO_PASSWORD,
 ): Promise<void> {
   await go(page, "/dang-nhap");
-  await page.getByTestId("login-email").fill(email);
+  await page.getByTestId("login-identifier").fill(email);
   await page.getByTestId("login-password").fill(password);
   await page.getByTestId("login-submit").click();
 

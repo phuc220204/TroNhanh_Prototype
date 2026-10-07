@@ -63,7 +63,7 @@ export async function getSavedListings(userId: string | undefined): Promise<List
       .map((listing) => toListingCard(listing));
   } catch (err) {
     logError("saved-listings-service.getSavedListings", err);
-    return [];
+    throw err;
   }
 }
 

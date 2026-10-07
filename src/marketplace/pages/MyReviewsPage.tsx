@@ -1,4 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
+import { qk } from "../../shared/query/keys";
+import { useAuth } from "../../shared/contexts/AuthContext";
 import { Star, TriangleAlert } from "lucide-react";
 import { RenterShell } from "../../shared/components/RenterShell";
 import { EmptyState, Skeleton } from "../../shared/components/common";
@@ -12,8 +14,10 @@ import { getMyReviews, canEditReview } from "../services/review-service";
  * contract_id để gọi post_review), nên ở đây chỉ hiển thị trạng thái còn/hết hạn.
  */
 export function MyReviewsPage() {
+  const { user } = useAuth();
   const reviewsQuery = useQuery({
-    queryKey: ["renter", "myReviews"],
+    // Key có userId: đổi tài khoản trên cùng tab không thấy đánh giá của người trước.
+    queryKey: qk.reviews.mine(user?.id),
     queryFn: getMyReviews,
   });
 

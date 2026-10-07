@@ -23,7 +23,7 @@ export function PlatformSettingsPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: qk.admin.settings });
       // Đổi chế độ làm tin mới đi vào hàng chờ thay vì Active — làm mới luôn.
-      queryClient.invalidateQueries({ queryKey: ["admin", "moderationQueue"] });
+      queryClient.invalidateQueries({ queryKey: qk.admin.moderationQueueAll });
     },
   });
 

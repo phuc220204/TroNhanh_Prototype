@@ -23,7 +23,7 @@ export function UserManagementPage() {
   const roleMutation = useMutation({
     mutationFn: ({ userId, role, grant }: { userId: string; role: GrantableRole; grant: boolean }) =>
       grant ? grantRole(userId, role) : revokeRole(userId, role),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["admin", "users"] }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: qk.admin.usersAll }),
   });
 
   const rows = usersQuery.data ?? [];

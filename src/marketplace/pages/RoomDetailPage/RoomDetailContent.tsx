@@ -4,6 +4,7 @@ import {
   Star, Users, Wrench, X, Zap,
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
+import { qk } from "../../../shared/query/keys";
 import { C, font } from "../../../shared/theme";
 import { amenityIcon, amenityLabel } from "../../../shared/constants/amenities";
 import { nearbyCategoryMeta } from "../../../shared/constants/nearby";
@@ -408,7 +409,7 @@ export function ReviewsSection({ listing }: { listing: any }) {
   const propertyId = listing?.property_id as string | undefined;
 
   const reviewsQuery = useQuery({
-    queryKey: ["marketplace", "listingReviews", propertyId],
+    queryKey: qk.reviews.byProperty(propertyId ?? ""),
     queryFn: () => listPropertyReviews(propertyId || ""),
     enabled: Boolean(propertyId),
   });

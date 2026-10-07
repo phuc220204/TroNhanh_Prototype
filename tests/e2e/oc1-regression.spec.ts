@@ -320,9 +320,9 @@ test.describe("Hồi quy OC1 không ghi dữ liệu", () => {
 
   test("ô đăng nhập và đăng ký nhận đủ dữ liệu gõ từ bàn phím", async ({ page }) => {
     await go(page, "/dang-nhap");
-    await page.getByTestId("login-email").pressSequentially("nguoidung@example.com");
+    await page.getByTestId("login-identifier").pressSequentially("nguoidung@example.com");
     await page.getByTestId("login-password").pressSequentially("MatKhau@123");
-    await expect(page.getByTestId("login-email")).toHaveValue("nguoidung@example.com");
+    await expect(page.getByTestId("login-identifier")).toHaveValue("nguoidung@example.com");
     await expect(page.getByTestId("login-password")).toHaveValue("MatKhau@123");
 
     await go(page, "/dang-ky");

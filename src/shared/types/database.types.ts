@@ -496,6 +496,32 @@ export type Database = {
           },
         ]
       }
+      listing_view_events: {
+        Row: {
+          listing_id: string
+          viewed_on: string
+          viewer_key: string
+        }
+        Insert: {
+          listing_id: string
+          viewed_on?: string
+          viewer_key: string
+        }
+        Update: {
+          listing_id?: string
+          viewed_on?: string
+          viewer_key?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "listing_view_events_listing_id_fkey"
+            columns: ["listing_id"]
+            isOneToOne: false
+            referencedRelation: "rental_listings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       messages: {
         Row: {
           content: string
@@ -580,6 +606,7 @@ export type Database = {
           link_status: string | null
           occupant_count: number | null
           owner_id: string
+          pending_link_email: string | null
           phone_number: string | null
           room_id: string | null
           start_date: string | null
@@ -598,6 +625,7 @@ export type Database = {
           link_status?: string | null
           occupant_count?: number | null
           owner_id: string
+          pending_link_email?: string | null
           phone_number?: string | null
           room_id?: string | null
           start_date?: string | null
@@ -616,6 +644,7 @@ export type Database = {
           link_status?: string | null
           occupant_count?: number | null
           owner_id?: string
+          pending_link_email?: string | null
           phone_number?: string | null
           room_id?: string | null
           start_date?: string | null
@@ -888,6 +917,7 @@ export type Database = {
           boost_payment_verified: boolean
           contact_name: string | null
           contact_phone: string | null
+          contact_phone_masked: string | null
           created_at: string
           deleted_at: string | null
           deposit: number | null
@@ -929,6 +959,7 @@ export type Database = {
           boost_payment_verified?: boolean
           contact_name?: string | null
           contact_phone?: string | null
+          contact_phone_masked?: string | null
           created_at?: string
           deleted_at?: string | null
           deposit?: number | null
@@ -970,6 +1001,7 @@ export type Database = {
           boost_payment_verified?: boolean
           contact_name?: string | null
           contact_phone?: string | null
+          contact_phone_masked?: string | null
           created_at?: string
           deleted_at?: string | null
           deposit?: number | null

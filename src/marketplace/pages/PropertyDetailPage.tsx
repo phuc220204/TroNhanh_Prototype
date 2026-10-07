@@ -1,5 +1,6 @@
 import { useParams } from "react-router";
 import { useQuery } from "@tanstack/react-query";
+import { qk } from "../../shared/query/keys";
 import { Home, Star, MapPin, TriangleAlert } from "lucide-react";
 import { PublicNavbar } from "../../shared/components/PublicNavbar";
 import { EmptyState, Skeleton } from "../../shared/components/common";
@@ -19,7 +20,7 @@ export function PropertyDetailPage() {
   const { slug } = useParams<{ slug: string }>();
 
   const profileQuery = useQuery({
-    queryKey: ["marketplace", "publicProperty", slug],
+    queryKey: qk.reviews.publicProfile(slug ?? ""),
     queryFn: () => getPropertyPublicProfile(slug || ""),
     enabled: Boolean(slug),
   });
@@ -27,7 +28,7 @@ export function PropertyDetailPage() {
   const property = profileQuery.data;
 
   const reviewsQuery = useQuery({
-    queryKey: ["marketplace", "publicPropertyReviews", property?.id],
+    queryKey: qk.reviews.byProperty(property?.id ?? ""),
     queryFn: () => listPropertyReviews(property?.id || ""),
     enabled: Boolean(property?.id),
   });

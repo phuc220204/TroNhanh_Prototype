@@ -31,6 +31,7 @@ export const formatShortDate = (value: string) => {
 
 export const STATUS_OPTIONS = [
   { label: "Tất cả trạng thái", value: "" },
+  { label: "Chưa thu đủ", value: "Outstanding" },
   { label: "Chưa thanh toán", value: "Unpaid" },
   { label: "Thu một phần", value: "PartiallyPaid" },
   { label: "Đã thanh toán", value: "Paid" },

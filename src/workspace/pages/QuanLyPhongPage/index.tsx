@@ -7,6 +7,7 @@ import { LandlordShell, LandlordBreadcrumb, type LandlordNavId } from "../../../
 import { ROOM_PAGE_TABS } from "../../../shared/components/landlord/SidebarNav";
 import type { Room, Property } from "../../types/room";
 import type { RoomStatus } from "../../../shared/types/status";
+import { CONTRACT_STATUS_META, normalizeContractStatus, normalizeRoomStatus } from "../../../shared/utils/statusMaps";
 import { useAuth } from "../../../shared/contexts/AuthContext";
 import { useCanWrite } from "../../../shared/contexts/SubscriptionContext";
 import { getPropertiesByOwnerOrThrow } from "../../services/property-service";
@@ -27,7 +28,7 @@ import { EditRoomModal } from "../../components/EditRoomModal";
 
 const mapDbRoomToRoom = (dbRoom: any): Room => {
   const activeContract = dbRoom.contracts?.find(
-    (c: any) => c.status === "Active" || c.status === "active",
+    (c: any) => normalizeContractStatus(c.status) === "active",
   );
   let occupant = null;
   let contract = null;
@@ -48,16 +49,17 @@ const mapDbRoomToRoom = (dbRoom: any): Room => {
       start: activeContract.start_date,
       end: activeContract.end_date,
       deposit: `${Number(activeContract.deposit || 0).toLocaleString("vi-VN")}đ`,
-      status: activeContract.status === "Active" ? "Đang hiệu lực" : activeContract.status,
+      status: CONTRACT_STATUS_META[normalizeContractStatus(activeContract.status) ?? "active"].label,
     };
   }
 
   return {
     id: dbRoom.id,
     code: dbRoom.room_code || dbRoom.code || "",
-    floor: typeof dbRoom.floor === "number" ? `Tầng ${dbRoom.floor}` : (dbRoom.floor || "Tầng 1"),
-    status: (dbRoom.status === "Available" ? "available" : dbRoom.status === "Deposited" ? "deposited" : dbRoom.status === "Rented" ? "rented" : dbRoom.status === "Hidden" ? "hidden" : "available") as RoomStatus,
-    area: `${dbRoom.area || 20} m²`,
+    // Không điền số bịa (trước: "Tầng 1", 20 m²) khi chủ trọ chưa khai báo.
+    floor: typeof dbRoom.floor === "number" ? `Tầng ${dbRoom.floor}` : (dbRoom.floor || "Chưa khai báo"),
+    status: normalizeRoomStatus(dbRoom.status) ?? "available",
+    area: dbRoom.area ? `${dbRoom.area} m²` : "Chưa khai báo",
     price: `${Number(dbRoom.price || 0).toLocaleString("vi-VN")}đ`,
     amenities: [],
     note: dbRoom.description || "",

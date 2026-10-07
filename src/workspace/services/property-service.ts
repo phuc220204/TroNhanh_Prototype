@@ -40,7 +40,7 @@ export async function getPropertiesByOwner(ownerId: string | undefined): Promise
     return (data || []) as PropertyItem[];
   } catch (err) {
     logError("property-service.getPropertiesByOwner", err);
-    return [];
+    throw err;
   }
 }
 

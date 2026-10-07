@@ -40,7 +40,7 @@ export function ListingModerationPage() {
       setErrorMessage(null);
       setRejectTarget(null);
       // Mọi tab đều đổi sau một action (tin rời hàng chờ sang Active/Rejected).
-      queryClient.invalidateQueries({ queryKey: ["admin", "moderationQueue"] });
+      queryClient.invalidateQueries({ queryKey: qk.admin.moderationQueueAll });
     },
     onError: (err) => setErrorMessage(toUserMessage(err)),
   });

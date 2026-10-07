@@ -10,6 +10,9 @@ import { C, font } from "../../shared/theme";
 import { useBreakpoint } from "../../shared/components/useBreakpoint";
 import { useAuth } from "../../shared/contexts/AuthContext";
 import { listMyDemandPosts, setDemandPostStatus, deleteDemandPost, type DemandPostItem } from "../services/demand-post-service";
+import { Button, ModalShell } from "../../shared/components/common";
+import { useToast } from "../../shared/contexts/ToastContext";
+import { toUserMessage } from "../../shared/services/supabase-error";
 
 export function MyDemandPostsPage() {
   const navigate = useNavigate();
@@ -18,20 +21,20 @@ export function MyDemandPostsPage() {
 
   const [posts, setPosts] = useState<DemandPostItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const [toastMsg, setToastMsg] = useState("");
-
-  const showToast = (msg: string) => {
-    setToastMsg(msg);
-    setTimeout(() => setToastMsg(""), 3000);
-  };
+  // Lỗi tải tách khỏi "chưa có tin": trước đây lỗi mạng hiện "Bạn chưa có tin nhu cầu nào".
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<DemandPostItem | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const { showToast } = useToast();
 
   const fetchMyPosts = async () => {
     try {
       setLoading(true);
+      setLoadError(null);
       const list = await listMyDemandPosts();
       setPosts(list);
-    } catch (_) {
-      setPosts([]);
+    } catch (err) {
+      setLoadError(toUserMessage(err));
     } finally {
       setLoading(false);
     }
@@ -47,29 +50,45 @@ export function MyDemandPostsPage() {
       await setDemandPostStatus(post.id, nextStatus);
       showToast(`Đã ${nextStatus === "Active" ? "hiển thị" : "ẩn"} tin đăng.`);
       fetchMyPosts();
-    } catch (_) {
-      showToast("Có lỗi xảy ra khi đổi trạng thái tin.");
+    } catch (err) {
+      showToast(`Chưa đổi được trạng thái tin: ${toUserMessage(err)}`, { variant: "error" });
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!window.confirm("Bạn có chắc chắn muốn xóa tin nhu cầu này?")) return;
+  const confirmDelete = async () => {
+    if (!deleteTarget) return;
     try {
-      await deleteDemandPost(id);
-      showToast("Đã xóa tin nhu cầu thành công.");
+      setIsDeleting(true);
+      await deleteDemandPost(deleteTarget.id);
+      showToast("Đã xóa tin nhu cầu.");
+      setDeleteTarget(null);
       fetchMyPosts();
-    } catch (_) {
-      showToast("Có lỗi xảy ra khi xóa tin.");
+    } catch (err) {
+      showToast(`Chưa xóa được tin: ${toUserMessage(err)}`, { variant: "error" });
+    } finally {
+      setIsDeleting(false);
     }
   };
 
   return (
     <RenterShell active="demands">
       <div style={{ boxSizing: "border-box" }}>
-        {toastMsg && (
-          <div style={{ background: C.cream, border: `1px solid ${C.success}`, color: C.success, padding: "10px 16px", borderRadius: 10, fontFamily: font, fontSize: 13, fontWeight: 600, marginBottom: 16 }}>
-            {toastMsg}
-          </div>
+        {deleteTarget && (
+          <ModalShell
+            title="Xóa tin nhu cầu?"
+            size="sm"
+            onClose={() => setDeleteTarget(null)}
+            footer={
+              <>
+                <Button variant="ghost" onClick={() => setDeleteTarget(null)}>Hủy</Button>
+                <Button variant="danger" loading={isDeleting} onClick={() => void confirmDelete()} data-testid="demand-delete-confirm">Xóa tin</Button>
+              </>
+            }
+          >
+            <p style={{ fontFamily: font, fontSize: 14, color: C.textPrimary, margin: 0 }}>
+              Tin “{deleteTarget.title}” sẽ bị gỡ khỏi danh sách tin nhu cầu. Thao tác này không hoàn tác được.
+            </p>
+          </ModalShell>
         )}
 
         {/* Header Bar */}
@@ -110,6 +129,14 @@ export function MyDemandPostsPage() {
           <p style={{ fontFamily: font, fontSize: 14, color: C.textSecondary, textAlign: "center", padding: "48px 0" }}>
             Đang tải tin đăng của bạn...
           </p>
+        ) : loadError ? (
+          <div role="alert" style={{ background: C.white, border: `1px solid ${C.errorBorder}`, borderRadius: 16, padding: "48px 24px" }}>
+            <EmptyState
+              title="Chưa tải được tin nhu cầu của bạn"
+              description={loadError}
+              action={<Button variant="outline" onClick={() => void fetchMyPosts()}>Thử lại</Button>}
+            />
+          </div>
         ) : posts.length === 0 ? (
           <div style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: 16, padding: "48px 24px" }}>
             <EmptyState
@@ -184,7 +211,7 @@ export function MyDemandPostsPage() {
                           <button
                             type="button"
                             title="Xóa tin"
-                            onClick={() => handleDelete(p.id)}
+                            onClick={() => setDeleteTarget(p)}
                             style={{ padding: "6px", background: C.cream, border: `1px solid ${C.error}`, borderRadius: 6, cursor: "pointer" }}
                           >
                             <Trash2 size={14} color={C.error} />

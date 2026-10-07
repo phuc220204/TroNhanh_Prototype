@@ -103,7 +103,7 @@ export async function listActiveDemandPosts(filter?: DemandPostFilter): Promise<
     return ((data || []) as any[]).map(formatDemandPostItem);
   } catch (err) {
     logError("demand-post-service.listActiveDemandPosts", err);
-    return [];
+    throw err;
   }
 }
 
@@ -123,7 +123,7 @@ export async function getDemandPostById(id: string): Promise<DemandPostItem | nu
     return formatDemandPostItem(data);
   } catch (err) {
     logError("demand-post-service.getDemandPostById", err);
-    return null;
+    throw err;
   }
 }
 
@@ -147,7 +147,7 @@ export async function listMyDemandPosts(): Promise<DemandPostItem[]> {
     return ((data || []) as any[]).map(formatDemandPostItem);
   } catch (err) {
     logError("demand-post-service.listMyDemandPosts", err);
-    return [];
+    throw err;
   }
 }
 
@@ -174,7 +174,7 @@ export async function createDemandPost(payload: Partial<DemandPostItem>): Promis
         desired_ward_codes: payload.desired_ward_codes || [],
         price_min: payload.price_min || 0,
         price_max: payload.price_max || 0,
-        status: "Active", // Auto approved by default configuration
+        // Không gửi `status`: trigger `guard_demand_post_write` đặt theo cài đặt kiểm duyệt (§6.1).
         ...(payload.kind === "RoomWanted"
           ? {
               property_type: payload.property_type || null,
