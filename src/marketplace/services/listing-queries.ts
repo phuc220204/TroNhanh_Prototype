@@ -4,25 +4,20 @@ import { loadVnWards, normalizeVi, searchWards } from "../../shared/utils/vn-reg
 import { toListingCard, ListingCardItem } from "./listing-mappers";
 
 /**
- * BR-014: khách (anon) KHÔNG có quyền đọc cột `contact_phone` — chỉ cột đã che
- * `contact_phone_masked` (migration 20261009100000). `select("*")` khi chưa
- * đăng nhập sẽ bị "permission denied", nên khách chọn đúng các cột công khai.
- * Thêm cột công khai mới vào `rental_listings` ⇒ thêm vào đây VÀ grant cho anon.
+ * BR-014: khách (anon) đọc tin qua VIEW `public_rental_listings` — allow-list cột,
+ * KHÔNG có `contact_phone`, có sẵn `contact_phone_masked` và `is_boost_active`
+ * (BR-005). Không dùng quyền theo cột trên bảng: sắp xếp theo trường tính toán
+ * `is_boost_active(rental_listings)` cần quyền đọc CẢ DÒNG ⇒ khách bị 42501
+ * (sự cố 2026-10-07). Đã đăng nhập thì đọc bảng (RLS lo phần còn lại).
  */
-const LISTING_PUBLIC_COLUMNS = [
-  "id", "seller_id", "room_id", "title", "property_type", "price", "district", "area", "status",
-  "boost_expire_at", "created_at", "updated_at", "deleted_at", "contact_name", "address",
-  "description", "rejection_reason", "approved_at", "expire_at", "moderated_by", "moderated_at",
-  "view_count", "property_id", "electricity_price", "water_price", "water_unit", "service_price",
-  "deposit", "access_policy", "access_open_time", "access_close_time", "latitude", "longitude",
-  "metadata", "province_code", "ward_code", "boost_payment_verified", "first_published_at",
-  "contact_phone_masked",
-].join(", ");
-
-/** Cột của tin theo người xem: đã đăng nhập thấy đủ, khách thấy bản che số. */
-async function getListingColumns(): Promise<string> {
+async function isGuestViewer(): Promise<boolean> {
   const { data } = await supabase.auth.getSession();
-  return data.session ? "*" : LISTING_PUBLIC_COLUMNS;
+  return !data.session;
+}
+
+/** Nguồn đọc tin theo người xem. Ép kiểu: view là tập con cột của bảng (+ is_boost_active). */
+function listingSource(isGuest: boolean): "rental_listings" {
+  return (isGuest ? "public_rental_listings" : "rental_listings") as "rental_listings";
 }
 
 export interface ListingQueryParams {
@@ -182,11 +177,10 @@ async function buildKeywordFilter(
  */
 export async function searchListings(params: ListingQueryParams = {}): Promise<SearchListingsResult> {
   try {
-    const columns = await getListingColumns();
+    const isGuest = await isGuestViewer();
     let q = supabase
-      .from("rental_listings")
-      // Ép kiểu về chuỗi đầy đủ để giữ type của row; khách nhận ít cột hơn (không có contact_phone).
-      .select(`${columns}, listing_amenities(amenity), listing_media(storage_path, sort_order)` as "*, listing_amenities(amenity), listing_media(storage_path, sort_order)", { count: "exact" })
+      .from(listingSource(isGuest))
+      .select("*, listing_amenities(amenity), listing_media(storage_path, sort_order)", { count: "exact" })
       .is("deleted_at", null);
 
     const statusFilter = params.status || "Active";
@@ -415,10 +409,14 @@ export async function getListingStatus(id: string): Promise<string | null> {
  */
 export async function getListingById(id: string) {
   try {
-    const columns = await getListingColumns();
+    const isGuest = await isGuestViewer();
+    // Khách không đọc được `properties` (RLS) ⇒ không nhúng, tránh lỗi quan hệ qua view.
+    const select = isGuest
+      ? "*, listing_amenities(*), listing_media(*)"
+      : "*, listing_amenities(*), listing_media(*), properties(*)";
     const { data, error } = await supabase
-      .from("rental_listings")
-      .select(`${columns}, listing_amenities(*), listing_media(*), properties(*)` as "*, listing_amenities(*), listing_media(*), properties(*)")
+      .from(listingSource(isGuest))
+      .select(select as "*, listing_amenities(*), listing_media(*), properties(*)")
       .eq("id", id)
       .is("deleted_at", null)
       .maybeSingle();
