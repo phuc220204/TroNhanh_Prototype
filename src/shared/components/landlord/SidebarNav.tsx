@@ -8,10 +8,13 @@ import { C, font, shadow } from "../../theme";
 import { BrandLogo } from "../brand/BrandLogo";
 import { useAuth } from "../../contexts/AuthContext";
 import { useSubscriptionContext } from "../../contexts/SubscriptionContext";
+import { useUnreadMessageCount } from "../../hooks/useUnreadMessageCount";
 
 export type LandlordNavId =
   | "overview" | "rooms" | "listings" | "occupants" | "billing" | "settings"
   | "find-renter" | "reviews"
+  /** Hộp thư `/tin-nhan` khi mở từ khu chủ trọ — miễn phí, không thuộc SAAS_NAV_IDS. */
+  | "messages"
   /** Trang mua/gia hạn gói — KHÔNG thuộc SAAS_NAV_IDS: người chưa có gói phải vào được để mua. */
   | "plans";
 
@@ -23,6 +26,26 @@ export const SAAS_NAV_IDS: readonly LandlordNavId[] = [
 /** Giá trị hợp lệ của `?tab=` trong /chu-tro/quan-ly-phong. */
 export const ROOM_PAGE_TABS: readonly LandlordNavId[] = ["rooms", "occupants", "settings"];
 
+/**
+ * Router state gửi kèm khi mở `/tin-nhan` từ khu chủ trọ. Hộp thư thấy cờ này
+ * thì render trong `LandlordShell` (giữ sidebar) thay vì navbar công khai —
+ * trước đây bấm "Tin nhắn" là văng khỏi khu chủ trọ, không có lối quay lại.
+ */
+export const LANDLORD_INBOX_STATE = { fromLandlord: true } as const;
+
+export function isLandlordInboxState(state: unknown): boolean {
+  return typeof state === "object" && state !== null && (state as { fromLandlord?: unknown }).fromLandlord === true;
+}
+
+function UnreadDot({ count }: { count: number }) {
+  if (count <= 0) return null;
+  return (
+    <span data-testid="sidebar-unread-badge" style={{ marginLeft: "auto", background: C.repairing, color: C.white, fontFamily: font, fontSize: 11, fontWeight: 800, borderRadius: 999, padding: "1px 7px" }}>
+      {count > 99 ? "99+" : count}
+    </span>
+  );
+}
+
 
 // Khu vực chủ trọ giờ CHỈ còn phần vận hành. "Quản lý tin đăng" đã chuyển sang
 // `/tai-khoan/tin-cho-thue`: đăng tin là việc miễn phí ai cũng làm được, để nó
@@ -31,7 +54,7 @@ export const ROOM_PAGE_TABS: readonly LandlordNavId[] = ["rooms", "occupants", "
 // Nhóm 1 KHÔNG còn là "tính năng miễn phí trong khu chủ trọ" nữa — nó là hai
 // LỐI TẮT ra ngoài khu vực này. Cả hai đều nằm ở `/tai-khoan/*` và `/tin-nhan`,
 // dùng được không cần gói.
-const NAV_FREE: { id: LandlordNavId | "messages"; icon: typeof LayoutGrid; label: string; to?: string }[] = [
+const NAV_FREE: { id: LandlordNavId; icon: typeof LayoutGrid; label: string; to?: string }[] = [
   { id: "listings", icon: FileText, label: "Tin đăng của tôi", to: "/tai-khoan/tin-cho-thue" },
   { id: "messages", icon: MessageSquare, label: "Tin nhắn", to: "/tin-nhan" },
 ];
@@ -57,6 +80,7 @@ export function Sidebar({ active, onSaaSAccess }: { active: LandlordNavId; onSaa
 
   const displayName = profile?.full_name || user?.email?.split("@")[0] || "Chủ trọ";
   const displaySub = profile?.contact_phone || user?.email || "";
+  const unreadCount = useUnreadMessageCount();
 
   return (
     <aside style={{ width: 248, background: C.white, borderRight: `1px solid ${C.border}`, display: "flex", flexDirection: "column", position: "sticky", top: 0, height: "100vh", flexShrink: 0 }}>
@@ -85,11 +109,13 @@ export function Sidebar({ active, onSaaSAccess }: { active: LandlordNavId; onSaa
         {NAV_FREE.map(({ id, icon: Icon, label, to }) => {
           const isActive = id === active;
           return (
-            <button key={id} onClick={to ? () => navigate(to) : undefined}
+            <button key={id} onClick={to ? () => navigate(to, id === "messages" ? { state: LANDLORD_INBOX_STATE } : undefined) : undefined}
+              data-testid={`sidebar-nav-${id}`}
               style={{ display: "flex", alignItems: "center", gap: 11, padding: "10px 13px", borderRadius: 10, border: "none", background: isActive ? C.caramelSoft : "transparent", cursor: "pointer", fontFamily: font, fontSize: 13.5, fontWeight: isActive ? 700 : 500, color: isActive ? C.primary : C.textSecondary, textAlign: "left", width: "100%" }}
               onMouseEnter={e => { if (!isActive) e.currentTarget.style.background = C.bg; }}
               onMouseLeave={e => { if (!isActive) e.currentTarget.style.background = "transparent"; }}>
               <Icon size={17} /> {label}
+              {id === "messages" && <UnreadDot count={unreadCount} />}
             </button>
           );
         })}
@@ -161,7 +187,7 @@ export function MobileTabBar({ active, onSaaSAccess }: { active: LandlordNavId; 
     { Icon: Home, label: "Tổng quan", on: ["overview"], onTap: () => navigate("/chu-tro") },
     { Icon: Building2, label: "Phòng", on: ["rooms", "occupants", "settings"], onTap: openSaaS("/chu-tro/quan-ly-phong") },
     { Icon: Wallet, label: "Hóa đơn", on: ["billing"], onTap: openSaaS("/chu-tro/hoa-don") },
-    { Icon: MessageSquare, label: "Tin nhắn", on: [], onTap: () => navigate("/tin-nhan") },
+    { Icon: MessageSquare, label: "Tin nhắn", on: ["messages"], onTap: () => navigate("/tin-nhan", { state: LANDLORD_INBOX_STATE }) },
     { Icon: User, label: "Tài khoản", on: [], onTap: () => setAccountOpen(true) },
   ];
 
@@ -182,7 +208,7 @@ export function MobileTabBar({ active, onSaaSAccess }: { active: LandlordNavId; 
       <AccountSheet
         open={accountOpen}
         onClose={() => setAccountOpen(false)}
-        onNavigate={(to) => { setAccountOpen(false); navigate(to); }}
+        onNavigate={(to, state) => { setAccountOpen(false); navigate(to, state ? { state } : undefined); }}
         onLogout={() => {
           setAccountOpen(false);
           signOut();
@@ -196,7 +222,7 @@ export function MobileTabBar({ active, onSaaSAccess }: { active: LandlordNavId; 
 }
 
 function AccountSheet({ open, onClose, onNavigate, onLogout }: {
-  open: boolean; onClose: () => void; onNavigate: (to: string) => void; onLogout: () => void;
+  open: boolean; onClose: () => void; onNavigate: (to: string, state?: unknown) => void; onLogout: () => void;
 }) {
   const { user, profile } = useAuth();
   const displayName = profile?.full_name || user?.email?.split("@")[0] || "Chủ trọ";
@@ -207,7 +233,7 @@ function AccountSheet({ open, onClose, onNavigate, onLogout }: {
     { Icon: User, label: "Hồ sơ", action: () => onNavigate("/tai-khoan") },
     { Icon: Crown, label: "Gói dịch vụ", action: () => onNavigate("/chu-tro/goi-dich-vu") },
     { Icon: FileText, label: "Tin đăng của tôi", action: () => onNavigate("/tai-khoan/tin-cho-thue") },
-    { Icon: MessageSquare, label: "Tin nhắn", action: () => onNavigate("/tin-nhan") },
+    { Icon: MessageSquare, label: "Tin nhắn", action: () => onNavigate("/tin-nhan", LANDLORD_INBOX_STATE) },
     { Icon: LayoutGrid, label: "Tổng quan chủ trọ", action: () => onNavigate("/chu-tro") },
     { Icon: Search, label: "Về trang tìm phòng", action: () => onNavigate("/") },
     { Icon: Settings, label: "Cài đặt", action: () => onNavigate("/tai-khoan/cai-dat") },

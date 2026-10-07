@@ -17,9 +17,9 @@ export function getRoomActions(status: Room["status"]): RoomActionType[] {
 }
 
 const ACTION_META: Record<RoomActionType, { label: string; icon: React.ReactNode; testId: string }> = {
-  "add-occupant": { label: "Thêm người ở", icon: <UserPlus size={13} />, testId: "room-add-occupant-btn" },
-  utility: { label: "Điện nước", icon: <Zap size={13} />, testId: "room-utility-btn" },
-  invoice: { label: "Hóa đơn", icon: <FileText size={13} />, testId: "room-invoice-btn" },
+  "add-occupant": { label: "Thêm người ở", icon: <UserPlus size={15} />, testId: "room-add-occupant-btn" },
+  utility: { label: "Điện nước", icon: <Zap size={15} />, testId: "room-utility-btn" },
+  invoice: { label: "Hóa đơn", icon: <FileText size={15} />, testId: "room-invoice-btn" },
 };
 
 export function RoomActions({ room, onAction, size = "sm" }: {
@@ -40,7 +40,7 @@ export function RoomActions({ room, onAction, size = "sm" }: {
             icon={meta.icon}
             onClick={() => onAction(type, room)}
             data-testid={meta.testId}
-            style={{ flex: 1, justifyContent: "center" }}
+            style={{ flex: 1, justifyContent: "center", whiteSpace: "nowrap" }}
           >
             {meta.label}
           </Button>

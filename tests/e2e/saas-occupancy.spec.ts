@@ -8,6 +8,11 @@ const propertyName = `SaaS ${tag}`;
 const roomCode = `S${tag.slice(-5).toUpperCase()}`;
 const occupantName = `Khách ${tag}`;
 
+// Toast là toàn cục và xếp chồng: toast cũ có thể còn khi toast mới hiện ⇒ chọn
+// đúng toast theo nội dung thay vì giả định chỉ có một (strict mode).
+const occupancyToast = (page: Page, text: string) =>
+  page.getByTestId("occupancy-toast").filter({ hasText: text });
+
 const roomCard = (page: Page) =>
   page.locator(`[data-testid="room-card"][data-room-code="${roomCode}"]`);
 
@@ -35,7 +40,7 @@ async function bestEffortCleanup(
       if (await endButton.isVisible().catch(() => false)) {
         await endButton.click();
         await page.getByTestId("confirm-end-contract-btn").click();
-        await expect(page.getByTestId("occupancy-toast")).toContainText("Đã kết thúc hợp đồng");
+        await expect(occupancyToast(page, "Đã kết thúc hợp đồng")).toBeVisible();
       }
     }
   } catch {
@@ -82,7 +87,7 @@ test("tạo phòng, thêm khách, hiện khách trên thẻ phòng, kết thúc 
     await page.getByTestId("contract-rent-input").fill("3000000");
     await page.getByTestId("occupancy-submit-btn").click();
     await expect(page.getByTestId("occupancy-submit-btn")).toBeHidden();
-    await expect(page.getByTestId("occupancy-toast")).toContainText("Đã thêm người ở và tạo hợp đồng");
+    await expect(occupancyToast(page, "Đã thêm người ở và tạo hợp đồng")).toBeVisible();
     await expect(page.getByText(occupantName, { exact: true })).toBeVisible();
 
     // This cross-check exercises the nested PostgREST relation used by room cards.
@@ -95,7 +100,7 @@ test("tạo phòng, thêm khách, hiện khách trên thẻ phòng, kết thúc 
     expect(await selectProperty(page, propertyName)).toBe(true);
     await page.getByTestId("end-contract-btn").click();
     await page.getByTestId("confirm-end-contract-btn").click();
-    await expect(page.getByTestId("occupancy-toast")).toContainText("Đã kết thúc hợp đồng");
+    await expect(occupancyToast(page, "Đã kết thúc hợp đồng")).toBeVisible();
     await expect(page.getByTestId("end-contract-btn")).toHaveCount(0);
 
     await go(page, "/chu-tro/quan-ly-phong");

@@ -9,7 +9,7 @@ import {
 import { C, font } from "../theme";
 import { BrandLogo } from "./brand/BrandLogo";
 import { useAuth } from "../contexts/AuthContext";
-import { getTotalUnreadCount } from "../services/messaging-service";
+import { useUnreadMessageCount } from "../hooks/useUnreadMessageCount";
 
 /* ══════════════════════════════════════════
    ĐĂNG TIN DROPDOWN
@@ -151,20 +151,12 @@ export function PublicNavbarDesktop({
   const [accountOpen, setAccountOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [localQuery, setLocalQuery] = useState(searchQuery || "");
-  const [unreadCount, setUnreadCount] = useState(0);
+  const unreadCount = useUnreadMessageCount();
   const dangTinRef = useRef<HTMLDivElement>(null);
   const accountRef = useRef<HTMLDivElement>(null);
   const accountTriggerRef = useRef<HTMLButtonElement>(null);
   const dangTinTriggerRef = useRef<HTMLButtonElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    if (!user) {
-      setUnreadCount(0);
-      return;
-    }
-    getTotalUnreadCount().then(setUnreadCount);
-  }, [user]);
 
   useEffect(() => {
     setLocalQuery(searchQuery || "");

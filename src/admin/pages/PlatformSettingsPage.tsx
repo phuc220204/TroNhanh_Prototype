@@ -199,7 +199,7 @@ export function PlatformSettingsPage() {
                 Hạn hiển thị tin được duyệt
               </p>
               <p style={{ fontFamily: font, fontSize: 13, color: C.textSecondary, margin: 0 }}>
-                {settings?.listingTtlDays ?? 60} ngày kể từ lúc duyệt (BR-026). Chỉ đọc ở phiên bản này.
+                {settings?.listingTtlDays ?? 60} ngày kể từ lúc duyệt. Chỉ đọc ở phiên bản này.
               </p>
             </div>
           </div>

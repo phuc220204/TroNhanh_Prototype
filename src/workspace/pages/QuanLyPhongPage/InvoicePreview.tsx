@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { AlertCircle, AlertTriangle } from "lucide-react";
+import { AlertCircle, AlertTriangle, CheckCircle2 } from "lucide-react";
 import { C, font, radius } from "../../../shared/theme";
 import { Button, ModalShell, Skeleton, VietQRBlock } from "../../../shared/components/common";
 import type { Room, Property } from "../../types/room";
@@ -12,6 +12,8 @@ import {
   type InvoiceDraft,
   type UtilityLine,
 } from "../../services/invoice-draft";
+import { getInvoiceTransferPurpose, toInvoiceImageLines, type InvoiceImageData } from "../../services/invoice-image";
+import { ExportInvoiceImageButton } from "../../components/ExportInvoiceImageButton";
 import { toUserMessage } from "../../../shared/services/supabase-error";
 import { qk } from "../../../shared/query/keys";
 import { addDaysToISODate, formatPeriod, formatVnd, toLocalISODate, toLocalPeriod } from "../../../shared/utils/format";
@@ -95,6 +97,7 @@ export function InvoicePreview({ room, property, onClose, onSuccess, isReadOnly 
   const [amounts, setAmounts] = useState<AmountInputs>(EMPTY_AMOUNTS);
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
+  const [createdInvoice, setCreatedInvoice] = useState<InvoiceImageData | null>(null);
 
   const isValidPeriod = PERIOD_PATTERN.test(period);
   // Key nằm dưới `qk.billing.all`: ghi chỉ số / tạo hóa đơn ở nơi khác tự làm mới nháp.
@@ -119,6 +122,33 @@ export function InvoicePreview({ room, property, onClose, onSuccess, isReadOnly 
 
   // Guard SAU mọi hook (Rules of Hooks).
   if (!room) return null;
+
+  if (createdInvoice) {
+    return (
+      <ModalShell
+        title={`Đã tạo hóa đơn - Phòng ${room.code}`}
+        onClose={onClose}
+        footer={(
+          <>
+            <Button variant="ghost" onClick={onClose} data-testid="invoice-created-close-btn">Đóng</Button>
+            <ExportInvoiceImageButton data={createdInvoice} variant="primary" />
+          </>
+        )}
+      >
+        <div data-testid="invoice-created" role="status" style={{ display: "flex", alignItems: "flex-start", gap: 12, background: C.successBg, border: `1px solid ${C.successBorder}`, borderRadius: radius.md, padding: "14px 16px", fontFamily: font }}>
+          <CheckCircle2 size={22} color={C.success} style={{ flexShrink: 0, marginTop: 1 }} />
+          <div>
+            <p style={{ margin: "0 0 4px", fontSize: 15, fontWeight: 700, color: C.textPrimary }}>
+              Hóa đơn {formatPeriod(createdInvoice.period)} · {formatVnd(createdInvoice.totalAmount)}
+            </p>
+            <p style={{ margin: 0, fontSize: 13.5, color: C.textSecondary, lineHeight: 1.5 }}>
+              Xuất ảnh hóa đơn (kèm mã VietQR) để gửi cho người ở qua Zalo hoặc Messenger.
+            </p>
+          </div>
+        </div>
+      </ModalShell>
+    );
+  }
 
   // Nháp phải khớp kỳ đang chọn (kỳ bị xóa trống thì không tải lại → không được gửi).
   const draft = loadedDraft && loadedDraft.period === period ? loadedDraft : null;
@@ -148,15 +178,29 @@ export function InvoicePreview({ room, property, onClose, onSuccess, isReadOnly 
     try {
       setLoading(true);
       setErrorMsg("");
+      const items = buildInvoiceItems(draft, finalAmounts);
       await createInvoiceWithItems({
         roomId: room.id,
         contractId: draft.contractId,
         period,
         dueDate,
-        items: buildInvoiceItems(draft, finalAmounts),
+        items,
       });
       onSuccess?.();
-      onClose();
+      // Không đóng ngay: bước kế tiếp tự nhiên là gửi hóa đơn cho người ở.
+      setCreatedInvoice({
+        propertyName: property?.name ?? "",
+        roomCode: room.code,
+        period,
+        dueDate,
+        issuedAt: new Date().toISOString(),
+        lines: toInvoiceImageLines(items),
+        totalAmount: totalCalc,
+        paidAmount: 0,
+        bankCode: property?.bank_name,
+        accountNumber: property?.bank_account_number,
+        accountName: property?.bank_account_name,
+      });
     } catch (err) {
       // INVOICE_PERIOD_EXISTS → "Kỳ này đã có hóa đơn."
       setErrorMsg(toUserMessage(err));
@@ -258,7 +302,7 @@ export function InvoicePreview({ room, property, onClose, onSuccess, isReadOnly 
                   accountNumber={property?.bank_account_number}
                   accountName={property?.bank_account_name}
                   amount={totalCalc}
-                  purpose={`Tien phong ${room.code} ky ${period}`}
+                  purpose={getInvoiceTransferPurpose(room.code, period)}
                   size={170}
                 />
               </div>

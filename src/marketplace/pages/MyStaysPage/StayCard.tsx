@@ -91,7 +91,7 @@ export function StayCard({ stay, busy, onReview }: StayCardProps) {
           )}
           {!editable && (
             <p style={{ fontFamily: font, fontSize: 12, color: C.textSecondary, margin: `${space[2]}px 0 0` }}>
-              Đã quá 7 ngày nên không sửa được nữa (BR-023).
+              Đã quá 7 ngày nên không sửa được nữa.
             </p>
           )}
         </div>

@@ -1,9 +1,8 @@
-import { useEffect, useState } from "react";
 import { useNavigate, useLocation } from "react-router";
 import { Home, Search, MessageSquare, User } from "lucide-react";
 import { C, font } from "../../theme";
 import { useAuth } from "../../contexts/AuthContext";
-import { getTotalUnreadCount } from "../../services/messaging-service";
+import { useUnreadMessageCount } from "../../hooks/useUnreadMessageCount";
 
 /**
  * Thanh tab dưới cùng của bản mobile.
@@ -51,23 +50,11 @@ export function BottomTabBar() {
   const navigate = useNavigate();
   const location = useLocation();
   const { user } = useAuth();
-  const [unread, setUnread] = useState(0);
+  const unread = useUnreadMessageCount();
 
   // Suy tab đang mở từ URL thay vì nhận prop `active={1}`: ba trang trước đây
   // tự truyền số, nên thêm route mới là quên cập nhật và tab sáng sai chỗ.
   const active = activeIndex(location.pathname);
-
-  useEffect(() => {
-    if (!user) {
-      setUnread(0);
-      return;
-    }
-    let cancelled = false;
-    getTotalUnreadCount()
-      .then((n) => { if (!cancelled) setUnread(n); })
-      .catch(() => { if (!cancelled) setUnread(0); });
-    return () => { cancelled = true; };
-  }, [user, location.pathname]);
 
   return (
     <nav
