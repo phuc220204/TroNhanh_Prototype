@@ -38,10 +38,5 @@ export const STATUS_OPTIONS = [
   { label: "Quá hạn", value: "Overdue" },
 ];
 
-export const ITEM_TYPE_LABELS: Record<string, string> = {
-  Rent: "Tiền phòng",
-  Electricity: "Tiền điện",
-  Water: "Tiền nước",
-  Service: "Phí dịch vụ",
-  Other: "Khác",
-};
+// Một nguồn nhãn cho cả màn hóa đơn lẫn ảnh hóa đơn xuất ra.
+export { ITEM_TYPE_LABELS } from "../../services/invoice-image";

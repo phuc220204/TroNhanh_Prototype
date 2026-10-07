@@ -4,6 +4,8 @@ import { Badge, Button, ModalShell, VietQRBlock } from "../../../shared/componen
 import { formatDate, formatPeriod, formatVnd } from "../../../shared/utils/format";
 import { getPaidAmount, getRemainingAmount, type InvoiceItem } from "../../services/billing-service";
 import { CollectionLogSection } from "../../components/CollectionLogSection";
+import { ExportInvoiceImageButton } from "../../components/ExportInvoiceImageButton";
+import { getInvoiceTransferPurpose, toInvoiceImageLines, type InvoiceImageData } from "../../services/invoice-image";
 import { ITEM_TYPE_LABELS, toDisplayStatusKey } from "./invoice-display";
 
 export interface InvoiceProperty {
@@ -26,6 +28,20 @@ const fieldLabel: React.CSSProperties = { fontSize: 12, color: C.textSecondary }
 export function InvoiceDetailModal({ invoice, property, isPropertiesError, actionMessage, onClose, onRecordPayment }: InvoiceDetailModalProps) {
   const paidAmount = getPaidAmount(invoice);
   const remainingAmount = getRemainingAmount(invoice);
+  // Ảnh hóa đơn gửi người ở — QR trên ảnh theo số CÒN THIẾU, như khối VietQR bên dưới.
+  const imageData: InvoiceImageData = {
+    propertyName: invoice.rooms?.properties?.name || "",
+    roomCode: invoice.rooms?.room_code ?? "",
+    period: invoice.period,
+    dueDate: invoice.due_date ?? null,
+    issuedAt: invoice.created_at,
+    lines: toInvoiceImageLines(invoice.invoice_items ?? []),
+    totalAmount: Number(invoice.total_amount || 0),
+    paidAmount,
+    bankCode: property?.bank_name,
+    accountNumber: property?.bank_account_number,
+    accountName: property?.bank_account_name,
+  };
 
   return (
     <ModalShell
@@ -100,6 +116,14 @@ export function InvoiceDetailModal({ invoice, property, isPropertiesError, actio
           )}
         </div>
 
+        {/* Footer đã chật (trạng thái + Đóng + Ghi nhận) ⇒ lối gửi hóa đơn đặt ngay dưới phần tóm tắt. */}
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, flexWrap: "wrap", border: `1px solid ${C.border}`, borderRadius: radius.md, padding: "10px 12px" }}>
+          <span style={{ fontSize: 13, color: C.textSecondary, lineHeight: 1.45, flex: "1 1 180px" }}>
+            Gửi hóa đơn kèm mã VietQR cho người ở qua Zalo, Messenger.
+          </span>
+          <ExportInvoiceImageButton data={imageData} />
+        </div>
+
         <CollectionLogSection invoiceId={invoice.id} isSettled={remainingAmount <= 0} />
 
         {/* Đã thu đủ thì không còn gì để quét. */}
@@ -121,7 +145,7 @@ export function InvoiceDetailModal({ invoice, property, isPropertiesError, actio
               accountNumber={property?.bank_account_number}
               accountName={property?.bank_account_name}
               amount={remainingAmount}
-              purpose={`Tien phong ${invoice.rooms?.room_code ?? ""} ky ${invoice.period}`}
+              purpose={getInvoiceTransferPurpose(invoice.rooms?.room_code ?? "", invoice.period)}
             />
           </div>
         )}
