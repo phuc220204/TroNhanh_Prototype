@@ -129,8 +129,8 @@ Deno.serve(async (request) => {
     // nine ASCII characters while the full immutable order code remains in
     // orderCode and in the database for reconciliation.
     description: `BOOST${String(order.order_code).slice(-4)}`,
-    returnUrl: `${siteOrigin}/?boost=return&orderCode=${order.order_code}`,
-    cancelUrl: `${siteOrigin}/?boost=cancel&orderCode=${order.order_code}`,
+    returnUrl: `${siteOrigin}/tai-khoan/tin-cho-thue?boost=return&orderCode=${order.order_code}`,
+    cancelUrl: `${siteOrigin}/tai-khoan/tin-cho-thue?boost=cancel&orderCode=${order.order_code}`,
   };
   // `expiredAt` không nằm trong chữ ký (payOS chỉ ký 5 trường ở paymentRequest).
   const expiredAt = Math.floor(Date.now() / 1000) + PAYMENT_LINK_TTL_SECONDS;

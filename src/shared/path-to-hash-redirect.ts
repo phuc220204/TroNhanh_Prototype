@@ -11,12 +11,23 @@
  * Bỏ qua gốc `/`: Supabase OAuth quay về `/?code=…` và phải để nguyên
  * `window.location.search` cho `detectSessionInUrl` (xem `AuthContext.tsx`).
  *
+ * Ngoại lệ ở gốc: link payOS của đơn Boost tạo TRƯỚC khi đổi `returnUrl` vẫn
+ * quay về `/?boost=…`. Đưa thẳng về trang quản lý tin — nơi chủ tin vừa bấm
+ * thanh toán — thay vì để rơi ở trang chủ. Nhánh OAuth (`/?code=…`) không có
+ * `boost` nên không bị đụng.
+ *
  * PHẢI là import đầu tiên trong `main.tsx` — router đọc URL ngay khi module
  * `routes` được nạp.
  */
-const { pathname, search, hash } = window.location;
+const BOOST_RETURN_PATH = "/tai-khoan/tin-cho-thue";
 
-if (pathname !== "/" && pathname !== "/index.html" && !hash) {
+const { pathname, search, hash } = window.location;
+const isRoot = pathname === "/" || pathname === "/index.html";
+const boostResult = new URLSearchParams(search).get("boost");
+
+if (isRoot && !hash && (boostResult === "return" || boostResult === "cancel")) {
+  window.history.replaceState(null, "", `/#${BOOST_RETURN_PATH}${search}`);
+} else if (!isRoot && !hash) {
   window.history.replaceState(null, "", `/#${pathname}${search}`);
 }
 
