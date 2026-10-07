@@ -13,7 +13,7 @@ interface RoomsToolbarProps {
   setSort: (value: RoomSort) => void;
   viewMode: RoomViewMode;
   setViewMode: (value: RoomViewMode) => void;
-  /** Điện thoại không có dạng danh sách (bảng không vừa màn) ⇒ ẩn nút chuyển. */
+  /** Điện thoại không có dạng danh sách (bảng không vừa màn) ⇒ ẩn nút chuyển, thu gọn hàng công cụ. */
   canToggleView: boolean;
   onAddRoom: () => void;
 }
@@ -30,7 +30,7 @@ export function RoomsToolbar({
     <div style={{ display: "flex", flexDirection: "column", gap: 14, background: C.white, border: `1px solid ${C.border}`, borderRadius: radius.xl, padding: 16, fontFamily: font }}>
       {/* Hàng 1: tìm kiếm · sắp xếp · kiểu xem · thêm phòng */}
       <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 10 }}>
-        <div style={{ position: "relative", flex: "1 1 240px", minWidth: 200 }}>
+        <div style={{ position: "relative", flex: canToggleView ? "1 1 240px" : "1 1 100%", minWidth: 200 }}>
           <Search size={17} color={C.textSecondary} style={{ position: "absolute", left: 14, top: "50%", transform: "translateY(-50%)" }} />
           <input
             type="text"
@@ -42,7 +42,8 @@ export function RoomsToolbar({
           />
         </div>
 
-        <div style={{ width: 190 }}>
+        {/* AppSelect không tự có viền (thiết kế để nằm trong ô tìm kiếm) ⇒ bọc khung 44px cho đồng bộ ô tìm. */}
+        <div style={{ flex: canToggleView ? "0 0 190px" : "1 1 0", minWidth: 0, height: 44, display: "flex", alignItems: "center", padding: "0 12px", border: `1px solid ${C.border}`, borderRadius: radius.md, boxSizing: "border-box" }}>
           <AppSelect
             value={sort}
             options={SORT_OPTIONS}
@@ -76,7 +77,7 @@ export function RoomsToolbar({
         )}
 
         <Button variant="primary" requiresWrite icon={<Plus size={17} />} onClick={onAddRoom} data-testid="add-room-btn" style={{ height: 44, whiteSpace: "nowrap" }}>
-          Thêm phòng mới
+          {canToggleView ? "Thêm phòng mới" : "Thêm phòng"}
         </Button>
       </div>
 
