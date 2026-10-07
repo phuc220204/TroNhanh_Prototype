@@ -6,7 +6,7 @@ import { useBreakpoint } from "../../../shared/components/useBreakpoint";
 import { LandlordShell, LandlordBreadcrumb, type LandlordNavId } from "../../../shared/components/LandlordShell";
 import { ROOM_PAGE_TABS } from "../../../shared/components/landlord/SidebarNav";
 import type { Room, Property } from "../../types/room";
-import type { RoomStatus } from "../../../shared/types/status";
+import type { RoomFilter, RoomSort } from "./rooms-view-model";
 import { CONTRACT_STATUS_META, normalizeContractStatus, normalizeRoomStatus } from "../../../shared/utils/statusMaps";
 import { useAuth } from "../../../shared/contexts/AuthContext";
 import { useCanWrite } from "../../../shared/contexts/SubscriptionContext";
@@ -61,6 +61,7 @@ const mapDbRoomToRoom = (dbRoom: any): Room => {
     status: normalizeRoomStatus(dbRoom.status) ?? "available",
     area: dbRoom.area ? `${dbRoom.area} m²` : "Chưa khai báo",
     price: `${Number(dbRoom.price || 0).toLocaleString("vi-VN")}đ`,
+    priceValue: Number(dbRoom.price || 0),
     amenities: [],
     note: dbRoom.description || "",
     occupant,
@@ -100,8 +101,8 @@ export function QuanLyPhongPage() {
   const [properties, setProperties] = useState<Property[]>([]);
   const [selectedId, setSelectedId] = useState<string>("");
   const [search, setSearch] = useState("");
-  const [filter, setFilter] = useState<RoomStatus | "all">("all");
-  const [sort, setSort] = useState("Mới cập nhật");
+  const [filter, setFilter] = useState<RoomFilter>("all");
+  const [sort, setSort] = useState<RoomSort>("code");
   const [detailRoom, setDetailRoom] = useState<Room | null>(null);
   const [switcherOpen, setSwitcherOpen] = useState(false);
   const [actionModal, setActionModal] = useState<{ type: RoomActionType; room: Room } | null>(null);
@@ -181,13 +182,24 @@ export function QuanLyPhongPage() {
         <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
           <div>
             <LandlordBreadcrumb trail={["Quản lý phòng"]} />
-            <h1 style={{ fontFamily: font, fontSize: isMobile ? 22 : 26, fontWeight: 800, color: C.textPrimary, margin: "6px 0 0" }}>
+            <h1 style={{ fontFamily: font, fontSize: isMobile ? 22 : 28, fontWeight: 800, color: C.textPrimary, margin: "6px 0 0" }}>
               Quản lý khu trọ &amp; Phòng
             </h1>
+            {selectedProperty && (
+              <p data-testid="property-summary" style={{ fontFamily: font, fontSize: 14, color: C.textSecondary, margin: "6px 0 0" }}>
+                {[selectedProperty.address, `${selectedProperty.rooms.length} phòng`].filter(Boolean).join(" · ")}
+              </p>
+            )}
           </div>
 
-          {/* Property Selector Dropdown */}
-          {properties.length > 0 && selectedProperty && (
+          {/* Khu: chọn khu + thêm khu. "Thêm khu trọ" là thao tác cấp KHU nên nằm cạnh
+              bộ chọn khu, không chen vào thanh công cụ của danh sách phòng. Trước đây
+              lối vào duy nhất là empty state ⇒ có một khu rồi thì không tạo được khu thứ hai. */}
+          <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+            <Button variant="outline" requiresWrite icon={<Building2 size={16} />} onClick={() => setShowAddProperty(true)} data-testid="add-property-btn" style={{ minHeight: 44 }}>
+              Thêm khu trọ
+            </Button>
+            {properties.length > 0 && selectedProperty && (
             <div style={{ position: "relative" }}>
               <button
                 type="button"
@@ -200,9 +212,10 @@ export function QuanLyPhongPage() {
                   background: C.white,
                   border: `1.5px solid ${C.border}`,
                   borderRadius: 12,
-                  padding: "9px 16px",
+                  padding: "0 16px",
+                  minHeight: 44,
                   fontFamily: font,
-                  fontSize: 14,
+                  fontSize: 15,
                   fontWeight: 700,
                   color: C.textPrimary,
                   cursor: "pointer",
@@ -253,7 +266,8 @@ export function QuanLyPhongPage() {
                 </div>
               )}
             </div>
-          )}
+            )}
+          </div>
         </div>
 
         {/* Điện thoại không có sidebar: thanh tab để vào Người ở / Cài đặt (trước đây không có lối vào). */}
@@ -304,7 +318,6 @@ export function QuanLyPhongPage() {
                 onAddRoom={() => setShowAddRoom(true)}
                 onAddProperty={() => setShowAddProperty(true)}
                 onOpenSettings={() => goToTab("settings")}
-                isReadOnly={isReadOnly}
                 mobile={isMobile}
               />
             )}

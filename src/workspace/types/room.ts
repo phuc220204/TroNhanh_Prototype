@@ -30,6 +30,8 @@ export interface Room {
   status: RoomStatus;
   area: string;
   price: string;
+  /** Giá thuê dạng số (VND) — để sắp xếp; `price` là chuỗi đã định dạng. */
+  priceValue: number;
   amenities: string[];
   note: string;
   occupant: Occupant | null;

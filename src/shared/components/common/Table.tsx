@@ -16,6 +16,12 @@ export interface TableProps<T = any> {
   emptyState?: React.ReactNode;
   style?: React.CSSProperties;
   "data-testid"?: string;
+  /** Bấm cả hàng (vd mở chi tiết). Hàng nhận focus bàn phím, Enter/Space để mở. */
+  onRowClick?: (row: T) => void;
+  /** Thuộc tính `data-*` của từng hàng — selector ổn định cho E2E. */
+  getRowAttributes?: (row: T) => Record<`data-${string}`, string>;
+  /** Nhãn đọc màn hình cho hàng bấm được. */
+  getRowLabel?: (row: T) => string;
 }
 
 export function Table<T extends Record<string, any>>({
@@ -25,6 +31,9 @@ export function Table<T extends Record<string, any>>({
   emptyState,
   style,
   "data-testid": testId,
+  onRowClick,
+  getRowAttributes,
+  getRowLabel,
 }: TableProps<T>) {
   if (!rows || rows.length === 0) {
     return (
@@ -72,9 +81,21 @@ export function Table<T extends Record<string, any>>({
           {rows.map((row, rowIndex) => (
             <tr
               key={row.id || rowIndex}
+              {...getRowAttributes?.(row)}
+              {...(onRowClick && {
+                role: "button",
+                tabIndex: 0,
+                "aria-label": getRowLabel?.(row),
+                onClick: () => onRowClick(row),
+                onKeyDown: (e: React.KeyboardEvent<HTMLTableRowElement>) => {
+                  if (e.target !== e.currentTarget) return;
+                  if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onRowClick(row); }
+                },
+              })}
               style={{
                 borderBottom: rowIndex === rows.length - 1 ? "none" : `1px solid ${C.border}`,
                 transition: "background 0.15s",
+                cursor: onRowClick ? "pointer" : undefined,
               }}
             >
               {columns.map((col) => (
