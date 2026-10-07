@@ -65,6 +65,13 @@ export type Database = {
             foreignKeyName: "boost_orders_listing_id_fkey"
             columns: ["listing_id"]
             isOneToOne: false
+            referencedRelation: "public_rental_listings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "boost_orders_listing_id_fkey"
+            columns: ["listing_id"]
+            isOneToOne: false
             referencedRelation: "rental_listings"
             referencedColumns: ["id"]
           },
@@ -444,6 +451,13 @@ export type Database = {
             foreignKeyName: "listing_amenities_listing_id_fkey"
             columns: ["listing_id"]
             isOneToOne: false
+            referencedRelation: "public_rental_listings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "listing_amenities_listing_id_fkey"
+            columns: ["listing_id"]
+            isOneToOne: false
             referencedRelation: "rental_listings"
             referencedColumns: ["id"]
           },
@@ -491,6 +505,13 @@ export type Database = {
             foreignKeyName: "listing_media_listing_id_fkey"
             columns: ["listing_id"]
             isOneToOne: false
+            referencedRelation: "public_rental_listings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "listing_media_listing_id_fkey"
+            columns: ["listing_id"]
+            isOneToOne: false
             referencedRelation: "rental_listings"
             referencedColumns: ["id"]
           },
@@ -513,6 +534,13 @@ export type Database = {
           viewer_key?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "listing_view_events_listing_id_fkey"
+            columns: ["listing_id"]
+            isOneToOne: false
+            referencedRelation: "public_rental_listings"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "listing_view_events_listing_id_fkey"
             columns: ["listing_id"]
@@ -1285,6 +1313,13 @@ export type Database = {
             foreignKeyName: "saved_listings_listing_id_fkey"
             columns: ["listing_id"]
             isOneToOne: false
+            referencedRelation: "public_rental_listings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "saved_listings_listing_id_fkey"
+            columns: ["listing_id"]
+            isOneToOne: false
             referencedRelation: "rental_listings"
             referencedColumns: ["id"]
           },
@@ -1505,6 +1540,148 @@ export type Database = {
           updated_at: string | null
         }
         Relationships: []
+      }
+      public_rental_listings: {
+        Row: {
+          access_close_time: string | null
+          access_open_time: string | null
+          access_policy: string | null
+          address: string | null
+          approved_at: string | null
+          area: number | null
+          boost_expire_at: string | null
+          boost_payment_verified: boolean | null
+          contact_name: string | null
+          contact_phone_masked: string | null
+          created_at: string | null
+          deleted_at: string | null
+          deposit: number | null
+          description: string | null
+          district: string | null
+          electricity_price: number | null
+          expire_at: string | null
+          first_published_at: string | null
+          id: string | null
+          is_boost_active: boolean | null
+          latitude: number | null
+          longitude: number | null
+          metadata: Json | null
+          price: number | null
+          property_id: string | null
+          property_type: string | null
+          province_code: number | null
+          room_id: string | null
+          seller_id: string | null
+          service_price: number | null
+          status: string | null
+          title: string | null
+          updated_at: string | null
+          view_count: number | null
+          ward_code: number | null
+          water_price: number | null
+          water_unit: string | null
+        }
+        Insert: {
+          access_close_time?: string | null
+          access_open_time?: string | null
+          access_policy?: string | null
+          address?: string | null
+          approved_at?: string | null
+          area?: number | null
+          boost_expire_at?: string | null
+          boost_payment_verified?: boolean | null
+          contact_name?: string | null
+          contact_phone_masked?: string | null
+          created_at?: string | null
+          deleted_at?: string | null
+          deposit?: number | null
+          description?: string | null
+          district?: string | null
+          electricity_price?: number | null
+          expire_at?: string | null
+          first_published_at?: string | null
+          id?: string | null
+          is_boost_active?: never
+          latitude?: number | null
+          longitude?: number | null
+          metadata?: Json | null
+          price?: number | null
+          property_id?: string | null
+          property_type?: string | null
+          province_code?: number | null
+          room_id?: string | null
+          seller_id?: string | null
+          service_price?: number | null
+          status?: string | null
+          title?: string | null
+          updated_at?: string | null
+          view_count?: number | null
+          ward_code?: number | null
+          water_price?: number | null
+          water_unit?: string | null
+        }
+        Update: {
+          access_close_time?: string | null
+          access_open_time?: string | null
+          access_policy?: string | null
+          address?: string | null
+          approved_at?: string | null
+          area?: number | null
+          boost_expire_at?: string | null
+          boost_payment_verified?: boolean | null
+          contact_name?: string | null
+          contact_phone_masked?: string | null
+          created_at?: string | null
+          deleted_at?: string | null
+          deposit?: number | null
+          description?: string | null
+          district?: string | null
+          electricity_price?: number | null
+          expire_at?: string | null
+          first_published_at?: string | null
+          id?: string | null
+          is_boost_active?: never
+          latitude?: number | null
+          longitude?: number | null
+          metadata?: Json | null
+          price?: number | null
+          property_id?: string | null
+          property_type?: string | null
+          province_code?: number | null
+          room_id?: string | null
+          seller_id?: string | null
+          service_price?: number | null
+          status?: string | null
+          title?: string | null
+          updated_at?: string | null
+          view_count?: number | null
+          ward_code?: number | null
+          water_price?: number | null
+          water_unit?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rental_listings_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "properties"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rental_listings_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "property_public_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rental_listings_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "rooms"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Functions: {

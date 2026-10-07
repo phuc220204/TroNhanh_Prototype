@@ -66,7 +66,7 @@ test.describe("Hồi quy OC1 không ghi dữ liệu", () => {
     expect(listingId).toBeTruthy();
 
     // Chỉ thay response đọc của một tin; mọi thao tác ghi vẫn không được gọi.
-    await page.route("**/rest/v1/rental_listings?*", async (route) => {
+    await page.route(/\/rest\/v1\/(public_)?rental_listings\?/, async (route) => {
       const queriedId = new URL(route.request().url()).searchParams.get("id");
       if (queriedId !== `eq.${listingId}`) {
         await route.continue();
@@ -141,7 +141,7 @@ test.describe("Hồi quy OC1 không ghi dữ liệu", () => {
     const listingId = await row.getAttribute("data-listing-id");
     expect(listingId).toBeTruthy();
 
-    await page.route("**/rest/v1/rental_listings?*", async (route) => {
+    await page.route(/\/rest\/v1\/(public_)?rental_listings\?/, async (route) => {
       const queriedId = new URL(route.request().url()).searchParams.get("id");
       if (queriedId !== `eq.${listingId}`) {
         await route.continue();
@@ -254,7 +254,7 @@ test.describe("Hồi quy OC1 không ghi dữ liệu", () => {
     const listingId = await row.getAttribute("data-listing-id");
     expect(listingId).toBeTruthy();
 
-    await page.route("**/rest/v1/rental_listings?*", async (route) => {
+    await page.route(/\/rest\/v1\/(public_)?rental_listings\?/, async (route) => {
       const queriedId = new URL(route.request().url()).searchParams.get("id");
       if (queriedId !== `eq.${listingId}`) {
         await route.continue();
@@ -360,7 +360,7 @@ test.describe("Hồi quy OC1 không ghi dữ liệu", () => {
     const locationClauses: string[] = [];
     page.on("request", (request) => {
       const requestUrl = new URL(request.url());
-      if (requestUrl.pathname.endsWith("/rental_listings")) {
+      if (/\/(public_)?rental_listings$/.test(requestUrl.pathname)) {
         locationClauses.push(requestUrl.searchParams.get("or") ?? "");
       }
     });
@@ -388,7 +388,7 @@ test.describe("Hồi quy OC1 không ghi dữ liệu", () => {
   test("API tìm phòng lỗi thì báo lỗi và cho thử lại, không báo sai là 0 phòng", async ({ page }) => {
     let requestCount = 0;
     let allowSuccess = false;
-    await page.route("**/rest/v1/rental_listings?*", async (route) => {
+    await page.route(/\/rest\/v1\/(public_)?rental_listings\?/, async (route) => {
       requestCount += 1;
       if (!allowSuccess) {
         await route.fulfill({ status: 503, contentType: "application/json", body: JSON.stringify({ message: "SERVICE_UNAVAILABLE" }) });
