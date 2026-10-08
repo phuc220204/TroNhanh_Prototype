@@ -18,20 +18,19 @@ test.describe("Xác thực", () => {
 
     await go(page, "/dang-ky");
     await page.getByTestId("register-fullname").fill("Người Dùng E2E");
-    await page.getByTestId("register-phone").fill("0900000000");
+    // Cố ý KHÔNG nhập SĐT: có SĐT thì tài khoản chính là phone, Supabase gọi
+    // SMS hook và phụ thuộc nhà cung cấp SMS; SĐT cố định cũng trùng ở lần chạy
+    // sau. Nhánh phone đã được `auth-registration-mock.spec.ts` kiểm.
     await page.getByTestId("register-email").fill(email);
     await page.getByTestId("register-password").fill(DEMO_PASSWORD);
     await page.getByTestId("register-submit").click();
 
-    const banner = page.getByTestId("register-success");
-    await expect(banner).toBeVisible();
-    // Phân biệt HAI nhánh thành công: có session thì vào thẳng app, còn phải xác
-    // thực email thì đứng lại. Nếu banner nhắc "kiểm tra email" nghĩa là email
-    // confirmation đang BẬT — sửa cấu hình Supabase chứ không sửa test.
-    await expect(banner).not.toContainText("kiểm tra email");
-
-    // Đăng ký xong phải VÀO ĐƯỢC ứng dụng (RegisterPage tự điều hướng về "/").
+    // Đăng ký xong phải VÀO ĐƯỢC ứng dụng: RegisterPage tự điều hướng về "/",
+    // không hiện banner (`register-success` chỉ dành cho nhánh email phụ chưa
+    // liên kết được). Nếu đứng lại ở form với lỗi "chưa cấp phiên" nghĩa là
+    // email confirmation đang BẬT — sửa cấu hình Supabase chứ không sửa test.
     await expect(page.getByTestId("account-menu-trigger")).toBeVisible();
+    await expect(page).toHaveURL(/#\/$/);
 
     // Reload: đây là chỗ từng hỏng khi guard dùng `isLoading` đơn độc — cả cây
     // route bị unmount và người dùng bị đá về trang đăng nhập.
@@ -43,6 +42,29 @@ test.describe("Xác thực", () => {
     // NEGATIVE: sau khi đăng xuất, vào trang cần đăng nhập phải KHÔNG vào được.
     await go(page, "/tai-khoan");
     await expect(page.getByTestId("account-menu-trigger")).toBeHidden();
+  });
+
+  /**
+   * ⚠️ Cần cấu hình Supabase như `docs/OTP_SETUP_SPEEDSMS.md`: Phone provider
+   * BẬT, phone confirmations TẮT. Khi đó signUp bằng SĐT trả session ngay,
+   * không gửi SMS, không gọi Send SMS hook.
+   */
+  test("đăng ký bằng SĐT không cần OTP, đăng nhập lại bằng SĐT", async ({ page }) => {
+    // SĐT khác nhau mỗi lần chạy — SĐT cố định sẽ "đã có tài khoản" từ lần 2.
+    const phone = `09${Date.now().toString().slice(-8)}`;
+
+    await go(page, "/dang-ky");
+    await page.getByTestId("register-fullname").fill("Người Dùng SĐT E2E");
+    await page.getByTestId("register-phone").fill(phone);
+    await page.getByTestId("register-password").fill(DEMO_PASSWORD);
+    await page.getByTestId("register-submit").click();
+
+    // Vào thẳng app — không có bước nhập mã OTP.
+    await expect(page.getByTestId("account-menu-trigger")).toBeVisible();
+    await expect(page).toHaveURL(/#\/$/);
+
+    await logout(page);
+    await login(page, phone);
   });
 
   test("sai mật khẩu hiện lỗi tiếng Việt và KHÔNG tạo phiên", async ({ page }) => {

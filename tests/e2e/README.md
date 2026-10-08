@@ -32,7 +32,7 @@ khi đã có dữ liệu.
 
 | Spec | Tạo ra | Dọn ở đâu |
 |---|---|---|
-| `auth` | 1 tài khoản `e2e.<stamp>@tronhanh.test` | Supabase → Auth → Users (lọc `@tronhanh.test`) |
+| `auth` | 1 tài khoản `e2e.<stamp>@tronhanh.test` + 1 tài khoản SĐT tên "Người Dùng SĐT E2E" | Supabase → Auth → Users (lọc `@tronhanh.test`; tài khoản SĐT lọc theo cột Phone/tên hiển thị) |
 | `listing` | 2 tin đăng + 5 ảnh trong Storage | `/tai-khoan/tin-cho-thue` → xóa tin (ảnh xóa theo) |
 | `moderation` | 1 tin đăng | `/tai-khoan/tin-cho-thue` |
 | `demand` | 3 tin nhu cầu | `/tai-khoan/tin-nhu-cau` |

@@ -6,6 +6,7 @@ import { Eye, EyeOff, Mail, Phone, Lock, ArrowLeft } from "lucide-react";
 import { GoogleSignInButton, AuthDivider } from "../../shared/components/common";
 import { clearPostAuthRedirect, toSafeRedirect, withAuthRedirect } from "../../shared/utils/auth-redirect";
 import { isEmailIdentifier, normalizeVietnamPhone } from "../../shared/utils/phone";
+import { logError, toUserMessage } from "../../shared/services/supabase-error";
 
 export function LoginPage() {
   const navigate = useNavigate();
@@ -40,11 +41,8 @@ export function LoginPage() {
       );
 
       if (error) {
-        if (error.message === "Invalid login credentials") {
-          setErrorMessage("Thông tin đăng nhập hoặc mật khẩu không chính xác.");
-        } else {
-          setErrorMessage(error.message || "Đã xảy ra lỗi đăng nhập.");
-        }
+        logError("LoginPage.handleSubmit", error);
+        setErrorMessage(toUserMessage(error));
         return;
       }
 
@@ -53,8 +51,9 @@ export function LoginPage() {
         // Redirect to target URL or default homepage
         navigate(redirectUrl ?? "/");
       }
-    } catch (err: any) {
-      setErrorMessage(err.message || "Không thể kết nối đến máy chủ.");
+    } catch (err) {
+      logError("LoginPage.handleSubmit", err);
+      setErrorMessage(toUserMessage(err));
     } finally {
       setIsLoading(false);
     }

@@ -170,10 +170,19 @@ export function toUserMessage(e: unknown): string {
   const pgMessage = pgCode ? PG_CODE_MESSAGES[pgCode] : undefined;
   if (pgMessage) return pgMessage;
 
-  // 3. Lỗi auth thường gặp của Supabase (chuỗi tiếng Anh)
-  if (/invalid login credentials/i.test(text)) return "Email hoặc mật khẩu không đúng.";
-  if (/email not confirmed/i.test(text)) return "Email chưa được xác nhận.";
-  if (/user already registered/i.test(text)) return "Email này đã được đăng ký.";
+  // 3. Lỗi auth thường gặp của Supabase (mã `code` của AuthError hoặc chuỗi tiếng Anh)
+  const authSignal = `${pgCode ?? ""} ${text}`;
+  if (/invalid login credentials|invalid_credentials/i.test(authSignal))
+    return "Số điện thoại/email hoặc mật khẩu không đúng.";
+  if (/email not confirmed|email_not_confirmed/i.test(authSignal)) return "Email chưa được xác nhận.";
+  if (/user already registered|user_already_exists|phone_exists|email_exists|already registered/i.test(authSignal))
+    return "Số điện thoại hoặc email này đã có tài khoản. Hãy đăng nhập.";
+  if (/phone_provider_disabled|phone signups are disabled/i.test(authSignal))
+    return "Đăng ký bằng số điện thoại đang tạm tắt. Hãy dùng email.";
+  // Lưới an toàn khi cấu hình Supabase lệch (bật xác nhận SĐT + SMS hook):
+  // xem docs/OTP_SETUP_SPEEDSMS.md §Xử lý sự cố.
+  if (/sms_send_failed|hook/i.test(authSignal))
+    return "Hệ thống chưa gửi được SMS. Hãy thử đăng ký bằng email.";
   if (/password should be at least/i.test(text)) return "Mật khẩu quá ngắn (tối thiểu 6 ký tự).";
   if (/rate limit|too many requests/i.test(text)) return "Bạn thao tác quá nhanh. Vui lòng thử lại sau.";
 
