@@ -8,7 +8,8 @@ import {
 import { useBreakpoint } from "../../../shared/components/useBreakpoint";
 import { C, font } from "../../../shared/theme";
 import { AppSelect } from "../../../shared/components/common/AppSelect";
-import { EmptyState, Skeleton } from "../../../shared/components/common";
+import { Button, EmptyState, Skeleton } from "../../../shared/components/common";
+import { RoomCarousel } from "./RoomCarousel";
 import { SaveListingButton } from "../../components/SaveListingButton";
 import { FEATURED_CARD_BORDER, ListingPostedTime, ListingTag } from "../../components/ListingCardMeta";
 import type { ListingBadge } from "../../services/listing-mappers";
@@ -408,9 +409,11 @@ export function QuickFilterChips({ onSearch, mobile }: { onSearch?: () => void; 
    FEATURED ROOMS SECTION
    ══════════════════════════════════════════ */
 export function FeaturedRoomsSection({
-  rooms, loading, onRoomClick, onSearch, onViewAll, cols,
-}: { rooms: any[]; loading: boolean; onRoomClick?: (id: string) => void; onSearch?: () => void; onViewAll?: () => void; cols: number }) {
+  rooms, loading, onRoomClick, onSearch, onViewAll, onPost, cols,
+}: { rooms: any[]; loading: boolean; onRoomClick?: (id: string) => void; onSearch?: () => void; onViewAll?: () => void; onPost?: () => void; cols: number }) {
   const { isMobile } = useBreakpoint();
+  // Mobile: 1 thẻ + mép thẻ sau để người dùng biết vuốt được.
+  const perView = isMobile ? 1.15 : cols;
   return (
     <section style={{ padding: isMobile ? "40px 16px" : "60px 32px", maxWidth: 1200, margin: "0 auto" }}>
       {/* Section header */}
@@ -430,17 +433,18 @@ export function FeaturedRoomsSection({
         {/* Actions */}
         <div style={{ display: "flex", alignItems: "center", gap: 16, width: isMobile ? "100%" : "auto", justifyContent: isMobile ? "space-between" : "flex-end" }}>
           <button onClick={onViewAll ?? onSearch}
-            style={{ display: "flex", alignItems: "center", gap: 5, fontFamily: font, fontSize: 14, fontWeight: 700, color: C.primary, background: "none", border: "none", cursor: "pointer", padding: 0 }}>
+            style={{ display: "flex", alignItems: "center", gap: 5, fontFamily: font, fontSize: 14, fontWeight: 700, color: C.primary, background: "none", border: "none", cursor: "pointer", padding: 0, whiteSpace: "nowrap" }}>
             Xem tất cả <ArrowRight size={15} />
           </button>
 
-          <button onClick={onSearch}
+          {/* Mobile đã có chip lọc nhanh và ô tìm ở navbar — nút này chỉ làm chật hàng. */}
+          {!isMobile && <button onClick={onSearch}
             style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 16px", border: `1.5px solid ${C.border}`, borderRadius: 10, background: C.white, fontFamily: font, fontSize: 13, fontWeight: 700, color: C.textPrimary, cursor: "pointer", whiteSpace: "nowrap", transition: "all 0.15s ease", boxShadow: "0 1px 4px rgba(0,0,0,0.03)" }}
             onMouseEnter={e => { e.currentTarget.style.borderColor = C.secondary; e.currentTarget.style.background = C.cream; }}
             onMouseLeave={e => { e.currentTarget.style.borderColor = C.border; e.currentTarget.style.background = C.white; }}>
             <SlidersHorizontal size={13} color={C.textSecondary} />
             Bộ lọc nâng cao
-          </button>
+          </button>}
         </div>
       </div>
 
@@ -448,18 +452,24 @@ export function FeaturedRoomsSection({
 
       {/* Cards grid */}
       {loading ? (
-        <div data-testid="home-listings-loading" style={{ display: "grid", gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))`, gap: 20 }}>
-          {Array.from({ length: cols }).map((_, index) => <Skeleton key={index} variant="card" />)}
+        <div data-testid="home-listings-loading" style={{ display: "grid", gridTemplateColumns: `repeat(${isMobile ? 1 : cols}, minmax(0, 1fr))`, gap: 20 }}>
+          {Array.from({ length: isMobile ? 1 : cols }).map((_, index) => <Skeleton key={index} variant="card" />)}
         </div>
       ) : rooms.length === 0 ? (
         <EmptyState
           title="Chưa có tin đăng phòng trọ nào"
           description="Hiện chưa có tin đăng phòng trọ công khai nào trên hệ thống."
+          action={onPost ? <Button variant="primary" onClick={onPost}>Đăng tin ngay</Button> : undefined}
         />
       ) : (
-        <div style={{ display: "grid", gridTemplateColumns: `repeat(${cols}, 1fr)`, gap: 20 }}>
-          {rooms.map(r => <RoomCard key={r.id} room={r} onClick={() => onRoomClick?.(r.id)} />)}
-        </div>
+        <RoomCarousel
+          rooms={rooms}
+          perView={perView}
+          mobile={isMobile}
+          onViewAll={onViewAll}
+          // Thẻ dọc ở mọi kích thước: thẻ ngang (`mobile`) quá hẹp trong một slide.
+          renderRoom={(r) => <RoomCard room={r} onClick={() => onRoomClick?.(r.id)} />}
+        />
       )}
     </section>
   );

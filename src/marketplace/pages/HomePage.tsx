@@ -1,19 +1,15 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
-import { C, font } from "../../shared/theme";
+import { C } from "../../shared/theme";
 import { useBreakpoint } from "../../shared/components/useBreakpoint";
 import { PublicNavbarDesktop, PublicNavbarMobile } from "../../shared/components/PublicNavbar";
-import { BottomTabBar, Button, EmptyState, Skeleton } from "../../shared/components/common";
+import { BottomTabBar } from "../../shared/components/common";
 import { logError } from "../../shared/services/supabase-error";
 import { getFeaturedListings } from "../services/listing-queries";
 import { mapAmenityToKey } from "../services/listing-mappers";
 import { listActiveDemandPosts } from "../services/demand-post-service";
-import {
-  FeaturedRoomsSection,
-  HeroSection,
-  QuickFilterChips,
-  RoomCard,
-} from "./HomePage/HomeHeroSections";
+import { FeaturedRoomsSection, HeroSection } from "./HomePage/HomeHeroSections";
+import { HOME_NEW_LISTINGS_LIMIT } from "./HomePage/RoomCarousel";
 import {
   InfoModal,
   LandlordCTA,
@@ -48,7 +44,7 @@ export function HomePage() {
       try {
         // allSettled: lỗi tin nhu cầu không được kéo mất khối phòng nổi bật (và ngược lại).
         const [featuredResult, demandResult] = await Promise.allSettled([
-          getFeaturedListings(4),
+          getFeaturedListings(HOME_NEW_LISTINGS_LIMIT),
           listActiveDemandPosts(),
         ]);
         if (!isCurrent) return;
@@ -104,33 +100,7 @@ export function HomePage() {
         <div style={{ flex: 1, overflowY: "auto" }}>
           <HeroSection onSearch={onSearch} isMobile />
 
-          <div style={{ padding: "40px 16px" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
-              <div>
-                <h2 style={{ fontFamily: font, fontSize: 20, fontWeight: 800, color: C.textPrimary, margin: "0 0 3px" }}>Phòng mới đăng tải</h2>
-                <p style={{ fontFamily: font, fontSize: 12, color: C.textSecondary, margin: 0 }}>Được cập nhật gần đây</p>
-              </div>
-              <button onClick={onViewAll} style={{ fontFamily: font, fontSize: 13, fontWeight: 600, color: C.primary, background: "none", border: "none", cursor: "pointer" }}>
-                Xem tất cả →
-              </button>
-            </div>
-            <QuickFilterChips onSearch={onSearch} mobile />
-            {isLoadingHome ? (
-              <div data-testid="home-listings-loading" style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-                <Skeleton variant="card" count={2} />
-              </div>
-            ) : rooms.length === 0 ? (
-              <EmptyState
-                title="Chưa có tin đăng phòng trọ nào"
-                description="Hiện chưa có tin đăng phòng trọ công khai nào trên hệ thống."
-                action={<Button variant="primary" onClick={onLandlordPost}>Đăng tin ngay</Button>}
-              />
-            ) : (
-              <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-                {rooms.map(r => <RoomCard key={r.id} room={r} mobile onClick={() => onRoomClick(r.id)} />)}
-              </div>
-            )}
-          </div>
+          <FeaturedRoomsSection rooms={rooms} loading={isLoadingHome} onRoomClick={onRoomClick} onSearch={onSearch} onViewAll={onViewAll} onPost={onLandlordPost} cols={1} />
 
           <MarketplaceSections roomWants={roomWants} roommateWants={roommateWants} loading={isLoadingHome} mobile onInfo={setInfoModal} />
           <WhyUsSection mobile />
