@@ -1,5 +1,5 @@
 import { test, expect, type Page } from "@playwright/test";
-import { ACCOUNTS, go, login, runTag } from "./helpers";
+import { ACCOUNTS, go, login, pickArea as pickAreaSelect, runTag } from "./helpers";
 
 /**
  * Tin nhu cầu — cả hai loại `RoomWanted` và `RoommateWanted`.
@@ -30,16 +30,19 @@ const HARDCODED_STRINGS = [
  * còn là dãy chip 6 quận. Cấp quận/huyện đã bị bãi bỏ 01/07/2025.
  */
 async function pickArea(page: Page, province: string, ward: string) {
-  await page.getByTestId("demand-area-province").click();
-  await page.getByTestId("demand-area-province-search").fill(province);
-  await page.getByTestId("demand-area-province-option").first().click();
-
-  await page.getByTestId("demand-area-ward").click();
-  await page.getByTestId("demand-area-ward-search").fill(ward);
-  await page.getByTestId("demand-area-ward-option").first().click();
-
+  await pickAreaSelect(page, "demand-area", province, ward);
   await page.getByTestId("demand-area-add").click();
   await expect(page.getByTestId("demand-area-chip").filter({ hasText: ward })).toHaveCount(1);
+}
+
+/**
+ * Bấm đăng rồi CHỜ trang tự điều hướng về danh sách. Không `goto` ngay sau
+ * click: điều hướng thủ công hủy request tạo tin đang bay, và tin không bao
+ * giờ được ghi.
+ */
+async function submitDemand(page: Page) {
+  await page.getByTestId("demand-submit-btn").click();
+  await expect(page).toHaveURL(/#\/tin-nhu-cau$/);
 }
 
 test.describe("Tin nhu cầu", () => {
@@ -57,9 +60,8 @@ test.describe("Tin nhu cầu", () => {
     // với "hiện giá trị khởi tạo".
     await pickArea(page, "Hồ Chí Minh", "Thạnh Mỹ Tây");
     await page.getByTestId("demand-description-input").fill("Tin do bộ test E2E tạo.");
-    await page.getByTestId("demand-submit-btn").click();
+    await submitDemand(page);
 
-    await go(page, "/tin-nhu-cau");
     const card = page.getByTestId("demand-post-card").filter({ hasText: title });
     await expect(card).toHaveCount(1);
     await expect(card.getByTestId("demand-kind-badge")).toHaveText("Tìm phòng");
@@ -74,9 +76,8 @@ test.describe("Tin nhu cầu", () => {
     await page.getByTestId("demand-title-input").fill(title);
     await pickArea(page, "Hồ Chí Minh", "Bến Thành");
     await page.getByTestId("demand-description-input").fill("Tin ở ghép do bộ test E2E tạo.");
-    await page.getByTestId("demand-submit-btn").click();
+    await submitDemand(page);
 
-    await go(page, "/tin-nhu-cau");
     const card = page.getByTestId("demand-post-card").filter({ hasText: title });
     await expect(card).toHaveCount(1);
     // Hai loại tin phải hiện KHÁC nhau — cùng badge nghĩa là `kind` bị bỏ qua.
@@ -102,9 +103,8 @@ test.describe("Tin nhu cầu", () => {
     await page.getByTestId("demand-kind-room-wanted").click();
     await page.getByTestId("demand-title-input").fill(title);
     await pickArea(page, "Hồ Chí Minh", "Tân Hưng");
-    await page.getByTestId("demand-submit-btn").click();
+    await submitDemand(page);
 
-    await go(page, "/tin-nhu-cau");
     const mine = page.getByTestId("demand-post-card").filter({ hasText: title });
     await expect(mine).toHaveCount(1);
     await expect(mine.getByTestId("demand-contact-btn")).toHaveCount(0);

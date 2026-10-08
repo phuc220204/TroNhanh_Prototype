@@ -58,9 +58,39 @@ export async function login(
 }
 
 export async function logout(page: Page): Promise<void> {
-  await page.getByTestId("account-menu-trigger").click();
-  await page.getByTestId("account-menu-signout").click();
-  await expect(page.getByTestId("navbar-login-btn")).toBeVisible();
+  // `/quan-tri/*` dùng AdminShell — không có PublicNavbar, nút đăng xuất riêng.
+  const adminSignout = page.getByTestId("admin-signout");
+  if (await adminSignout.isVisible()) {
+    await adminSignout.click();
+  } else {
+    await page.getByTestId("account-menu-trigger").click();
+    await page.getByTestId("account-menu-signout").click();
+  }
+  // Đăng xuất ở trang công khai thì navbar hiện nút "Đăng nhập"; ở trang cần
+  // đăng nhập thì guard đưa về form đăng nhập (không có navbar). Cả hai đều là
+  // bằng chứng phiên đã mất.
+  await expect(
+    page.getByTestId("navbar-login-btn").or(page.getByTestId("login-identifier")),
+  ).toBeVisible();
+}
+
+/**
+ * Chọn tỉnh + phường/xã trong một `AreaSelect` (combobox có ô tìm kiếm).
+ * `prefix` là `testIdPrefix` của component, ví dụ `listing-area`.
+ */
+export async function pickArea(
+  page: Page,
+  prefix: string,
+  province: string,
+  ward: string,
+): Promise<void> {
+  await page.getByTestId(`${prefix}-province`).click();
+  await page.getByTestId(`${prefix}-province-search`).fill(province);
+  await page.getByTestId(`${prefix}-province-option`).first().click();
+
+  await page.getByTestId(`${prefix}-ward`).click();
+  await page.getByTestId(`${prefix}-ward-search`).fill(ward);
+  await page.getByTestId(`${prefix}-ward-option`).first().click();
 }
 
 /** `true` nếu đang có phiên đăng nhập (dùng cho assertion negative). */

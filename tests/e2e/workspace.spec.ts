@@ -26,12 +26,13 @@ const roomCard = (page: Page) =>
 /** Chọn khu vừa tạo trong dropdown chuyển khu (seller.a có thể đã có khu khác). */
 async function selectProperty(page: Page): Promise<void> {
   await go(page, "/chu-tro/quan-ly-phong");
-  const switcher = page.getByRole("button", { name: new RegExp(propertyName) });
-  if (!(await switcher.isVisible().catch(() => false))) {
-    await page.getByText(/Khu test|Nhà trọ|Khu trọ/).first().click();
-    await page.getByText(propertyName, { exact: true }).click();
+  const switcher = page.getByTestId("property-switcher");
+  await expect(switcher).toBeVisible();
+  if (!(await switcher.innerText()).includes(propertyName)) {
+    await switcher.click();
+    await page.getByTestId("property-option").filter({ hasText: propertyName }).click();
   }
-  await expect(page.getByText(propertyName).first()).toBeVisible();
+  await expect(switcher).toContainText(propertyName);
 }
 
 test.describe("Vận hành khu trọ", () => {
@@ -134,22 +135,28 @@ test.describe("Vận hành khu trọ", () => {
     await expect(page.getByTestId("create-invoice-btn")).toBeHidden();
 
     await go(page, "/chu-tro/hoa-don");
-    const invoice = page.getByTestId("invoice-row").first();
-    await expect(invoice).toBeVisible();
+    // Lọc theo mã phòng của spec: seller.a còn nhiều hóa đơn khác từ seed.
+    const invoice = page.getByTestId("invoice-row").filter({ hasText: roomCode });
+    await expect(invoice).toHaveCount(1);
     await invoice.click();
 
-    const remaining = page.getByTestId("invoice-remaining-amount");
-    await expect(remaining).toBeVisible();
-    const before = await remaining.innerText();
-    expect(before.replace(/\D/g, "")).not.toBe("0");
+    // Chưa thu đồng nào ⇒ chưa có dòng "Còn thiếu", nút ghi nhận còn bấm được.
+    const markPaid = page.getByTestId("mark-paid-btn");
+    await expect(markPaid).toBeEnabled();
+    await expect(page.getByTestId("invoice-remaining-amount")).toHaveCount(0);
 
-    await page.getByTestId("mark-paid-btn").first().click();
-    await page.getByTestId("confirm-payment-btn").click();
+    await markPaid.click();
+    // Modal ghi nhận điền sẵn đúng số còn thiếu ⇒ xác nhận là thu đủ.
+    await page.getByTestId("confirm-record-payment").click();
+    await expect(page.getByTestId("record-payment-modal")).toBeHidden();
 
-    await go(page, "/chu-tro/hoa-don");
-    await page.getByTestId("invoice-row").first().click();
+    // Mở lại từ server, không tin state cục bộ của modal. `go()` tới cùng hash
+    // không tải lại trang (modal chi tiết vẫn mở) ⇒ phải reload.
+    await page.reload();
+    await page.getByTestId("invoice-row").filter({ hasText: roomCode }).click();
     // AS-002: nền tảng không giữ tiền — "Đã thu" chỉ ghi nhận, nhưng phải ghi ĐÚNG.
-    await expect(page.getByTestId("invoice-remaining-amount")).toContainText("0");
+    await expect(page.getByTestId("invoice-remaining-amount")).toHaveText(/^0\s*đ$/);
+    await expect(page.getByTestId("mark-paid-btn")).toBeDisabled();
   });
 });
 

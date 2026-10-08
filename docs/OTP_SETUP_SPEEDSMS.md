@@ -14,6 +14,19 @@ Thực hiện ở project `ropzrnlasbkznoxqaqtp` trước khi thử phiên bản
 
 Tên mục có thể thay đổi theo giao diện Dashboard. Mở trang Auth Providers và bấm **Save** sau khi sửa cả Email/Phone. Không tắt Email provider vì tài khoản email/mật khẩu hiện có vẫn cần đăng nhập.
 
+> **Nếu Dashboard không cho lưu Phone provider** vì đòi thông tin Twilio/SMS provider: để hook **Send SMS** ở trạng thái **bật** (bỏ qua bước 1). Khung báo "SMS provider settings are disabled while the SMS hook is enabled" là bình thường. Vì **phone confirmations đã tắt**, Supabase không sinh OTP nên không bao giờ gọi hook — đăng ký/đăng nhập SĐT + mật khẩu vẫn không cần SMS.
+
+### Xử lý sự cố
+
+| Triệu chứng (UI / Network `auth/v1/signup`) | Nguyên nhân | Cách sửa |
+|---|---|---|
+| 500 `unexpected_failure` — `Invalid payload sent to hook`; UI: "Hệ thống chưa gửi được SMS…" | **Enable phone confirmations** đang BẬT ⇒ Supabase gửi OTP qua Send SMS hook, hook từ chối | Tắt **Enable phone confirmations** ở Providers → Phone, Save |
+| 422 `phone_provider_disabled`; UI: "Đăng ký bằng số điện thoại đang tạm tắt…" | **Enable Phone provider** đang TẮT | Bật Phone provider, Save |
+| UI: "Supabase chưa cấp phiên đăng nhập…" | Một trong hai confirmations (Email/Phone) còn bật nên `signUp` không trả session | Tắt confirmations tương ứng |
+| 422 `phone_exists` / `user_already_exists`; UI: "…đã có tài khoản. Hãy đăng nhập." | SĐT/email đã đăng ký | Đăng nhập; tài khoản test dọn ở Auth → Users |
+
+Kiểm tra nhanh sau khi cấu hình: `npx playwright test auth.spec.ts` — test "đăng ký bằng SĐT không cần OTP" phải pass, và **Logs → Edge Functions** không có lời gọi `speedsms-auth-hook`.
+
 ## Triển khai mã và migration
 
 Từ PowerShell ở thư mục repo, xem trước migration trước khi áp dụng:

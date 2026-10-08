@@ -1,5 +1,5 @@
 import { test, expect, type Page } from "@playwright/test";
-import { ACCOUNTS, go, login, runTag, tinyPng } from "./helpers";
+import { ACCOUNTS, go, login, pickArea, runTag, tinyPng } from "./helpers";
 
 /**
  * Đăng tin đầy đủ 4 bước + upload ảnh thật, rồi kiểm tin xuất hiện ở
@@ -21,6 +21,7 @@ async function postListing(page: Page, title: string): Promise<string> {
   // ── Bước 1: thông tin cơ bản ──
   // Field của Formik chọn theo `[name]` — hợp đồng của form, không phải style.
   await page.locator('[name="title"]').fill(title);
+  await pickArea(page, "listing-area", "Hồ Chí Minh", "Bến Thành");
   await page.locator('[name="address"]').fill("Số 1 Đường Thử Nghiệm, Phường 1");
   await page.locator('[name="area"]').fill("28");
   await page.locator('[name="price"]').fill("3500000");
@@ -28,7 +29,7 @@ async function postListing(page: Page, title: string): Promise<string> {
   await page.getByTestId("listing-next-btn").click();
 
   // ── Bước 2: mô tả + tiện ích ──
-  await page.locator('[name="description"]').fill(
+  await page.getByTestId("listing-description-input").fill(
     "Phòng do bộ test E2E tạo ra. Có cửa sổ, wifi, giờ giấc tự do.",
   );
   await page.getByTestId("listing-next-btn").click();
@@ -89,13 +90,14 @@ test.describe("Đăng tin", () => {
   test("NEGATIVE: thiếu ảnh thì không qua được bước 3", async ({ page }) => {
     await go(page, "/dang-tin-cho-thue");
     await page.locator('[name="title"]').fill("Tin thiếu ảnh dùng cho kiểm thử");
+    await pickArea(page, "listing-area", "Hồ Chí Minh", "Bến Thành");
     await page.locator('[name="address"]').fill("Số 2 Đường Thử Nghiệm");
     await page.locator('[name="area"]').fill("20");
     await page.locator('[name="price"]').fill("2500000");
     await page.locator('[name="phone"]').fill("0912345678");
     await page.getByTestId("listing-next-btn").click();
 
-    await page.locator('[name="description"]').fill("Mô tả đủ dài cho bước hai đi qua.");
+    await page.getByTestId("listing-description-input").fill("Mô tả đủ dài cho bước hai đi qua.");
     await page.getByTestId("listing-next-btn").click();
 
     // Chỉ 2 ảnh — dưới mức tối thiểu 3.
@@ -106,7 +108,9 @@ test.describe("Đăng tin", () => {
     await page.getByTestId("listing-next-btn").click();
 
     // Vẫn phải đứng ở bước ảnh: nút của bước 4 chưa xuất hiện.
-    await expect(page.getByTestId("photo-upload-input")).toBeVisible();
+    // Input file bị ẩn (`display: none`) ⇒ kiểm còn gắn trong DOM, không kiểm visible.
+    await expect(page.getByTestId("photo-upload-input")).toBeAttached();
+    await expect(page.getByTestId("photo-item")).toHaveCount(2);
     await expect(page.getByTestId("listing-submit-btn")).toBeHidden();
   });
 });
