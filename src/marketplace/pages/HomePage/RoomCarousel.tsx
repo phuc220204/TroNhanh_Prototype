@@ -6,6 +6,9 @@ import { C, font, radius, shadow } from "../../../shared/theme";
 export const HOME_NEW_LISTINGS_LIMIT = 12;
 
 const GAP = 20;
+const ARROW_SIZE = 44;
+/** Rãnh hai bên dải thẻ cho mũi tên: nút + 12px khoảng cách tới thẻ. */
+const ARROW_GUTTER = ARROW_SIZE + 12;
 
 /** Trạng thái cuộn của một track ngang: còn cuộn được về trước / về sau không. */
 function useCarouselScroll(itemCount: number) {
@@ -50,10 +53,10 @@ function useCarouselScroll(itemCount: number) {
 function EdgeArrow({ side, visible, mobile, onClick }: {
   side: "prev" | "next"; visible: boolean; mobile?: boolean; onClick: () => void;
 }) {
-  const size = mobile ? 36 : 44;
-  // Desktop: tâm nút nằm đúng mép dải thẻ — nửa nút lấn ra khoảng trống ngoài
-  // thẻ. Mobile: section chỉ có 16px lề nên đặt nút vào trong mép.
-  const offset = mobile ? 6 : -size / 2;
+  const size = mobile ? 36 : ARROW_SIZE;
+  // Desktop: nút nằm trọn trong rãnh `ARROW_GUTTER` hai bên, không chạm thẻ.
+  // Mobile: không đủ chỗ cho rãnh ⇒ đặt nút vào trong mép, đè lên ảnh.
+  const offset = mobile ? 6 : 0;
   const isPrev = side === "prev";
   return (
     <button
@@ -99,7 +102,7 @@ export function RoomCarousel<T extends { id: string }>({ rooms, perView, renderR
   const itemStyle: React.CSSProperties = { flex: `0 0 ${itemWidth}`, minWidth: 0, scrollSnapAlign: "start", display: "flex" };
 
   return (
-    <div style={{ position: "relative" }}>
+    <div style={{ position: "relative", padding: mobile ? 0 : `0 ${ARROW_GUTTER}px` }}>
       <EdgeArrow side="prev" visible={carousel.canPrev} mobile={mobile} onClick={carousel.prev} />
       <EdgeArrow side="next" visible={carousel.canNext} mobile={mobile} onClick={carousel.next} />
       <div
