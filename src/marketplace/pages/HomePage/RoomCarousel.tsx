@@ -7,12 +7,8 @@ export const HOME_NEW_LISTINGS_LIMIT = 12;
 
 const GAP = 20;
 
-/**
- * Trạng thái cuộn của một track ngang. Tách khỏi component track để header
- * section đặt được mũi tên ở chỗ khác (cạnh "Xem tất cả") mà vẫn điều khiển
- * đúng track.
- */
-export function useCarouselScroll(itemCount: number) {
+/** Trạng thái cuộn của một track ngang: còn cuộn được về trước / về sau không. */
+function useCarouselScroll(itemCount: number) {
   const trackRef = useRef<HTMLDivElement | null>(null);
   const [canPrev, setCanPrev] = useState(false);
   const [canNext, setCanNext] = useState(false);
@@ -47,103 +43,105 @@ export function useCarouselScroll(itemCount: number) {
   };
 }
 
-type CarouselState = ReturnType<typeof useCarouselScroll>;
-
-function ArrowButton({ label, disabled, onClick, children, testId }: {
-  label: string; disabled: boolean; onClick: () => void; children: React.ReactNode; testId: string;
+/**
+ * Mũi tên nổi ở mép dải thẻ, căn giữa theo chiều dọc. Hết chỗ cuộn về phía
+ * đó thì mờ đi và không bấm được (ẩn hẳn, không để nút xám nằm đó).
+ */
+function EdgeArrow({ side, visible, mobile, onClick }: {
+  side: "prev" | "next"; visible: boolean; mobile?: boolean; onClick: () => void;
 }) {
+  const size = mobile ? 36 : 44;
+  // Desktop: tâm nút nằm đúng mép dải thẻ — nửa nút lấn ra khoảng trống ngoài
+  // thẻ. Mobile: section chỉ có 16px lề nên đặt nút vào trong mép.
+  const offset = mobile ? 6 : -size / 2;
+  const isPrev = side === "prev";
   return (
     <button
       type="button"
-      aria-label={label}
-      disabled={disabled}
+      aria-label={isPrev ? "Phòng trước" : "Phòng tiếp theo"}
+      aria-hidden={!visible}
+      tabIndex={visible ? 0 : -1}
       onClick={onClick}
-      data-testid={testId}
+      data-testid={isPrev ? "home-carousel-prev" : "home-carousel-next"}
       style={{
-        width: 40, height: 40, borderRadius: radius.pill, flexShrink: 0,
+        // Mobile: nút nằm đè lên thẻ ⇒ căn giữa phần ảnh (4px đệm track + ảnh 190px)
+        // để không che tiêu đề và giá.
+        position: "absolute", top: mobile ? 4 + 190 / 2 : "50%", [isPrev ? "left" : "right"]: offset, zIndex: 2,
+        transform: `translateY(-50%) scale(${visible ? 1 : 0.85})`,
+        width: size, height: size, borderRadius: radius.pill,
         display: "inline-flex", alignItems: "center", justifyContent: "center",
-        border: `1.5px solid ${C.border}`, background: C.white, boxShadow: shadow.sm,
-        color: disabled ? C.border : C.textPrimary,
-        cursor: disabled ? "default" : "pointer",
-        transition: "color 0.15s ease, border-color 0.15s ease",
+        border: `1px solid ${C.border}`, background: C.white, boxShadow: shadow.md,
+        color: C.textPrimary, cursor: "pointer",
+        opacity: visible ? 1 : 0, pointerEvents: visible ? "auto" : "none",
+        transition: "opacity 0.2s ease, transform 0.2s ease",
       }}
     >
-      {children}
+      {isPrev ? <ChevronLeft size={mobile ? 18 : 20} /> : <ChevronRight size={mobile ? 18 : 20} />}
     </button>
   );
 }
 
-export function CarouselArrows({ carousel }: { carousel: CarouselState }) {
-  // Ít tin đến mức vừa một màn thì không cần mũi tên.
-  if (!carousel.canPrev && !carousel.canNext) return null;
-  return (
-    <div style={{ display: "flex", gap: 8 }}>
-      <ArrowButton label="Phòng trước" testId="home-carousel-prev" disabled={!carousel.canPrev} onClick={carousel.prev}>
-        <ChevronLeft size={18} />
-      </ArrowButton>
-      <ArrowButton label="Phòng tiếp theo" testId="home-carousel-next" disabled={!carousel.canNext} onClick={carousel.next}>
-        <ChevronRight size={18} />
-      </ArrowButton>
-    </div>
-  );
-}
-
 /**
- * Track ngang có scroll-snap: bấm mũi tên hoặc vuốt (mobile) để xem tin tiếp.
- * `perView` lẻ (1.15) trên mobile để lộ mép thẻ sau — gợi ý là vuốt được.
+ * Track ngang có scroll-snap: bấm mũi tên ở 2 bên hoặc vuốt (mobile) để xem tin
+ * tiếp. `perView` lẻ (1.15) trên mobile để lộ mép thẻ sau — gợi ý là vuốt được.
  * Thẻ phòng do nơi gọi render (`renderRoom`) để file này không import ngược
  * `HomeHeroSections`.
  */
-export function RoomCarousel<T extends { id: string }>({ rooms, perView, carousel, renderRoom, onViewAll }: {
+export function RoomCarousel<T extends { id: string }>({ rooms, perView, renderRoom, onViewAll, mobile }: {
   rooms: T[];
   perView: number;
-  carousel: CarouselState;
   renderRoom: (room: T) => React.ReactNode;
   onViewAll?: () => void;
+  mobile?: boolean;
 }) {
+  const carousel = useCarouselScroll(rooms.length);
   const itemWidth = `calc((100% - ${GAP * (Math.ceil(perView) - 1)}px) / ${perView})`;
   const itemStyle: React.CSSProperties = { flex: `0 0 ${itemWidth}`, minWidth: 0, scrollSnapAlign: "start", display: "flex" };
 
   return (
-    <div
-      ref={carousel.trackRef}
-      onScroll={carousel.onScroll}
-      data-testid="home-listings-carousel"
-      style={{
-        display: "flex", gap: GAP, overflowX: "auto", scrollSnapType: "x mandatory",
-        scrollbarWidth: "none", WebkitOverflowScrolling: "touch",
-        // Chừa chỗ cho bóng của thẻ khi hover, không bị track cắt mất.
-        padding: "4px 2px 12px", margin: "-4px -2px -12px",
-      }}
-    >
-      {rooms.map((room) => (
-        <div key={room.id} style={itemStyle}>
-          {/* grid ⇒ thẻ giãn đủ chiều cao slide, các thẻ cao bằng nhau. */}
-          <div style={{ width: "100%", display: "grid" }}>{renderRoom(room)}</div>
-        </div>
-      ))}
-      {onViewAll && (
-        <div style={itemStyle}>
-          <button
-            type="button"
-            onClick={onViewAll}
-            aria-label="Xem tất cả phòng"
-            data-testid="home-carousel-view-all"
-            style={{
-              width: "100%", minHeight: 240, borderRadius: radius.xl, cursor: "pointer",
-              border: `1.5px dashed ${C.secondary}`, background: C.cream,
-              display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 12,
-              fontFamily: font, color: C.primary,
-            }}
-          >
-            <span style={{ width: 48, height: 48, borderRadius: radius.pill, background: C.white, display: "inline-flex", alignItems: "center", justifyContent: "center", boxShadow: shadow.sm }}>
-              <ArrowRight size={20} />
-            </span>
-            <span style={{ fontSize: 15, fontWeight: 800 }}>Xem tất cả phòng</span>
-            <span style={{ fontSize: 12.5, color: C.textSecondary }}>Lọc theo khu vực, giá, loại phòng</span>
-          </button>
-        </div>
-      )}
+    <div style={{ position: "relative" }}>
+      <EdgeArrow side="prev" visible={carousel.canPrev} mobile={mobile} onClick={carousel.prev} />
+      <EdgeArrow side="next" visible={carousel.canNext} mobile={mobile} onClick={carousel.next} />
+      <div
+        ref={carousel.trackRef}
+        onScroll={carousel.onScroll}
+        data-testid="home-listings-carousel"
+        style={{
+          display: "flex", gap: GAP, overflowX: "auto", scrollSnapType: "x mandatory",
+          scrollbarWidth: "none", WebkitOverflowScrolling: "touch",
+          // Chừa chỗ cho bóng của thẻ khi hover, không bị track cắt mất.
+          padding: "4px 2px 12px", margin: "-4px -2px -12px",
+        }}
+      >
+        {rooms.map((room) => (
+          <div key={room.id} style={itemStyle}>
+            {/* grid ⇒ thẻ giãn đủ chiều cao slide, các thẻ cao bằng nhau. */}
+            <div style={{ width: "100%", display: "grid" }}>{renderRoom(room)}</div>
+          </div>
+        ))}
+        {onViewAll && (
+          <div style={itemStyle}>
+            <button
+              type="button"
+              onClick={onViewAll}
+              aria-label="Xem tất cả phòng"
+              data-testid="home-carousel-view-all"
+              style={{
+                width: "100%", minHeight: 240, borderRadius: radius.xl, cursor: "pointer",
+                border: `1.5px dashed ${C.secondary}`, background: C.cream,
+                display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 12,
+                fontFamily: font, color: C.primary,
+              }}
+            >
+              <span style={{ width: 48, height: 48, borderRadius: radius.pill, background: C.white, display: "inline-flex", alignItems: "center", justifyContent: "center", boxShadow: shadow.sm }}>
+                <ArrowRight size={20} />
+              </span>
+              <span style={{ fontSize: 15, fontWeight: 800 }}>Xem tất cả phòng</span>
+              <span style={{ fontSize: 12.5, color: C.textSecondary }}>Lọc theo khu vực, giá, loại phòng</span>
+            </button>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

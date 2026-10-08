@@ -9,7 +9,7 @@ import { useBreakpoint } from "../../../shared/components/useBreakpoint";
 import { C, font } from "../../../shared/theme";
 import { AppSelect } from "../../../shared/components/common/AppSelect";
 import { Button, EmptyState, Skeleton } from "../../../shared/components/common";
-import { CarouselArrows, RoomCarousel, useCarouselScroll } from "./RoomCarousel";
+import { RoomCarousel } from "./RoomCarousel";
 import { SaveListingButton } from "../../components/SaveListingButton";
 import { FEATURED_CARD_BORDER, ListingPostedTime, ListingTag } from "../../components/ListingCardMeta";
 import type { ListingBadge } from "../../services/listing-mappers";
@@ -412,7 +412,6 @@ export function FeaturedRoomsSection({
   rooms, loading, onRoomClick, onSearch, onViewAll, onPost, cols,
 }: { rooms: any[]; loading: boolean; onRoomClick?: (id: string) => void; onSearch?: () => void; onViewAll?: () => void; onPost?: () => void; cols: number }) {
   const { isMobile } = useBreakpoint();
-  const carousel = useCarouselScroll(rooms.length);
   // Mobile: 1 thẻ + mép thẻ sau để người dùng biết vuốt được.
   const perView = isMobile ? 1.15 : cols;
   return (
@@ -433,13 +432,10 @@ export function FeaturedRoomsSection({
 
         {/* Actions */}
         <div style={{ display: "flex", alignItems: "center", gap: 16, width: isMobile ? "100%" : "auto", justifyContent: isMobile ? "space-between" : "flex-end" }}>
-          {/* Mobile: "Xem tất cả" bên trái, mũi tên bên phải; desktop: mũi tên đứng trước. */}
-          {!isMobile && !loading && rooms.length > 0 && <CarouselArrows carousel={carousel} />}
           <button onClick={onViewAll ?? onSearch}
             style={{ display: "flex", alignItems: "center", gap: 5, fontFamily: font, fontSize: 14, fontWeight: 700, color: C.primary, background: "none", border: "none", cursor: "pointer", padding: 0, whiteSpace: "nowrap" }}>
             Xem tất cả <ArrowRight size={15} />
           </button>
-          {isMobile && !loading && rooms.length > 0 && <CarouselArrows carousel={carousel} />}
 
           {/* Mobile đã có chip lọc nhanh và ô tìm ở navbar — nút này chỉ làm chật hàng. */}
           {!isMobile && <button onClick={onSearch}
@@ -469,7 +465,7 @@ export function FeaturedRoomsSection({
         <RoomCarousel
           rooms={rooms}
           perView={perView}
-          carousel={carousel}
+          mobile={isMobile}
           onViewAll={onViewAll}
           // Thẻ dọc ở mọi kích thước: thẻ ngang (`mobile`) quá hẹp trong một slide.
           renderRoom={(r) => <RoomCard room={r} onClick={() => onRoomClick?.(r.id)} />}
