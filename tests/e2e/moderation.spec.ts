@@ -1,5 +1,5 @@
 import { test, expect, type Page } from "@playwright/test";
-import { ACCOUNTS, go, login, logout, runTag, tinyPng } from "./helpers";
+import { ACCOUNTS, go, login, logout, pickArea, runTag, tinyPng } from "./helpers";
 
 /**
  * Vòng đời kiểm duyệt: bật Thủ công → seller đăng tin → tin KHÔNG lên public →
@@ -30,13 +30,14 @@ async function setModeration(page: Page, mode: "auto" | "manual"): Promise<void>
 async function postListing(page: Page, title: string): Promise<void> {
   await go(page, "/dang-tin-cho-thue");
   await page.locator('[name="title"]').fill(title);
+  await pickArea(page, "listing-area", "Hồ Chí Minh", "Bến Thành");
   await page.locator('[name="address"]').fill("Số 9 Đường Kiểm Duyệt");
   await page.locator('[name="area"]').fill("22");
   await page.locator('[name="price"]').fill("2800000");
   await page.locator('[name="phone"]').fill("0912345678");
   await page.getByTestId("listing-next-btn").click();
 
-  await page.locator('[name="description"]').fill("Tin dùng cho kiểm thử luồng kiểm duyệt.");
+  await page.getByTestId("listing-description-input").fill("Tin dùng cho kiểm thử luồng kiểm duyệt.");
   await page.getByTestId("listing-next-btn").click();
 
   await page.getByTestId("photo-upload-input").setInputFiles([
@@ -118,7 +119,7 @@ test.describe("Kiểm duyệt tin đăng", () => {
     await row.getByTestId("listing-resubmit-btn").click();
     await expect(page.locator('[name="title"]')).toHaveValue(title);
     await page.getByTestId("listing-next-btn").click();
-    await page.locator('[name="description"]').fill("Đã sửa lại theo yêu cầu của kiểm duyệt viên.");
+    await page.getByTestId("listing-description-input").fill("Đã sửa lại theo yêu cầu của kiểm duyệt viên.");
     await page.getByTestId("listing-next-btn").click();
     // Ảnh cũ được nạp sẵn ở chế độ sửa nên bước ảnh đã đủ điều kiện.
     await expect(page.getByTestId("photo-item")).toHaveCount(3);

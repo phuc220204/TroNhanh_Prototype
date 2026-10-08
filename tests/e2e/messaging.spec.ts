@@ -37,7 +37,8 @@ test.describe("Nhắn tin", () => {
 
     await renter.getByTestId("message-input").fill(body);
     await renter.getByTestId("message-send-btn").click();
-    await expect(renter.getByText(body)).toBeVisible();
+    // Chỉ tìm trong khung tin nhắn: preview ở danh sách hội thoại cũng chứa `body`.
+    await expect(renter.getByTestId("message-list").getByText(body)).toBeVisible();
 
     // ── Phía B: chủ tin đăng, phiên hoàn toàn khác ──
     const seller = await newSession(browser, ACCOUNTS.sellerA);
@@ -46,7 +47,7 @@ test.describe("Nhắn tin", () => {
     const thread = seller.getByTestId("conversation-item").first();
     await expect(thread).toBeVisible();
     await thread.click();
-    await expect(seller.getByText(body)).toBeVisible();
+    await expect(seller.getByTestId("message-list").getByText(body)).toBeVisible();
 
     await renter.context().close();
     await seller.context().close();
