@@ -40,7 +40,9 @@ export function RoomActions({ room, onAction, size = "sm" }: {
             icon={meta.icon}
             onClick={() => onAction(type, room)}
             data-testid={meta.testId}
-            style={{ flex: 1, justifyContent: "center", whiteSpace: "nowrap" }}
+            // Basis `auto` (không phải 0) để hàng nút cha `flexWrap` xuống dòng khi
+            // "Thêm người ở" + "Điện nước" không vừa thẻ hẹp — thay vì tràn ra ngoài.
+            style={{ flex: "1 1 auto", justifyContent: "center", whiteSpace: "nowrap" }}
           >
             {meta.label}
           </Button>
