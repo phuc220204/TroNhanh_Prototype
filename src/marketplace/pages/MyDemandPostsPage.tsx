@@ -5,7 +5,7 @@ import { useNavigate } from "react-router";
 // mất và người dùng mất luôn đường quay lại các mục khác.
 import { RenterShell } from "../../shared/components/RenterShell";
 import { EmptyState } from "../../shared/components/common/EmptyState";
-import { FileText, Plus, Edit, Eye, EyeOff, Trash2, CheckCircle, Clock } from "lucide-react";
+import { FileText, Plus, Edit, Eye, EyeOff, Trash2, CheckCircle, Clock, Rocket } from "lucide-react";
 import { C, font } from "../../shared/theme";
 import { useBreakpoint } from "../../shared/components/useBreakpoint";
 import { useAuth } from "../../shared/contexts/AuthContext";
@@ -13,6 +13,8 @@ import { listMyDemandPosts, setDemandPostStatus, deleteDemandPost, type DemandPo
 import { Button, ModalShell } from "../../shared/components/common";
 import { useToast } from "../../shared/contexts/ToastContext";
 import { toUserMessage } from "../../shared/services/supabase-error";
+import { DemandBoostModal } from "../components/DemandBoostModal";
+import { DemandBoostReturnNotice } from "../components/DemandBoostReturnNotice";
 
 export function MyDemandPostsPage() {
   const navigate = useNavigate();
@@ -25,6 +27,7 @@ export function MyDemandPostsPage() {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<DemandPostItem | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [boostTarget, setBoostTarget] = useState<DemandPostItem | null>(null);
   const { showToast } = useToast();
 
   const fetchMyPosts = async () => {
@@ -73,6 +76,8 @@ export function MyDemandPostsPage() {
   return (
     <RenterShell active="demands">
       <div style={{ boxSizing: "border-box" }}>
+        <DemandBoostReturnNotice onPaid={() => void fetchMyPosts()} />
+        {boostTarget && <DemandBoostModal post={boostTarget} onClose={() => setBoostTarget(null)} />}
         {deleteTarget && (
           <ModalShell
             title="Xóa tin nhu cầu?"
@@ -189,9 +194,26 @@ export function MyDemandPostsPage() {
                             <EyeOff size={13} /> {p.status}
                           </span>
                         )}
+                        {p.boost_expire_at && new Date(p.boost_expire_at).getTime() > Date.now() ? (
+                          <div data-testid="demand-boost-until" style={{ marginTop: 4, color: C.warning, fontWeight: 700, fontSize: 11.5, display: "flex", alignItems: "center", gap: 4 }}>
+                            <Rocket size={12} /> Nổi bật đến {new Date(p.boost_expire_at).toLocaleDateString("vi-VN")}
+                          </div>
+                        ) : null}
                       </td>
                       <td style={{ padding: "14px 16px" }}>
                         <div style={{ display: "flex", gap: 8 }}>
+                          {p.status === "Active" ? (
+                            <button
+                              type="button"
+                              title="Đẩy tin lên đầu (trả phí)"
+                              aria-label="Đẩy tin lên đầu"
+                              data-testid="demand-boost-open"
+                              onClick={() => setBoostTarget(p)}
+                              style={{ display: "inline-flex", alignItems: "center", gap: 4, padding: "6px 10px", background: C.primary, color: C.white, border: "none", borderRadius: 6, cursor: "pointer", fontFamily: font, fontSize: 12, fontWeight: 700 }}
+                            >
+                              <Rocket size={13} /> Đẩy tin
+                            </button>
+                          ) : null}
                           <button
                             type="button"
                             title="Sửa tin"

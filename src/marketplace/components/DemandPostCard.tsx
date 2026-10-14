@@ -1,4 +1,4 @@
-import { MapPin, Banknote, Building2, Users, Calendar, MessageSquare } from "lucide-react";
+import { MapPin, Banknote, Building2, Users, Calendar, MessageSquare, Rocket } from "lucide-react";
 import { C, font } from "../../shared/theme";
 import type { DemandPostItem } from "../services/demand-post-service";
 
@@ -98,6 +98,14 @@ export function DemandPostCard({ post, kind, onMessage, onView }: DemandPostCard
             Người thuê
           </p>
         </div>
+        {post.is_boost_active ? (
+          <span
+            data-testid="demand-boost-badge"
+            style={{ fontFamily: font, fontSize: 10.5, fontWeight: 700, color: C.white, background: C.warning, borderRadius: 999, padding: "4px 9px", display: "inline-flex", alignItems: "center", gap: 3, flexShrink: 0 }}
+          >
+            <Rocket size={11} /> Nổi bật
+          </span>
+        ) : null}
         <span
           data-testid="demand-kind-badge"
           style={{
