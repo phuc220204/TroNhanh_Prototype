@@ -68,6 +68,16 @@ Deno.serve(async (request) => {
     .eq("seller_id", userData.user.id)
     .maybeSingle();
   if (saasError) return json({ error: "PAYMENT_STATUS_UNAVAILABLE" }, 503, corsOrigin);
-  if (!saasOrder) return json({ error: "ORDER_NOT_FOUND" }, 404, corsOrigin);
-  return json({ order: { ...saasOrder, kind: "saas" } }, 200, corsOrigin);
+  if (saasOrder) return json({ order: { ...saasOrder, kind: "saas" } }, 200, corsOrigin);
+
+  // Cuối cùng: đơn đẩy tin nhu cầu của chính người gọi (Renter).
+  const { data: demandOrder, error: demandError } = await adminClient
+    .from("demand_boost_orders")
+    .select("order_code, demand_post_id, days, amount, status, paid_at")
+    .eq("order_code", orderCode as number)
+    .eq("renter_id", userData.user.id)
+    .maybeSingle();
+  if (demandError) return json({ error: "PAYMENT_STATUS_UNAVAILABLE" }, 503, corsOrigin);
+  if (!demandOrder) return json({ error: "ORDER_NOT_FOUND" }, 404, corsOrigin);
+  return json({ order: { ...demandOrder, kind: "demand_boost" } }, 200, corsOrigin);
 });

@@ -399,6 +399,9 @@ verify_jwt = false
 [functions.payos-create-saas-checkout]
 verify_jwt = false
 
+[functions.payos-create-demand-checkout]
+verify_jwt = false
+
 [functions.payos-webhook]
 verify_jwt = false
 

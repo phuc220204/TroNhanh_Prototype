@@ -1,5 +1,6 @@
 import { supabase } from "../supabaseClient";
 import { logError } from "./supabase-error";
+import { toFunctionError } from "./edge-function-error";
 
 /**
  * Gói SaaS & mua/gia hạn qua payOS. Bảng `subscription_plans`, `saas_orders`,
@@ -57,20 +58,6 @@ export async function getMyPaidPlanIds(): Promise<string[]> {
   }
 }
 
-/** Mã lỗi server → câu tiếng Việt. Edge Function trả `{ error: CODE }`. */
-async function toFunctionError(error: unknown): Promise<Error> {
-  const context = (error as { context?: { clone?: () => { json: () => Promise<unknown> } } } | null)?.context;
-  try {
-    if (context?.clone) {
-      const payload = await context.clone().json();
-      const code = (payload as { error?: unknown } | null)?.error;
-      if (typeof code === "string") return new Error(code);
-    }
-  } catch {
-    // dùng lỗi gốc bên dưới
-  }
-  return error instanceof Error ? error : new Error("PAYMENT_UNAVAILABLE");
-}
 
 export async function createSaasCheckout(planId: string): Promise<SaasCheckout> {
   const { data, error } = await supabase.functions.invoke<SaasCheckout>("payos-create-saas-checkout", { body: { planId } });

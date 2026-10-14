@@ -20,6 +20,10 @@ export interface DemandPostItem {
   status: "Pending" | "Active" | "Rejected" | "Hidden" | "Expired";
   created_at: string;
   updated_at: string;
+  /** Hạn đẩy tin (Renter trả phí). Chỉ server ghi — trigger `guard_demand_post_write`. */
+  boost_expire_at?: string | null;
+  /** Chỉ có trên view công khai: `boost_expire_at > now()`. */
+  is_boost_active?: boolean | null;
 
   // RoomWanted fields
   property_type?: string | null;
@@ -74,9 +78,11 @@ export function formatDemandPostItem(item: any): DemandPostItem {
  */
 export async function listActiveDemandPosts(filter?: DemandPostFilter): Promise<DemandPostItem[]> {
   try {
+    // BR-005: tin đang được đẩy xếp trước, rồi mới theo ngày đăng.
     let q = supabase.from("public_demand_posts")
       .select("*")
       .eq("status", "Active")
+      .order("is_boost_active", { ascending: false })
       .order("created_at", { ascending: false });
 
     if (filter?.kind && filter.kind !== "all") {

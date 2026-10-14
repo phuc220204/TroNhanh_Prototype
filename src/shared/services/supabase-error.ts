@@ -118,6 +118,20 @@ const ERROR_MESSAGES: Record<string, string> = {
   BOOST_CONFIG_MISSING:
     "Hệ thống chưa cấu hình gói đẩy tin. Vui lòng liên hệ quản trị viên.",
 
+  // Đẩy tin nhu cầu (Renter trả phí, B2C)
+  DEMAND_BOOST_REJECTED: "Chỉ đẩy được tin nhu cầu đang hiển thị của chính bạn, với gói hợp lệ.",
+  DEMAND_BOOST_CONFIG_INVALID:
+    "Hệ thống chưa cấu hình gói đẩy tin nhu cầu. Vui lòng liên hệ quản trị viên.",
+  DEMAND_BOOST_ORDER_NOT_READY: "Chưa tạo được đơn thanh toán. Vui lòng thử lại sau ít phút.",
+  DEMAND_BOOST_ORDER_INVALID: "Đơn thanh toán không hợp lệ. Vui lòng liên hệ hỗ trợ.",
+
+  // Cổng thanh toán payOS (Edge Function trả `{ error: CODE }`)
+  PAYMENT_NOT_AVAILABLE: "Thanh toán trực tuyến đang tạm đóng. Vui lòng thử lại sau.",
+  PAYMENT_NOT_CONFIGURED: "Thanh toán trực tuyến chưa được cấu hình. Vui lòng liên hệ quản trị viên.",
+  PAYOS_UNAVAILABLE: "Cổng thanh toán payOS đang bận. Vui lòng thử lại sau ít phút.",
+  PAYOS_INVALID_RESPONSE: "Cổng thanh toán trả về dữ liệu không hợp lệ. Vui lòng thử lại.",
+  ORDER_NOT_FOUND: "Không tìm thấy đơn thanh toán của tài khoản này.",
+
 };
 
 /** Mã lỗi Postgres → message tiếng Việt (khi không phải domain error của ta). */
