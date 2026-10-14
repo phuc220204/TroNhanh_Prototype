@@ -78,7 +78,7 @@ export function RoomCard({ room, onSelect, onAction }: RoomCardProps) {
       )}
 
       {/* `marginTop: auto` giữ hàng nút ở đáy thẻ ⇒ các thẻ cùng hàng thẳng nút. */}
-      <div style={{ marginTop: "auto", display: "flex", gap: 8 }} onClick={(e) => e.stopPropagation()}>
+      <div style={{ marginTop: "auto", display: "flex", flexWrap: "wrap", gap: 8 }} onClick={(e) => e.stopPropagation()}>
         <RoomActions room={room} onAction={onAction} size="md" />
       </div>
     </div>
