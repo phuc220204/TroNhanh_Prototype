@@ -10,7 +10,7 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "14.5"
+    PostgrestVersion: "14.15"
   }
   public: {
     Tables: {
@@ -189,8 +189,72 @@ export type Database = {
         }
         Relationships: []
       }
+      demand_boost_orders: {
+        Row: {
+          amount: number
+          checkout_url: string | null
+          created_at: string
+          days: number
+          demand_post_id: string
+          id: string
+          order_code: number
+          paid_at: string | null
+          payment_link_id: string | null
+          payos_reference: string | null
+          renter_id: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          checkout_url?: string | null
+          created_at?: string
+          days: number
+          demand_post_id: string
+          id?: string
+          order_code?: never
+          paid_at?: string | null
+          payment_link_id?: string | null
+          payos_reference?: string | null
+          renter_id: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          checkout_url?: string | null
+          created_at?: string
+          days?: number
+          demand_post_id?: string
+          id?: string
+          order_code?: never
+          paid_at?: string | null
+          payment_link_id?: string | null
+          payos_reference?: string | null
+          renter_id?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "demand_boost_orders_demand_post_id_fkey"
+            columns: ["demand_post_id"]
+            isOneToOne: false
+            referencedRelation: "demand_posts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "demand_boost_orders_demand_post_id_fkey"
+            columns: ["demand_post_id"]
+            isOneToOne: false
+            referencedRelation: "public_demand_posts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       demand_posts: {
         Row: {
+          boost_expire_at: string | null
           contact_name: string | null
           contact_phone: string | null
           created_at: string
@@ -222,6 +286,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          boost_expire_at?: string | null
           contact_name?: string | null
           contact_phone?: string | null
           created_at?: string
@@ -253,6 +318,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          boost_expire_at?: string | null
           contact_name?: string | null
           contact_phone?: string | null
           created_at?: string
@@ -1510,6 +1576,7 @@ export type Database = {
       }
       public_demand_posts: {
         Row: {
+          boost_expire_at: string | null
           contact_name: string | null
           contact_phone: string | null
           created_at: string | null
@@ -1523,6 +1590,7 @@ export type Database = {
           expire_at: string | null
           gender_requirement: string | null
           id: string | null
+          is_boost_active: boolean | null
           kind: string | null
           min_area: number | null
           move_in_date: string | null
@@ -1718,6 +1786,14 @@ export type Database = {
         }
         Returns: undefined
       }
+      attach_demand_boost_checkout_link: {
+        Args: {
+          p_checkout_url: string
+          p_order_code: number
+          p_payment_link_id: string
+        }
+        Returns: undefined
+      }
       attach_saas_checkout_link: {
         Args: {
           p_checkout_url: string
@@ -1737,6 +1813,14 @@ export type Database = {
       begin_contact_phone_verification: {
         Args: { p_otp_hash: string; p_phone_e164: string; p_user_id: string }
         Returns: Json
+      }
+      begin_demand_boost_checkout: {
+        Args: { p_days: number; p_demand_post_id: string; p_renter_id: string }
+        Returns: {
+          amount: number
+          days: number
+          order_code: number
+        }[]
       }
       begin_saas_checkout: {
         Args: { p_plan_id: string; p_seller_id: string }
@@ -1760,6 +1844,15 @@ export type Database = {
         Returns: Json
       }
       complete_verified_boost_payment: {
+        Args: {
+          p_amount: number
+          p_order_code: number
+          p_payment_link_id: string
+          p_reference: string
+        }
+        Returns: string
+      }
+      complete_verified_demand_boost_payment: {
         Args: {
           p_amount: number
           p_order_code: number
