@@ -587,3 +587,32 @@ tại**; grep theo tên trong comment sẽ ra 0 hit trên DB. Tên thật là
 `demo_enable_public_profiles()`.
 
 Mọi hàm `demo_*` thêm sau này phải được thêm vào bảng này.
+
+---
+
+## 14. Supabase Advisor "Security Definer View" — chấp nhận có chủ đích
+
+Advisor (lint `0010_security_definer_view`) báo **CRITICAL** cho 3 view dưới đây.
+Đây là **false-positive có chủ đích**, không phải lỗ hổng — xem CLAUDE.md §3.2.
+Advisor không có nút bỏ qua, nên 3 cảnh báo này sẽ luôn hiện.
+
+| View | Giấu gì | Điều kiện trong view |
+|---|---|---|
+| `property_public_profiles` | STK ngân hàng, đơn giá điện/nước/dịch vụ | `is_public_profile_enabled = true and deleted_at is null` |
+| `public_demand_posts` | SĐT + địa chỉ hiện tại (che với anon) | `status = 'Active' and deleted_at is null` |
+| `public_rental_listings` | `contact_phone` (BR-014) | `status = 'Active' and deleted_at is null` |
+
+**Vì sao không làm theo gợi ý `security_invoker = true`:** RLS là row-level, không
+phải column-level. Invoker view buộc anon có policy SELECT trên bảng gốc ⇒ lộ
+**mọi** cột của dòng đó (STK, SĐT đầy đủ). Không thêm policy thì marketplace công
+khai trống. Cả hai đều là regression.
+
+**Biên bảo mật thật** là allow-list cột + `WHERE` bên trong view (view bỏ qua RLS
+nên phải tự lặp lại điều kiện của policy). Khi sửa một trong 3 view:
+- [ ] Liệt kê cột tường minh, không `select *` / `t.*`.
+- [ ] Cột mới chỉ thêm nếu an toàn công khai cho anon.
+- [ ] Giữ nguyên điều kiện `WHERE` và các `case` che dữ liệu.
+- [ ] Giữ `comment on view` (migration `20261015110000`).
+
+Hướng thay thế nếu bắt buộc dashboard sạch: chuyển thành hàm `security definer`
+trả `setof` (bảo mật tương đương, phải sửa mọi chỗ gọi ở frontend). Chưa làm.
