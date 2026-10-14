@@ -16,7 +16,7 @@
 
 -- ── 1. Cấu hình gói (Admin sửa qua set_platform_setting) ──────────────────
 insert into public.platform_settings (key, value) values
-  ('demand_boost_config', '{"days":[3,7],"price":[10000,20000]}'::jsonb)
+  ('demand_boost_config', '{"days":[3,7],"price":[1000,2000]}'::jsonb)
 on conflict (key) do nothing;
 
 -- ── 2. Cột hạn đẩy tin ────────────────────────────────────────────────────
