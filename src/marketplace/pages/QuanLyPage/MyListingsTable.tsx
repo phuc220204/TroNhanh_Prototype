@@ -1,11 +1,12 @@
 import React from "react";
 import { useNavigate } from "react-router";
-import { Eye, EyeOff, Pencil, Trash2, MessageSquare, AlertTriangle, FileText, Plus } from "lucide-react";
-import { C, font } from "../../../shared/theme";
+import { Eye, Link2, MessageSquare, Plus, FileText, SearchX } from "lucide-react";
+import { C, font, radius } from "../../../shared/theme";
+import { Skeleton } from "../../../shared/components/common";
 import { getListingImage, listingImageUrls } from "../../services/listing-mappers";
 import { formatVND } from "../../utils/listingMetadata";
 import type { BoostOrderSummary } from "../../services/boost-orders-service";
-import { StatusChip, IconAction, ListingActionGroup, RejectionNotice } from "./ListingRowActions";
+import { StatusChip, ListingActionGroup, RejectionNotice } from "./ListingRowActions";
 
 export type DbListing = {
   id: string;
@@ -33,43 +34,25 @@ export type DbListing = {
   boost_orders?: BoostOrderSummary[];
 };
 
+const noteStyle: React.CSSProperties = { fontSize: 11.5, fontWeight: 700, lineHeight: 1.45 };
+
 function BoostPaymentStatus({ listing }: { listing: DbListing }) {
   // Đơn đã trả đang chờ duyệt được ưu tiên hiển thị, kể cả khi có đơn mới hơn chưa trả.
   const latest = listing.boost_orders?.find((order) => order.status === "PAID_PENDING_APPROVAL") ?? listing.boost_orders?.[0];
   if (latest?.status === "PAID_PENDING_APPROVAL") {
-    return (
-      <span data-testid="listing-paid-pending-approval" style={{ color: C.primary, fontSize: 11, fontWeight: 700, lineHeight: 1.45 }}>
-        Đã thanh toán {formatVND(latest.amount)} đ · Boost bắt đầu khi tin được duyệt
-      </span>
-    );
+    return <span data-testid="listing-paid-pending-approval" style={{ ...noteStyle, color: C.primary }}>Đã thanh toán {formatVND(latest.amount)} đ · Boost bắt đầu khi tin được duyệt</span>;
   }
   if (latest?.status === "PENDING" || latest?.status === "LINKED") {
-    return (
-      <span data-testid="listing-boost-pending-payment" style={{ color: C.primary, fontSize: 11, fontWeight: 700, lineHeight: 1.45 }}>
-        Đơn Boost {latest.days} ngày chưa thanh toán · có thể mở lại để tiếp tục
-      </span>
-    );
+    return <span data-testid="listing-boost-pending-payment" style={{ ...noteStyle, color: C.primary }}>Đơn Boost {latest.days} ngày chưa thanh toán · có thể mở lại để tiếp tục</span>;
   }
   if (latest?.status === "NEEDS_REVIEW") {
-    return (
-      <span data-testid="listing-boost-needs-review" style={{ color: C.error, fontSize: 11, fontWeight: 700, lineHeight: 1.45 }}>
-        Thanh toán Boost cần được đối soát · hãy liên hệ hỗ trợ
-      </span>
-    );
+    return <span data-testid="listing-boost-needs-review" style={{ ...noteStyle, color: C.error }}>Thanh toán Boost cần được đối soát · hãy liên hệ hỗ trợ</span>;
   }
   if (latest?.status === "PAID" && listing.boost_expire_at && new Date(listing.boost_expire_at).getTime() > Date.now()) {
-    return (
-      <span data-testid="listing-boost-active" style={{ color: "#4A7A34", fontSize: 11, fontWeight: 700, lineHeight: 1.45 }}>
-        Boost đang hoạt động đến {new Date(listing.boost_expire_at).toLocaleDateString("vi-VN")}
-      </span>
-    );
+    return <span data-testid="listing-boost-active" style={{ ...noteStyle, color: C.success }}>Boost đang hoạt động đến {new Date(listing.boost_expire_at).toLocaleDateString("vi-VN")}</span>;
   }
   if (listing.status === "PendingApproval" && Number.isInteger(listing.boost_intent?.days)) {
-    return (
-      <span data-testid="listing-boost-intent" style={{ color: C.primary, fontSize: 11, fontWeight: 700, lineHeight: 1.45 }}>
-        Đã chọn Boost {listing.boost_intent!.days} ngày · chưa tạo đơn
-      </span>
-    );
+    return <span data-testid="listing-boost-intent" style={{ ...noteStyle, color: C.primary }}>Đã chọn Boost {listing.boost_intent!.days} ngày · chưa tạo đơn</span>;
   }
   return null;
 }
@@ -78,12 +61,37 @@ function canStartBoostPayment(listing: DbListing): boolean {
   return !listing.boost_orders?.some((order) => order.status === "PAID_PENDING_APPROVAL");
 }
 
+/** Gắn tin với một phòng trong module quản lý trọ. */
+function LinkRoomButton({ listing, onLinkRoom }: { listing: DbListing; onLinkRoom: (listing: DbListing) => void }) {
+  return (
+    <button
+      type="button"
+      onClick={(e) => { e.stopPropagation(); onLinkRoom(listing); }}
+      data-testid="link-room-cell-btn"
+      style={{
+        display: "inline-flex", alignItems: "center", gap: 4, background: "none", border: "none", padding: 0, cursor: "pointer",
+        fontFamily: font, fontSize: 12, fontWeight: 650, color: listing.room_id ? C.primary : C.textSecondary,
+      }}
+    >
+      <Link2 size={12} />
+      <span style={{ textDecoration: "underline", textUnderlineOffset: 3 }}>
+        {listing.room_id ? `Phòng #${listing.room_id.slice(0, 6).toUpperCase()}` : "Gắn phòng"}
+      </span>
+    </button>
+  );
+}
+
+const listingCode = (id: string) => `TNH-${id.slice(0, 8).toUpperCase()}`;
+const formatDate = (iso: string) => new Date(iso).toLocaleDateString("vi-VN");
+const formatTime = (iso: string) => new Date(iso).toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" });
+
 interface MyListingsTableProps {
   paginatedRows: DbListing[];
   isLoading: boolean;
   totalRows: number;
   totalListingsCount: number;
   mutatingId: string | null;
+  /** `true` ⇒ layout thẻ (điện thoại & tablet). */
   isMobile: boolean;
   toPost: () => void;
   resetFilters: () => void;
@@ -93,6 +101,8 @@ interface MyListingsTableProps {
   showBoostAction: boolean;
   onBoostListing: (listing: DbListing) => void;
 }
+
+const panelStyle: React.CSSProperties = { background: C.white, border: `1px solid ${C.border}`, borderRadius: radius.xl };
 
 export function MyListingsTable({
   paginatedRows,
@@ -107,205 +117,148 @@ export function MyListingsTable({
   onLinkRoom,
   handleDeleteListing,
   showBoostAction,
-  onBoostListing
+  onBoostListing,
 }: MyListingsTableProps) {
   const navigate = useNavigate();
-  const cellStyle: React.CSSProperties = { fontFamily: font, fontSize: 13.5, color: C.textPrimary, padding: "14px 16px", verticalAlign: "middle" };
 
   if (isLoading) {
     return (
-      <div style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: 20, padding: 32, display: "flex", flexDirection: "column", gap: 14 }}>
-        {Array.from({ length: 4 }).map((_, i) => (
-          <div key={i} style={{ display: "flex", gap: 12, height: 48, background: "#f9f9f9", borderRadius: 10 }} />
-        ))}
+      <div style={{ ...panelStyle, padding: 16, display: "flex", flexDirection: "column", gap: 12 }}>
+        <Skeleton variant="row" count={4} />
       </div>
     );
   }
 
   if (totalRows === 0) {
-    if (totalListingsCount === 0) {
-      return (
-        <div style={{ background: C.white, border: `1px dashed ${C.border}`, borderRadius: 20, padding: "56px 40px", textAlign: "center", display: "flex", flexDirection: "column", alignItems: "center", gap: 16 }}>
-          <div style={{ width: 64, height: 64, borderRadius: "50%", background: C.caramelSoft, display: "flex", alignItems: "center", justifyContent: "center", color: C.primary }}>
-            <FileText size={28} />
-          </div>
-          <div>
-            <h3 style={{ fontFamily: font, fontSize: 16, fontWeight: 800, color: C.textPrimary, margin: "0 0 6px" }}>Bạn chưa có tin đăng nào</h3>
-            <p style={{ fontFamily: font, fontSize: 13, color: C.textSecondary, margin: 0, maxWidth: 360 }}>Bắt đầu kết nối phòng trọ trống của bạn lên thị trường để tiếp cận hàng nghìn khách hàng tiềm năng.</p>
-          </div>
-          <button onClick={toPost} style={{ display: "inline-flex", alignItems: "center", gap: 7, padding: "10px 18px", background: C.primary, color: C.white, border: "none", borderRadius: 10, fontFamily: font, fontSize: 13.5, fontWeight: 700, cursor: "pointer" }}>
+    const isEmptyAccount = totalListingsCount === 0;
+    return (
+      <div style={{ ...panelStyle, border: `1px ${isEmptyAccount ? "dashed" : "solid"} ${C.border}`, padding: "48px 24px", textAlign: "center", display: "flex", flexDirection: "column", alignItems: "center", gap: 14, fontFamily: font }}>
+        <span style={{ width: 56, height: 56, borderRadius: radius.pill, background: C.cream, display: "inline-flex", alignItems: "center", justifyContent: "center", color: C.primary }}>
+          {isEmptyAccount ? <FileText size={26} /> : <SearchX size={26} />}
+        </span>
+        <div>
+          <h3 style={{ fontSize: 16, fontWeight: 800, color: C.textPrimary, margin: "0 0 6px" }}>
+            {isEmptyAccount ? "Bạn chưa có tin đăng nào" : "Không có tin nào khớp bộ lọc"}
+          </h3>
+          <p style={{ fontSize: 13, color: C.textSecondary, margin: 0, maxWidth: 380 }}>
+            {isEmptyAccount
+              ? "Đăng tin miễn phí để người tìm trọ thấy phòng trống của bạn."
+              : "Thử đổi từ khóa, chọn tab trạng thái khác hoặc xóa bộ lọc."}
+          </p>
+        </div>
+        {isEmptyAccount ? (
+          <button type="button" onClick={toPost} style={{ display: "inline-flex", alignItems: "center", gap: 7, padding: "10px 18px", background: C.primary, color: C.white, border: "none", borderRadius: radius.md, fontFamily: font, fontSize: 13.5, fontWeight: 700, cursor: "pointer" }}>
             <Plus size={16} /> Đăng tin đầu tiên
           </button>
-        </div>
-      );
-    }
-
-    return (
-      <div style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: 20, padding: "48px 32px", textAlign: "center", display: "flex", flexDirection: "column", alignItems: "center", gap: 14 }}>
-        <AlertTriangle size={24} color={C.textSecondary} />
-        <p style={{ fontFamily: font, fontSize: 14, color: C.textSecondary, margin: 0 }}>Không tìm thấy tin đăng phù hợp với điều kiện lọc.</p>
-        <button onClick={resetFilters} style={{ padding: "8px 16px", background: C.white, border: `1.5px solid ${C.border}`, borderRadius: 10, fontFamily: font, fontSize: 13, fontWeight: 600, color: C.textSecondary, cursor: "pointer" }}>
-          Xóa bộ lọc
-        </button>
+        ) : (
+          <button type="button" onClick={resetFilters} style={{ padding: "8px 16px", background: C.white, border: `1.5px solid ${C.border}`, borderRadius: radius.md, fontFamily: font, fontSize: 13, fontWeight: 700, color: C.textSecondary, cursor: "pointer" }}>
+            Xóa bộ lọc
+          </button>
+        )}
       </div>
     );
   }
+
+  const actionsFor = (l: DbListing) => (
+    <ListingActionGroup
+      status={l.status}
+      isBlocked={mutatingId === l.id}
+      onView={() => navigate(`/phong/${l.id}`)}
+      onEdit={() => navigate(`/dang-tin-cho-thue/${l.id}`)}
+      onToggleStatus={() => handleToggleStatus(l.id, l.status)}
+      onDelete={() => handleDeleteListing(l.id)}
+      onBoost={showBoostAction && canStartBoostPayment(l) ? () => onBoostListing(l) : undefined}
+    />
+  );
+  const rejectionFor = (l: DbListing) => (
+    <RejectionNotice
+      reason={l.status === "Rejected" ? l.rejection_reason ?? null : null}
+      onEdit={() => navigate(`/dang-tin-cho-thue/${l.id}`)}
+    />
+  );
+  const imageFor = (l: DbListing) => listingImageUrls(l)[0] || getListingImage(l.id);
+  // Cùng testid + data-* cho cả bảng lẫn thẻ ⇒ E2E chạy được ở mọi kích thước.
+  const rowAttrs = (l: DbListing) => ({ "data-testid": "my-listing-row", "data-listing-id": l.id, "data-listing-status": l.status });
 
   if (isMobile) {
     return (
       <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-        {paginatedRows.map(l => {
-          // l.img đã do toListingCard() derive từ listing_media (fallback Unsplash bên trong).
-          const imageSrc = listingImageUrls(l)[0] || getListingImage(l.id);
-          const isBlocked = mutatingId === l.id;
-          
-          return (
-            <div key={l.id} style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: 18, padding: 16, display: "flex", flexDirection: "column", gap: 12, boxShadow: "0 2px 8px rgba(42,26,12,0.01)" }}>
-              <div style={{ display: "flex", gap: 12 }}>
-                <img src={imageSrc} alt={l.title} style={{ width: 68, height: 68, borderRadius: 10, objectFit: "cover", flexShrink: 0 }} />
-                <div style={{ minWidth: 0, display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
-                  <span style={{ fontFamily: font, fontSize: 14, fontWeight: 700, color: C.textPrimary, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden", textOverflow: "ellipsis", lineHeight: 1.3 }}>{l.title}</span>
-                  <span style={{ fontFamily: font, fontSize: 11, color: C.textSecondary }}>ID: TNH-{l.id.slice(0, 8).toUpperCase()}</span>
-                </div>
+        {paginatedRows.map((l) => (
+          <article key={l.id} {...rowAttrs(l)} style={{ ...panelStyle, padding: 14, display: "flex", flexDirection: "column", gap: 12, fontFamily: font }}>
+            <div style={{ display: "flex", gap: 12 }}>
+              <img src={imageFor(l)} alt="" style={{ width: 72, height: 72, borderRadius: radius.md, objectFit: "cover", flexShrink: 0 }} />
+              <div style={{ minWidth: 0, flex: 1, display: "flex", flexDirection: "column", gap: 4 }}>
+                <div><StatusChip status={l.status} /></div>
+                <span style={{ fontSize: 14, fontWeight: 700, color: C.textPrimary, lineHeight: 1.35, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>{l.title}</span>
+                <span style={{ fontSize: 15, fontWeight: 800, color: C.primary }}>{formatVND(l.price)} đ<span style={{ fontSize: 11.5, fontWeight: 500, color: C.textSecondary }}>/tháng</span></span>
+                <span style={{ fontSize: 12, color: C.textSecondary }}>{l.district} · {l.area} m²</span>
               </div>
-              <div style={{ display: "flex", flexDirection: "column", gap: 6, borderTop: `1px solid ${C.border}`, paddingTop: 10, fontSize: 12.8 }}>
-                <div style={{ display: "flex", justifyContent: "space-between" }}>
-                  <span style={{ color: C.textSecondary }}>Giá hiển thị</span>
-                  <b style={{ color: C.primary, fontWeight: 800 }}>{formatVND(l.price)} đ</b>
-                </div>
-                <div style={{ display: "flex", justifyContent: "space-between" }}>
-                  <span style={{ color: C.textSecondary }}>Khu vực</span>
-                  <span style={{ color: C.textPrimary, fontWeight: 650 }}>{l.district}</span>
-                </div>
-                <div style={{ display: "flex", justifyContent: "space-between" }}>
-                  <span style={{ color: C.textSecondary }}>Trạng thái</span>
-                  <StatusChip status={l.status} />
-                </div>
-                <BoostPaymentStatus listing={l} />
-                <div style={{ display: "flex", justifyContent: "space-between" }}>
-                  <span style={{ color: C.textSecondary }}>Hiệu quả</span>
-                  <span style={{ color: C.textPrimary, fontWeight: 650 }}>{l.views || 0} xem / {l.contacts || 0} liên hệ</span>
-                </div>
-              </div>
-              <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: 10, display: "flex", justifyContent: "flex-end", gap: 6 }}>
-                <ListingActionGroup
-                  status={l.status}
-                  isBlocked={isBlocked}
-                  onView={() => navigate(`/phong/${l.id}`)}
-                  onEdit={() => navigate(`/dang-tin-cho-thue/${l.id}`)}
-                  onToggleStatus={() => handleToggleStatus(l.id, l.status)}
-                  onDelete={() => handleDeleteListing(l.id)}
-                  onBoost={showBoostAction && canStartBoostPayment(l) ? () => onBoostListing(l) : undefined}
-                />
-              </div>
-              <RejectionNotice
-                reason={l.status === "Rejected" ? l.rejection_reason ?? null : null}
-                onEdit={() => navigate(`/dang-tin-cho-thue/${l.id}`)}
-              />
             </div>
-          );
-        })}
+            <BoostPaymentStatus listing={l} />
+            {rejectionFor(l)}
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, flexWrap: "wrap", borderTop: `1px solid ${C.border}`, paddingTop: 10 }}>
+              <div style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: 12, color: C.textSecondary }}>
+                <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}><Eye size={12} /> {l.views || 0} xem · <MessageSquare size={12} /> {l.contacts || 0} liên hệ</span>
+                <LinkRoomButton listing={l} onLinkRoom={onLinkRoom} />
+              </div>
+              {actionsFor(l)}
+            </div>
+          </article>
+        ))}
       </div>
     );
   }
 
+  const headStyle: React.CSSProperties = { fontFamily: font, fontSize: 11, fontWeight: 800, color: C.textSecondary, textTransform: "uppercase", letterSpacing: "0.06em", textAlign: "left", padding: "12px 14px", whiteSpace: "nowrap" };
+  const cellStyle: React.CSSProperties = { fontFamily: font, fontSize: 13, color: C.textPrimary, padding: "14px", verticalAlign: "middle" };
+
   return (
-    <div style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: 20, overflow: "hidden", boxShadow: "0 4px 20px rgba(42,26,12,0.015)" }}>
+    <div style={{ ...panelStyle, overflow: "hidden" }}>
+      {/* Phòng hờ cho khung hẹp bất thường; ở ≥1024px bảng vừa khít không cần cuộn. */}
       <div style={{ overflowX: "auto" }}>
-        <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 1100 }}>
+        <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 760 }}>
           <thead>
-            <tr style={{ background: "rgba(240,231,214,0.18)", borderBottom: `1.5px solid ${C.border}` }}>
-              {["Tin đăng", "Phòng liên kết", "Khu vực", "Giá hiển thị", "Trạng thái tin", "Hiệu quả", "Cập nhật", "Thao tác"].map(c => (
-                <th key={c} style={{ fontFamily: font, fontSize: 11, fontWeight: 900, color: C.textSecondary, textTransform: "uppercase", letterSpacing: "0.06em", textAlign: "left", padding: "14px 16px", whiteSpace: "nowrap" }}>{c}</th>
-              ))}
+            <tr style={{ background: C.bg, borderBottom: `1px solid ${C.border}` }}>
+              <th style={headStyle}>Tin đăng</th>
+              <th style={headStyle}>Giá thuê</th>
+              <th style={headStyle}>Trạng thái</th>
+              <th style={headStyle}>Hiệu quả</th>
+              <th style={{ ...headStyle, textAlign: "right" }}>Thao tác</th>
             </tr>
           </thead>
           <tbody>
-            {paginatedRows.map((l, idx) => {
-              // l.img đã do toListingCard() derive từ listing_media (fallback Unsplash bên trong).
-          const imageSrc = listingImageUrls(l)[0] || getListingImage(l.id);
-              const isBlocked = mutatingId === l.id;
-
-              return (
-                <tr key={l.id}
-                  data-testid="my-listing-row"
-                  data-listing-id={l.id}
-                  data-listing-status={l.status}
-                  style={{ borderBottom: `1px solid ${C.border}`, background: idx % 2 ? "rgba(240,231,214,0.03)" : C.white, transition: "background 0.1s" }}
-                  onMouseEnter={e => e.currentTarget.style.background = "rgba(240,231,214,0.08)"}
-                  onMouseLeave={e => e.currentTarget.style.background = idx % 2 ? "rgba(240,231,214,0.03)" : C.white}>
-                  
-                  <td style={{ ...cellStyle, maxWidth: 320 }}>
-                    <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
-                      <img src={imageSrc} alt="" style={{ width: 54, height: 54, borderRadius: 10, objectFit: "cover", flexShrink: 0, border: `1px solid ${C.border}` }} />
-                      <div style={{ minWidth: 0, display: "flex", flexDirection: "column", gap: 3 }}>
-                        <span style={{ fontWeight: 800, color: C.textPrimary, fontSize: 13.5, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={l.title}>{l.title}</span>
-                        <span style={{ fontSize: 11, color: C.textSecondary, fontWeight: 650 }}>ID: TNH-{l.id.slice(0, 8).toUpperCase()}</span>
-                        <BoostPaymentStatus listing={l} />
-                      </div>
+            {paginatedRows.map((l) => (
+              <tr key={l.id} {...rowAttrs(l)} style={{ borderBottom: `1px solid ${C.border}` }}>
+                <td style={{ ...cellStyle, maxWidth: 380 }}>
+                  <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+                    <img src={imageFor(l)} alt="" style={{ width: 56, height: 56, borderRadius: radius.md, objectFit: "cover", flexShrink: 0, border: `1px solid ${C.border}` }} />
+                    <div style={{ minWidth: 0, display: "flex", flexDirection: "column", gap: 3 }}>
+                      <span style={{ fontWeight: 700, fontSize: 13.5, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={l.title}>{l.title}</span>
+                      <span style={{ fontSize: 12, color: C.textSecondary }}>{l.district} · {l.area} m² · {listingCode(l.id)}</span>
+                      <LinkRoomButton listing={l} onLinkRoom={onLinkRoom} />
+                      <BoostPaymentStatus listing={l} />
                     </div>
-                  </td>
-
-                  {/* Ô này từng là chữ tĩnh "—", không có cách nào gắn phòng cho
-                      tin đã đăng. Giờ là nút mở LinkRoomModal. */}
-                  <td style={{ ...cellStyle, fontWeight: 650 }}>
-                    <button
-                      type="button"
-                      onClick={(e) => { e.stopPropagation(); onLinkRoom(l); }}
-                      data-testid="link-room-cell-btn"
-                      style={{
-                        background: "none", border: "none", padding: 0, cursor: "pointer",
-                        fontFamily: font, fontSize: 13, fontWeight: 650,
-                        color: l.room_id ? C.primary : C.textSecondary,
-                        textDecoration: "underline", textUnderlineOffset: 3,
-                      }}
-                    >
-                      {l.room_id ? `Phòng #${l.room_id.slice(0, 6).toUpperCase()}` : "Gắn phòng"}
-                    </button>
-                  </td>
-
-                  <td style={{ ...cellStyle, color: C.textSecondary, fontWeight: 650 }}>{l.district}</td>
-
-                  <td style={{ ...cellStyle, fontWeight: 800, color: C.primary, fontSize: 14 }}>
-                    {formatVND(l.price)} đ
-                  </td>
-
-                  <td style={cellStyle}>
-                    <StatusChip status={l.status} />
-                    <RejectionNotice
-                      reason={l.status === "Rejected" ? l.rejection_reason ?? null : null}
-                      onEdit={() => navigate(`/dang-tin-cho-thue/${l.id}`)}
-                    />
-                  </td>
-
-                  <td style={cellStyle}>
-                    <div style={{ display: "flex", flexDirection: "column", gap: 2, fontSize: 12.5, color: C.textSecondary }}>
-                      <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}><Eye size={12} /> {l.views || 0} xem</span>
-                      <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}><MessageSquare size={12} /> {l.contacts || 0} liên hệ</span>
-                    </div>
-                  </td>
-
-                  <td style={{ ...cellStyle, color: C.textSecondary, fontSize: 12.5 }}>
-                    <div style={{ display: "flex", flexDirection: "column" }}>
-                      <span style={{ fontWeight: 600 }}>{new Date(l.updated_at).toLocaleDateString("vi-VN")}</span>
-                      <span style={{ fontSize: 10.5, color: "#999" }}>{new Date(l.updated_at).toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" })}</span>
-                    </div>
-                  </td>
-
-                  <td style={cellStyle}>
-                    <ListingActionGroup
-                      status={l.status}
-                      isBlocked={isBlocked}
-                      onView={() => navigate(`/phong/${l.id}`)}
-                      onEdit={() => navigate(`/dang-tin-cho-thue/${l.id}`)}
-                      onToggleStatus={() => handleToggleStatus(l.id, l.status)}
-                      onDelete={() => handleDeleteListing(l.id)}
-                      onBoost={showBoostAction && canStartBoostPayment(l) ? () => onBoostListing(l) : undefined}
-                    />
-                  </td>
-                </tr>
-              );
-            })}
+                  </div>
+                </td>
+                <td style={{ ...cellStyle, fontWeight: 800, color: C.primary, whiteSpace: "nowrap" }}>{formatVND(l.price)} đ</td>
+                <td style={{ ...cellStyle, maxWidth: 240 }}>
+                  <StatusChip status={l.status} />
+                  <div style={{ fontSize: 11.5, color: C.textSecondary, marginTop: 5, whiteSpace: "nowrap" }}>
+                    Cập nhật {formatDate(l.updated_at)} · {formatTime(l.updated_at)}
+                  </div>
+                  {rejectionFor(l)}
+                </td>
+                <td style={{ ...cellStyle, fontSize: 12.5, color: C.textSecondary, whiteSpace: "nowrap" }}>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
+                    <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}><Eye size={12} /> {l.views || 0} xem</span>
+                    <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}><MessageSquare size={12} /> {l.contacts || 0} liên hệ</span>
+                  </div>
+                </td>
+                <td style={cellStyle}>
+                  <div style={{ display: "flex", justifyContent: "flex-end" }}>{actionsFor(l)}</div>
+                </td>
+              </tr>
+            ))}
           </tbody>
         </table>
       </div>
