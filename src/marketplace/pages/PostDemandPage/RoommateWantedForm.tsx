@@ -1,4 +1,5 @@
 import { C, font } from "../../../shared/theme";
+import { MoneyInput } from "../../../shared/components/common";
 
 const REQUIREMENTS_OPTIONS = ["Sạch sẽ", "Gọn gàng", "Vui vẻ", "Không nhậu nhẹt", "Tự giác", "Ít tụ tập"];
 
@@ -62,14 +63,16 @@ export function RoommateWantedForm({
         </div>
 
         <div>
-          <label style={{ display: "block", fontFamily: font, fontSize: 13, fontWeight: 700, color: C.textPrimary, marginBottom: 6 }}>
-            Giá chia sẻ/người (VND)
+          <label htmlFor="demand-share-price" style={{ display: "block", fontFamily: font, fontSize: 13, fontWeight: 700, color: C.textPrimary, marginBottom: 6 }}>
+            Giá chia sẻ/người
           </label>
-          <input
-            type="number"
+          <MoneyInput
+            id="demand-share-price"
+            suffix="đ/tháng"
+            placeholder="VD: 1.500.000"
             value={sharePrice}
-            onChange={(e) => setSharePrice(e.target.value)}
-            style={{ width: "100%", padding: "11px 14px", fontFamily: font, fontSize: 14, border: `1px solid ${C.border}`, borderRadius: 10, outline: "none", boxSizing: "border-box" }}
+            onChange={setSharePrice}
+            data-testid="demand-share-price"
           />
         </div>
       </div>

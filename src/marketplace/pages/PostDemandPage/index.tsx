@@ -4,7 +4,7 @@ import { PublicNavbar } from "../../../shared/components/PublicNavbar";
 import { Home, Users, ArrowLeft, Save, AlertCircle, X } from "lucide-react";
 import { C, font } from "../../../shared/theme";
 import { PROPERTY_TYPES } from "../../../shared/constants/catalog";
-import { AreaSelect } from "../../../shared/components/common";
+import { AreaSelect, MoneyInput } from "../../../shared/components/common";
 import { useAuth } from "../../../shared/contexts/AuthContext";
 import { createDemandPost, updateDemandPost, getDemandPostById } from "../../services/demand-post-service";
 import { toUserMessage } from "../../../shared/services/supabase-error";
@@ -354,28 +354,33 @@ export function PostDemandPage() {
 
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
                 <div>
-                  <label style={{ display: "block", fontFamily: font, fontSize: 13, fontWeight: 700, color: C.textPrimary, marginBottom: 6 }}>
-                    Ngân sách tối thiểu (VND) *
+                  <label htmlFor="demand-price-min" style={{ display: "block", fontFamily: font, fontSize: 13, fontWeight: 700, color: C.textPrimary, marginBottom: 6 }}>
+                    Ngân sách tối thiểu *
                   </label>
-                  <input
-                    type="number"
+                  <MoneyInput
+                    id="demand-price-min"
                     required
+                    suffix="đ/tháng"
+                    placeholder="VD: 2.000.000"
                     value={priceMin}
-                    onChange={(e) => setPriceMin(e.target.value)}
-                    style={{ width: "100%", padding: "11px 14px", fontFamily: font, fontSize: 14, border: `1px solid ${C.border}`, borderRadius: 10, outline: "none", boxSizing: "border-box" }}
+                    onChange={setPriceMin}
+                    data-testid="demand-price-min"
                   />
                 </div>
 
                 <div>
-                  <label style={{ display: "block", fontFamily: font, fontSize: 13, fontWeight: 700, color: C.textPrimary, marginBottom: 6 }}>
-                    Ngân sách tối đa (VND) *
+                  <label htmlFor="demand-price-max" style={{ display: "block", fontFamily: font, fontSize: 13, fontWeight: 700, color: C.textPrimary, marginBottom: 6 }}>
+                    Ngân sách tối đa *
                   </label>
-                  <input
-                    type="number"
+                  <MoneyInput
+                    id="demand-price-max"
                     required
+                    suffix="đ/tháng"
+                    placeholder="VD: 5.000.000"
                     value={priceMax}
-                    onChange={(e) => setPriceMax(e.target.value)}
-                    style={{ width: "100%", padding: "11px 14px", fontFamily: font, fontSize: 14, border: `1px solid ${C.border}`, borderRadius: 10, outline: "none", boxSizing: "border-box" }}
+                    onChange={setPriceMax}
+                    invalid={priceMax !== "" && priceMin !== "" && Number(priceMax) < Number(priceMin)}
+                    data-testid="demand-price-max"
                   />
                 </div>
               </div>
