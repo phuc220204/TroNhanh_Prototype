@@ -47,6 +47,7 @@ const ERROR_MESSAGES: Record<string, string> = {
   INVALID_LISTING_COORDINATES: "Vị trí ghim trên bản đồ chưa hợp lệ.",
   INVALID_LISTING_VISIBILITY_TRANSITION: "Chỉ tin đã được duyệt mới có thể ẩn hoặc hiện lại.",
   INVALID_LISTING_SUBMISSION_TRANSITION: "Chỉ bản nháp mới có thể được gửi duyệt.",
+  LISTING_NOT_EXPIRED: "Chỉ tin đã hết hạn mới cần gia hạn.",
 
   // Khu trọ & phòng (BR-011)
   PROPERTY_HAS_RENTED_ROOMS:

@@ -12,7 +12,7 @@ import { useAuth } from "../../../shared/contexts/AuthContext";
 import { useToast } from "../../../shared/contexts/ToastContext";
 import { searchListings } from "../../services/listing-queries";
 import { listMyBoostOrders, type BoostOrderSummary } from "../../services/boost-orders-service";
-import { updateListingStatus, deleteListing, linkListingToRoom } from "../../services/listing-mutations";
+import { updateListingStatus, renewListing, deleteListing, linkListingToRoom } from "../../services/listing-mutations";
 import { useBoostAvailability } from "../../hooks/useBoostAvailability";
 import { logError, toUserMessage } from "../../../shared/services/supabase-error";
 import { MyListingsTable, type DbListing } from "./MyListingsTable";
@@ -118,6 +118,20 @@ export function QuanLyPage() {
       showToast(nextStatus === "Active" ? "Đã hiển thị tin đăng thành công" : "Đã ẩn tin đăng thành công");
     } catch (err) {
       logError("QuanLyPage.handleToggleStatus", err);
+      showToast(toUserMessage(err), { variant: "error" });
+    } finally {
+      setMutatingId(null);
+    }
+  };
+
+  const handleRenewListing = async (id: string) => {
+    try {
+      setMutatingId(id);
+      const nextStatus = await renewListing(id);
+      setDbListings((prev) => prev.map((l) => (l.id === id ? { ...l, status: nextStatus } : l)));
+      showToast(nextStatus === "Active" ? "Đã gia hạn tin, tin hiển thị lại ngay" : "Đã gửi gia hạn, tin chờ kiểm duyệt");
+    } catch (err) {
+      logError("QuanLyPage.handleRenewListing", err);
       showToast(toUserMessage(err), { variant: "error" });
     } finally {
       setMutatingId(null);
@@ -274,6 +288,7 @@ export function QuanLyPage() {
           toPost={toPost}
           resetFilters={resetFilters}
           handleToggleStatus={handleToggleStatus}
+          handleRenewListing={handleRenewListing}
           onLinkRoom={(l) => { setLinkError(null); setLinkTarget(l); }}
           handleDeleteListing={handleDeleteListing}
           showBoostAction={showBoostAction}

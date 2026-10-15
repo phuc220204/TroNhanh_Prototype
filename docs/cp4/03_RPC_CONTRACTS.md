@@ -129,6 +129,18 @@ moderate_listing(p_listing_id uuid, p_action text, p_reason text) returns void
 
 > Đây là lý do moderator **cố ý không có policy UPDATE** trên `rental_listings`: mọi transition bị buộc đi qua đây, nên audit trail không thể bị bỏ sót.
 
+### 3b. `renew_listing` + job hết hạn (BR-026, migration `20261016100000`)
+
+```sql
+renew_listing(p_listing_id uuid) returns text   -- trạng thái mới
+```
+
+- Chỉ chủ tin (`seller_id = auth.uid()`), chỉ tin `Expired` → ngược lại `FORBIDDEN` / `LISTING_NOT_EXPIRED`.
+- `auto_approve_listings` bật → `Active`, `approved_at = now()`, `expire_at = now() + listing_ttl_days`; tắt → `PendingApproval` (Moderator duyệt sẽ đặt hạn).
+- Tin gắn phòng mà phòng đã có tin Active/PendingApproval khác → `ROOM_ALREADY_LISTED`.
+
+Hết hạn do **pg_cron** `expire-due-listings` (mỗi 15 phút) gọi `expire_due_listings()`: `Active` + `expire_at <= now()` → `Expired`. Hàm không cấp cho client. Tin `Hidden` không bị đụng (tránh lối vòng qua quyết định ẩn của Moderator). View `public_rental_listings` lọc thêm `expire_at > now()`; trigger `trg_set_listing_expire_at` bảo đảm tin `Active` luôn có `expire_at`.
+
 ---
 
 ## 4. `create_occupancy_with_contract`

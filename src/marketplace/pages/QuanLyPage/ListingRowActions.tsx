@@ -1,5 +1,5 @@
 import React from "react";
-import { Eye, EyeOff, Pencil, Sparkles, Trash2, TriangleAlert } from "lucide-react";
+import { Eye, EyeOff, Pencil, RefreshCw, Sparkles, Trash2, TriangleAlert } from "lucide-react";
 import { C, font, radius, space } from "../../../shared/theme";
 import { LISTING_META } from "../../../shared/utils/statusMaps";
 import { toListingStatus } from "../../../shared/types/status";
@@ -56,9 +56,10 @@ export function RejectionNotice({ reason, onEdit }: { reason: string | null; onE
   );
 }
 
-export function IconAction({ icon, label, onClick, danger, disabled }: { icon: React.ReactNode; label: string; onClick?: () => void; danger?: boolean; disabled?: boolean }) {
+export function IconAction({ icon, label, onClick, danger, disabled, testId }: { icon: React.ReactNode; label: string; onClick?: () => void; danger?: boolean; disabled?: boolean; testId?: string }) {
   return (
     <button 
+      data-testid={testId}
       disabled={disabled}
       onClick={onClick}
       title={label} 
@@ -95,15 +96,19 @@ export interface ListingActionGroupProps {
   onToggleStatus: () => void;
   onDelete: () => void;
   onBoost?: () => void;
+  /** Gia hạn tin `Expired` (BR-026). */
+  onRenew: () => void;
 }
 
-export function ListingActionGroup({ status, isBlocked, onView, onEdit, onToggleStatus, onDelete, onBoost }: ListingActionGroupProps) {
+export function ListingActionGroup({ status, isBlocked, onView, onEdit, onToggleStatus, onDelete, onBoost, onRenew }: ListingActionGroupProps) {
   const canToggleVisibility = status === "Active" || status === "Hidden";
   const canBuyBoost = status === "Active" || status === "PendingApproval";
+  const canRenew = status === "Expired";
   return (
     <div style={{ display: "flex", gap: 6 }} onClick={e => e.stopPropagation()}>
       <IconAction icon={<Eye size={14} />} label="Xem tin" onClick={onView} disabled={isBlocked} />
       <IconAction icon={<Pencil size={14} />} label="Chỉnh sửa" onClick={onEdit} disabled={isBlocked} />
+      {canRenew && <IconAction icon={<RefreshCw size={14} />} label="Gia hạn tin" onClick={onRenew} disabled={isBlocked} testId="listing-renew-btn" />}
       {canBuyBoost && onBoost ? <IconAction icon={<Sparkles size={14} />} label={status === "PendingApproval" ? "Thanh toán Boost" : "Đẩy tin với Boost"} onClick={onBoost} disabled={isBlocked} /> : null}
       {canToggleVisibility && <IconAction icon={status === "Active" ? <EyeOff size={14} /> : <Eye size={14} />} label={status === "Active" ? "Ẩn tin" : "Hiện tin"} onClick={onToggleStatus} disabled={isBlocked} />}
       <IconAction icon={<Trash2 size={14} />} label="Xóa tin" danger onClick={onDelete} disabled={isBlocked} />
