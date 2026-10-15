@@ -96,6 +96,7 @@ interface MyListingsTableProps {
   toPost: () => void;
   resetFilters: () => void;
   handleToggleStatus: (id: string, currentStatus: string) => void;
+  handleRenewListing: (id: string) => void;
   onLinkRoom: (listing: DbListing) => void;
   handleDeleteListing: (id: string) => void;
   showBoostAction: boolean;
@@ -114,6 +115,7 @@ export function MyListingsTable({
   toPost,
   resetFilters,
   handleToggleStatus,
+  handleRenewListing,
   onLinkRoom,
   handleDeleteListing,
   showBoostAction,
@@ -167,6 +169,7 @@ export function MyListingsTable({
       onEdit={() => navigate(`/dang-tin-cho-thue/${l.id}`)}
       onToggleStatus={() => handleToggleStatus(l.id, l.status)}
       onDelete={() => handleDeleteListing(l.id)}
+      onRenew={() => handleRenewListing(l.id)}
       onBoost={showBoostAction && canStartBoostPayment(l) ? () => onBoostListing(l) : undefined}
     />
   );

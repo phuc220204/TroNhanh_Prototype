@@ -205,6 +205,21 @@ export async function updateListingStatus(id: string, status: string): Promise<v
 }
 
 /**
+ * Gia hạn tin đã hết hạn (BR-026). Server quyết trạng thái mới: tự duyệt →
+ * `Active` kèm hạn mới, kiểm duyệt tay → `PendingApproval`.
+ */
+export async function renewListing(id: string): Promise<string> {
+  try {
+    const { data, error } = await supabase.rpc("renew_listing", { p_listing_id: id });
+    if (error) throw error;
+    return data;
+  } catch (err) {
+    logError("listing-mutations.renewListing", err);
+    throw err;
+  }
+}
+
+/**
  * Soft delete listing.
  */
 export async function deleteListing(id: string): Promise<void> {

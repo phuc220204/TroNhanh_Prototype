@@ -1899,6 +1899,7 @@ export type Database = {
         Returns: Json
       }
       delete_listing: { Args: { p_listing_id: string }; Returns: undefined }
+      expire_due_listings: { Args: never; Returns: number }
       extend_contract: {
         Args: { p_contract_id: string; p_new_end_date: string }
         Returns: undefined
@@ -2011,6 +2012,7 @@ export type Database = {
         Args: { p_email: string; p_occupancy_id: string }
         Returns: undefined
       }
+      listing_ttl_interval: { Args: never; Returns: string }
       mark_conversation_read: {
         Args: { p_conversation_id: string }
         Returns: undefined
@@ -2043,6 +2045,7 @@ export type Database = {
         }
         Returns: string
       }
+      renew_listing: { Args: { p_listing_id: string }; Returns: string }
       reply_to_review: {
         Args: { p_reply: string; p_review_id: string }
         Returns: undefined
