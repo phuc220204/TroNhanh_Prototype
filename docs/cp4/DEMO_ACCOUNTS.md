@@ -169,6 +169,40 @@ Nếu cần tự động hoá:
 - Cần test luồng ghi thì làm **thủ công**, hoặc dựng Playwright spec riêng theo `T29` với dữ liệu tự dựng rồi dọn sau
 - Chạm nhầm dữ liệu thì **nói ra**, đừng im lặng — seed lại theo §5 là xong
 
+### 6.1 Bộ Playwright E2E phải chạy trên Supabase project RIÊNG
+
+> Ngày **16/10/2026** trang `/tin-nhu-cau` production lộ ~30 tin rác (`nc-e2e-…`,
+> `og-e2e-…`, `self-e2e-…` của `renter.a`) do bộ E2E chạy thẳng lên production
+> (`ropzrnlasbkznoxqaqtp`) và không dọn. Phải xóa mềm bằng tay.
+
+Từ nay có 2 lớp chặn (code ở `tests/e2e/e2e-env.ts`, `tests/e2e/cleanup.ts`):
+
+1. **Guard production.** Mọi spec ghi dữ liệu gọi `assertWritesAllowed()` trong
+   `test.beforeAll`. Nếu `VITE_SUPABASE_URL` (đọc bằng `loadEnv` của Vite, đúng
+   env mà `pnpm dev` dùng) chứa project ref production thì spec **đỏ ngay**, trừ
+   khi đặt `E2E_ALLOW_PROD_WRITES=1`. Đừng đặt cờ này trừ khi chủ dự án yêu cầu.
+2. **Global teardown.** Sau mỗi lần chạy (kể cả khi spec đỏ), đăng nhập 3 tài
+   khoản demo bằng anon key và xóa mềm mọi tin nhu cầu, tin đăng, khu trọ có dấu
+   `-e2e-` — đi qua đúng đường của app (update `deleted_at` dưới RLS, RPC
+   `delete_listing`, `soft_delete_property`). Không dùng `service_role`. Bản ghi
+   không dọn được (khu còn phòng `Rented`, review, hội thoại, tài khoản `auth.spec`)
+   được in ra dòng `[e2e-cleanup] CÒN SÓT`.
+
+**Dựng project test cho E2E (làm một lần):**
+
+1. Tạo Supabase project mới (ví dụ `tronhanh-e2e`) — **không** dùng chung production.
+2. `pnpm exec supabase link --project-ref <ref-test>` rồi `pnpm db:push` để có đủ migration.
+3. Nạp seed demo (§5) và `supabase/tests/review_fixture.sql`; làm các bước cấu hình
+   ở `tests/e2e/README.md` §1.2 (tắt email confirmation, kiểm duyệt Tự động).
+4. Tạo `.env.development.local` (đã gitignore theo `*.local`) chứa URL + anon key
+   của project test. Vite ưu tiên file này hơn `.env`, nên `pnpm dev` và guard đều
+   trỏ vào project test mà không phải sửa `.env` production.
+5. Chạy `pnpm test:e2e`. Xong thì xóa/đổi tên `.env.development.local` để dev
+   server quay về `.env`, và `supabase link` lại project production nếu cần.
+
+Spec chỉ đọc (`oc1-regression`, `admin-dashboard`, `mobile-ui`,
+`auth-registration-mock`) không bị guard chặn.
+
 ---
 
 ## 7. Bảo mật
