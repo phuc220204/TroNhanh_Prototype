@@ -102,7 +102,17 @@ const ERROR_MESSAGES: Record<string, string> = {
   INVALID_REF_TYPE: "Loại tin không hợp lệ.",
 
   // Kiểm duyệt
-  REASON_REQUIRED: "Vui lòng nhập lý do từ chối.",
+  REASON_REQUIRED: "Vui lòng nhập lý do.",
+
+  // Báo cáo vi phạm & khóa tài khoản
+  ALREADY_REPORTED: "Bạn đã báo cáo nội dung này rồi. Chúng tôi sẽ xem xét sớm.",
+  CANNOT_REPORT_OWN_CONTENT: "Bạn không thể báo cáo nội dung của chính mình.",
+  REPORT_TARGET_NOT_FOUND: "Nội dung này không còn hiển thị hoặc đã được xử lý.",
+  REPORT_DETAILS_REQUIRED: "Vui lòng mô tả ngắn vấn đề khi chọn \"Lý do khác\".",
+  INVALID_REPORT: "Báo cáo chưa hợp lệ. Vui lòng thử lại.",
+  CANNOT_LOCK_SELF: "Bạn không thể tự khóa tài khoản của mình.",
+  CANNOT_LOCK_ADMIN: "Không thể khóa tài khoản Admin.",
+  USER_NOT_FOUND: "Không tìm thấy người dùng.",
   INVALID_MODERATION_ACTION: "Hành động kiểm duyệt không hợp lệ.",
 
   // Gói dịch vụ
@@ -190,6 +200,8 @@ export function toUserMessage(e: unknown): string {
   if (/invalid login credentials|invalid_credentials/i.test(authSignal))
     return "Số điện thoại/email hoặc mật khẩu không đúng.";
   if (/email not confirmed|email_not_confirmed/i.test(authSignal)) return "Email chưa được xác nhận.";
+  if (/user_banned|user is banned/i.test(authSignal))
+    return "Tài khoản đã bị khóa do vi phạm điều khoản. Liên hệ hỗ trợ nếu bạn cho rằng đây là nhầm lẫn.";
   if (/user already registered|user_already_exists|phone_exists|email_exists|already registered/i.test(authSignal))
     return "Số điện thoại hoặc email này đã có tài khoản. Hãy đăng nhập.";
   if (/phone_provider_disabled|phone signups are disabled/i.test(authSignal))

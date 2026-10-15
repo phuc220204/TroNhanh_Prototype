@@ -11,6 +11,7 @@ import { startConversation } from "../../shared/services/messaging-service";
 import { Button } from "../../shared/components/common";
 import { useToast } from "../../shared/contexts/ToastContext";
 import { toUserMessage } from "../../shared/services/supabase-error";
+import { ReportButton } from "../components/ReportButton";
 
 export function DemandDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -269,7 +270,8 @@ export function DemandDetailPage() {
           )}
 
           {/* CTA Bar */}
-          <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: 20, display: "flex", justifyContent: "flex-end" }}>
+          <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: 20, display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+            <ReportButton targetType="DemandPost" targetId={post.id} ownerId={post.renter_id} />
             <button
               type="button"
               disabled={isOwner}
