@@ -1,7 +1,10 @@
 # Bộ E2E Playwright (T29)
 
 > Đọc hết mục 1 trước khi chạy lần đầu. Bộ test này **ghi dữ liệu thật lên
-> Supabase remote** — không có database test riêng.
+> Supabase remote** — phải chạy trên một **Supabase project riêng cho E2E**, không
+> phải production (cách dựng: `docs/cp4/DEMO_ACCOUNTS.md` §6.1). Spec ghi dữ liệu
+> tự đỏ khi `VITE_SUPABASE_URL` trỏ vào production, trừ khi đặt
+> `E2E_ALLOW_PROD_WRITES=1` (`tests/e2e/e2e-env.ts`).
 
 Ngoại lệ: `oc1-regression.spec.ts` là bộ **18 ca chỉ đọc**. Các thao tác lưu
 trong ca sửa tin được chặn và thay bằng mock RPC; không dùng bộ này để chứng
@@ -42,6 +45,13 @@ khi đã có dữ liệu.
 
 Tên đều gắn timestamp (`-e2e-<base36>`) nên tìm lại được, và không bao giờ trùng
 với dữ liệu demo thật.
+
+**Dọn tự động:** `globalTeardown` (`tests/e2e/global-teardown.ts`) chạy sau mỗi lần
+chạy, kể cả khi spec đỏ, và xóa mềm mọi **tin nhu cầu, tin đăng, khu trọ** có dấu
+`-e2e-` của 3 tài khoản demo — qua RLS/RPC của app với anon key, không `service_role`.
+Nó quét theo dấu nên cũng dọn hộ rác của lần chạy trước bị kill. Những dòng còn lại
+trong bảng trên (tài khoản `auth`, review, hội thoại; khu còn phòng `Rented`) không có
+đường xóa hợp lệ phía client — teardown in chúng ra dòng `[e2e-cleanup] CÒN SÓT`.
 
 ---
 

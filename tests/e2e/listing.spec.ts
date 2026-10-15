@@ -1,5 +1,9 @@
 import { test, expect, type Page } from "@playwright/test";
 import { ACCOUNTS, go, login, pickArea, runTag, tinyPng } from "./helpers";
+import { assertWritesAllowed } from "./e2e-env";
+
+// Spec này GHI dữ liệu thật — chặn nếu đang trỏ vào production (xem e2e-env.ts).
+test.beforeAll(assertWritesAllowed);
 
 /**
  * Đăng tin đầy đủ 4 bước + upload ảnh thật, rồi kiểm tin xuất hiện ở
@@ -89,7 +93,7 @@ test.describe("Đăng tin", () => {
 
   test("NEGATIVE: thiếu ảnh thì không qua được bước 3", async ({ page }) => {
     await go(page, "/dang-tin-cho-thue");
-    await page.locator('[name="title"]').fill("Tin thiếu ảnh dùng cho kiểm thử");
+    await page.locator('[name="title"]').fill(`Tin thiếu ảnh ${runTag("thieu-anh")}`);
     await pickArea(page, "listing-area", "Hồ Chí Minh", "Bến Thành");
     await page.locator('[name="address"]').fill("Số 2 Đường Thử Nghiệm");
     await page.locator('[name="area"]').fill("20");
