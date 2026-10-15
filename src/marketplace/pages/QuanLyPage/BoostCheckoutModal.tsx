@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { ExternalLink, Sparkles } from "lucide-react";
 import { ModalShell } from "../../../shared/components/common/ModalShell";
+import { LegalConsentCheckbox } from "../../../shared/components/common/LegalConsentCheckbox";
 import { C, font } from "../../../shared/theme";
 import {
   createBoostCheckout,
@@ -18,6 +19,7 @@ export function BoostCheckoutModal({ listing, onClose, initialDays }: { listing:
   const [loadingPackages, setLoadingPackages] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [hasAcceptedTerms, setHasAcceptedTerms] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -37,7 +39,7 @@ export function BoostCheckoutModal({ listing, onClose, initialDays }: { listing:
   }, [initialDays]);
 
   const payNow = async () => {
-    if (selectedDays === null || submitting) return;
+    if (selectedDays === null || submitting || !hasAcceptedTerms) return;
     setSubmitting(true);
     setErrorMessage(null);
     try {
@@ -57,7 +59,7 @@ export function BoostCheckoutModal({ listing, onClose, initialDays }: { listing:
       footer={(
         <>
           <button type="button" disabled={submitting} onClick={onClose} style={{ minHeight: 44, padding: "10px 16px", borderRadius: 10, border: `1px solid ${C.border}`, background: C.white, color: C.textSecondary, fontFamily: font, fontWeight: 700, cursor: submitting ? "not-allowed" : "pointer" }}>Đóng</button>
-          <button type="button" disabled={loadingPackages || submitting || selectedDays === null} onClick={() => void payNow()} style={{ minHeight: 44, padding: "10px 16px", borderRadius: 10, border: "none", background: C.primary, color: C.white, fontFamily: font, fontWeight: 750, cursor: loadingPackages || submitting ? "not-allowed" : "pointer", opacity: loadingPackages || submitting ? 0.6 : 1, display: "inline-flex", alignItems: "center", gap: 8 }}>
+          <button type="button" disabled={loadingPackages || submitting || selectedDays === null || !hasAcceptedTerms} onClick={() => void payNow()} data-testid="listing-boost-pay" style={{ minHeight: 44, padding: "10px 16px", borderRadius: 10, border: "none", background: C.primary, color: C.white, fontFamily: font, fontWeight: 750, cursor: loadingPackages || submitting || !hasAcceptedTerms ? "not-allowed" : "pointer", opacity: loadingPackages || submitting || !hasAcceptedTerms ? 0.6 : 1, display: "inline-flex", alignItems: "center", gap: 8 }}>
             {submitting ? "Đang chuyển đến payOS…" : "Thanh toán ngay"} <ExternalLink size={15} />
           </button>
         </>
@@ -79,6 +81,7 @@ export function BoostCheckoutModal({ listing, onClose, initialDays }: { listing:
           <strong style={{ fontFamily: font, fontSize: 14, color: C.primary }}>{formatBoostVnd(item.amount)} đ</strong>
         </label>
       ))}
+      <LegalConsentCheckbox variant="payment" checked={hasAcceptedTerms} onChange={setHasAcceptedTerms} disabled={submitting} data-testid="listing-boost-terms-checkbox" />
       {errorMessage ? <p role="alert" style={{ margin: 0, fontFamily: font, color: C.error, fontSize: 13.5 }}>{errorMessage}</p> : null}
       <p style={{ margin: 0, fontFamily: font, color: C.textSecondary, fontSize: 12, lineHeight: 1.5 }}>Sau khi hoàn tất tại payOS, quay lại Trọ Nhanh và chờ thông báo xác nhận. Đừng thanh toán cùng một đơn lần hai.</p>
     </ModalShell>

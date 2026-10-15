@@ -23,6 +23,7 @@ test.describe("Xác thực", () => {
     // sau. Nhánh phone đã được `auth-registration-mock.spec.ts` kiểm.
     await page.getByTestId("register-email").fill(email);
     await page.getByTestId("register-password").fill(DEMO_PASSWORD);
+    await page.getByTestId("register-terms-checkbox").check();
     await page.getByTestId("register-submit").click();
 
     // Đăng ký xong phải VÀO ĐƯỢC ứng dụng: RegisterPage tự điều hướng về "/",
@@ -57,6 +58,7 @@ test.describe("Xác thực", () => {
     await page.getByTestId("register-fullname").fill("Người Dùng SĐT E2E");
     await page.getByTestId("register-phone").fill(phone);
     await page.getByTestId("register-password").fill(DEMO_PASSWORD);
+    await page.getByTestId("register-terms-checkbox").check();
     await page.getByTestId("register-submit").click();
 
     // Vào thẳng app — không có bước nhập mã OTP.

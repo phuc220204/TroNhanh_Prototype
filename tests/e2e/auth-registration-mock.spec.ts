@@ -74,6 +74,7 @@ async function mockAuthSignup(page: Page) {
 async function fillRequiredFields(page: Page) {
   await page.getByTestId("register-fullname").fill("Người dùng thử");
   await page.getByTestId("register-password").fill("demo-password");
+  await page.getByTestId("register-terms-checkbox").check();
 }
 
 async function mockPasswordSignin(page: Page) {
