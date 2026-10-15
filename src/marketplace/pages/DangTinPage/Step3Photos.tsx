@@ -151,7 +151,7 @@ export function Step3Photos({ photos, setPhotos, error, uploadProgress }: Step3P
       {uploadProgress && (
         <div style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: 12, padding: 16 }}>
           <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8, fontSize: 13, fontWeight: 600, color: C.textPrimary }}>
-            <span>Đang nén & tải ảnh lên Supabase Storage...</span>
+            <span>Đang nén & tải ảnh lên...</span>
             <span>{uploadProgress.current}/{uploadProgress.total}</span>
           </div>
           <div style={{ height: 8, background: C.bg, borderRadius: 4, overflow: "hidden" }}>
