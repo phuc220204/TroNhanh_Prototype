@@ -19,6 +19,9 @@ export const router = createHashRouter([
       ...(import.meta.env.DEV
         ? [{ path: "styleguide", lazy: async () => ({ Component: (await import("../marketplace/pages/StyleGuidePage")).StyleGuidePage }) }]
         : []),
+      // Quên / đặt lại mật khẩu — công khai: trang đặt lại tự kiểm phiên khôi phục.
+      { path: "quen-mat-khau", lazy: async () => ({ Component: (await import("../shared/pages/PasswordReset/ForgotPasswordPage")).ForgotPasswordPage }) },
+      { path: "dat-lai-mat-khau", lazy: async () => ({ Component: (await import("../shared/pages/PasswordReset/ResetPasswordPage")).ResetPasswordPage }) },
       { path: "dang-nhap", lazy: async () => ({ Component: (await import("../marketplace/pages/LoginPage")).LoginPage }) },
       { path: "dang-ky", lazy: async () => ({ Component: (await import("../marketplace/pages/RegisterPage")).RegisterPage }) },
 

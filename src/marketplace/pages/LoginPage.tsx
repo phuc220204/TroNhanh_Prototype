@@ -187,9 +187,14 @@ export function LoginPage() {
 
           {/* Password field */}
           <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-            <label htmlFor="login-password" style={{ fontSize: 13, fontWeight: 600, color: C.textPrimary }}>
-              Mật khẩu
-            </label>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 8 }}>
+              <label htmlFor="login-password" style={{ fontSize: 13, fontWeight: 600, color: C.textPrimary }}>
+                Mật khẩu
+              </label>
+              <Link to="/quen-mat-khau" data-testid="login-forgot-password" style={{ fontSize: 12.5, fontWeight: 600, color: C.primary, textDecoration: "none" }}>
+                Quên mật khẩu?
+              </Link>
+            </div>
             <div style={{ position: "relative" }}>
               <Lock
                 size={18}
