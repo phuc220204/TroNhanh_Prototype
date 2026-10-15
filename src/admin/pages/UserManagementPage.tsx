@@ -1,12 +1,12 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Users, TriangleAlert, Search } from "lucide-react";
+import { Users, TriangleAlert, Search, Lock, LockOpen } from "lucide-react";
 import { AdminShell } from "../components/AdminShell";
-import { EmptyState, Skeleton, Button } from "../../shared/components/common";
+import { EmptyState, Skeleton, Button, ModalShell } from "../../shared/components/common";
 import { C, font, radius, space } from "../../shared/theme";
 import { qk } from "../../shared/query/keys";
 import { toUserMessage } from "../../shared/services/supabase-error";
-import { listUsers, grantRole, revokeRole, type GrantableRole } from "../services/admin-user-service";
+import { listUsers, grantRole, revokeRole, setUserLock, type AdminUserRow, type GrantableRole } from "../services/admin-user-service";
 
 const GRANTABLE: GrantableRole[] = ["Seller", "Moderator"];
 
@@ -24,6 +24,19 @@ export function UserManagementPage() {
     mutationFn: ({ userId, role, grant }: { userId: string; role: GrantableRole; grant: boolean }) =>
       grant ? grantRole(userId, role) : revokeRole(userId, role),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: qk.admin.usersAll }),
+  });
+
+  const [lockTarget, setLockTarget] = useState<AdminUserRow | null>(null);
+  const [lockReason, setLockReason] = useState("");
+
+  const lockMutation = useMutation({
+    mutationFn: ({ userId, locked, reason }: { userId: string; locked: boolean; reason: string }) =>
+      setUserLock(userId, locked, reason),
+    onSuccess: () => {
+      setLockTarget(null);
+      setLockReason("");
+      void queryClient.invalidateQueries({ queryKey: qk.admin.usersAll });
+    },
   });
 
   const rows = usersQuery.data ?? [];
@@ -61,6 +74,12 @@ export function UserManagementPage() {
           <Button type="submit">Tìm</Button>
         </form>
 
+        {lockMutation.isError && !lockTarget && (
+          <div role="alert" style={{ display: "flex", alignItems: "center", gap: 8, background: C.cream, border: `1px solid ${C.error}`, color: C.error, borderRadius: radius.md, padding: `${space[3]}px ${space[4]}px`, marginBottom: space[4], fontFamily: font, fontSize: 13 }}>
+            <TriangleAlert size={15} /> {toUserMessage(lockMutation.error)}
+          </div>
+        )}
+
         {roleMutation.isError && (
           <div style={{ display: "flex", alignItems: "center", gap: 8, background: C.cream, border: `1px solid ${C.error}`, color: C.error, borderRadius: radius.md, padding: `${space[3]}px ${space[4]}px`, marginBottom: space[4], fontFamily: font, fontSize: 13 }}>
             <TriangleAlert size={15} /> {toUserMessage(roleMutation.error)}
@@ -94,6 +113,11 @@ export function UserManagementPage() {
                     {u.full_name || "(chưa đặt tên)"}
                   </p>
                   <p style={{ fontFamily: font, fontSize: 12.5, color: C.textSecondary, margin: "2px 0 0" }}>{u.email}</p>
+                  {u.locked_until && (
+                    <span data-testid="user-locked-badge" style={{ display: "inline-flex", alignItems: "center", gap: 4, marginTop: 6, fontFamily: font, fontSize: 11.5, fontWeight: 700, color: C.error, background: C.errorBg, borderRadius: radius.pill, padding: "3px 10px" }}>
+                      <Lock size={11} /> Đã khóa
+                    </span>
+                  )}
                 </div>
 
                 <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
@@ -108,7 +132,33 @@ export function UserManagementPage() {
                   )}
                 </div>
 
-                <div style={{ display: "flex", gap: space[2] }}>
+                <div style={{ display: "flex", gap: space[2], flexWrap: "wrap" }}>
+                  {!u.roles.includes("Admin") && (
+                    u.locked_until ? (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        icon={<LockOpen size={13} />}
+                        loading={lockMutation.isPending && lockMutation.variables?.userId === u.user_id}
+                        disabled={lockMutation.isPending}
+                        onClick={() => lockMutation.mutate({ userId: u.user_id, locked: false, reason: "" })}
+                        data-testid="user-unlock-btn"
+                      >
+                        Mở khóa
+                      </Button>
+                    ) : (
+                      <Button
+                        size="sm"
+                        variant="danger"
+                        icon={<Lock size={13} />}
+                        disabled={lockMutation.isPending}
+                        onClick={() => { lockMutation.reset(); setLockReason(""); setLockTarget(u); }}
+                        data-testid="user-lock-btn"
+                      >
+                        Khóa
+                      </Button>
+                    )
+                  )}
                   {GRANTABLE.map((role) => {
                     const has = u.roles.includes(role);
                     return (
@@ -130,6 +180,41 @@ export function UserManagementPage() {
           </div>
         )}
       </div>
+
+      {lockTarget && (
+        <ModalShell
+          title="Khóa tài khoản"
+          onClose={() => { if (!lockMutation.isPending) setLockTarget(null); }}
+          footer={(
+            <>
+              <Button variant="ghost" onClick={() => setLockTarget(null)} disabled={lockMutation.isPending}>Hủy</Button>
+              <Button
+                variant="danger"
+                loading={lockMutation.isPending}
+                disabled={!lockReason.trim()}
+                onClick={() => lockMutation.mutate({ userId: lockTarget.user_id, locked: true, reason: lockReason })}
+                data-testid="user-lock-confirm"
+              >
+                Khóa tài khoản
+              </Button>
+            </>
+          )}
+        >
+          <p style={{ margin: 0, fontFamily: font, fontSize: 13.5, color: C.textPrimary, lineHeight: 1.55 }}>
+            <strong>{lockTarget.full_name || lockTarget.email}</strong> sẽ không đăng nhập được nữa và bị đăng xuất khỏi mọi thiết bị
+            (phiên đang mở hết hiệu lực trong tối đa 1 giờ). Tin đăng của họ <strong>không</strong> tự ẩn — xử lý ở Báo cáo vi phạm.
+          </p>
+          <textarea
+            value={lockReason}
+            onChange={(e) => setLockReason(e.target.value.slice(0, 1000))}
+            placeholder="Lý do khóa (ghi vào nhật ký kiểm duyệt)"
+            rows={3}
+            data-testid="user-lock-reason"
+            style={{ width: "100%", boxSizing: "border-box", fontFamily: font, fontSize: 13.5, padding: space[3], border: `1.5px solid ${C.border}`, borderRadius: radius.sm, resize: "vertical" }}
+          />
+          {lockMutation.isError && <p role="alert" style={{ margin: 0, fontFamily: font, fontSize: 13, color: C.error }}>{toUserMessage(lockMutation.error)}</p>}
+        </ModalShell>
+      )}
     </AdminShell>
   );
 }
