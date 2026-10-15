@@ -15,7 +15,7 @@ import {
   X,
 } from "lucide-react";
 import { C, font } from "../../../shared/theme";
-import { AreaSelect } from "../../../shared/components/common";
+import { AreaSelect, ImageWithFallback } from "../../../shared/components/common";
 import {
   AMENITIES as CATALOG_AMENITIES,
   AREA_RANGES,
@@ -129,7 +129,7 @@ export function SearchRoomCard({ room, mobile, onClick }: { room: SearchRoom; mo
       }}
     >
       <div style={{ position: "relative", flexShrink: 0, width: mobile ? 140 : "100%" }}>
-        <img src={room.img} alt={room.title} style={{ width: "100%", height: mobile ? 140 : 172, objectFit: "cover", display: "block" }} />
+        <ImageWithFallback src={room.img} alt={room.title} style={{ width: "100%", height: mobile ? 140 : 172, objectFit: "cover", display: "block" }} />
         <SaveListingButton listingId={room.id} overlay size={16} />
         <span style={{ position: "absolute", top: 10, left: 10, background: C.available, color: C.white, fontFamily: font, fontSize: 11, fontWeight: 700, borderRadius: 999, padding: "3px 10px" }}>Trống</span>
         <ListingTag badge={room.badge} style={{ position: "absolute", bottom: 10, left: 10 }} />

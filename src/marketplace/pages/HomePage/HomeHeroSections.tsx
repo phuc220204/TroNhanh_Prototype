@@ -8,7 +8,7 @@ import {
 import { useBreakpoint } from "../../../shared/components/useBreakpoint";
 import { C, font } from "../../../shared/theme";
 import { AppSelect } from "../../../shared/components/common/AppSelect";
-import { Button, EmptyState, Skeleton } from "../../../shared/components/common";
+import { Button, EmptyState, ImageWithFallback, Skeleton } from "../../../shared/components/common";
 import { RoomCarousel } from "./RoomCarousel";
 import { SaveListingButton } from "../../components/SaveListingButton";
 import { FEATURED_CARD_BORDER, ListingPostedTime, ListingTag } from "../../components/ListingCardMeta";
@@ -56,7 +56,7 @@ export function RoomCard({ room, mobile, onClick }: {
       }}
     >
       <div style={{ position: "relative", flexShrink: 0, width: mobile ? 140 : "100%", overflow: "hidden" }}>
-        <img src={room.img} alt={room.title}
+        <ImageWithFallback src={room.img} alt={room.title}
           style={{ width: "100%", height: mobile ? 140 : 190, objectFit: "cover", display: "block", transition: "transform 0.4s ease-in-out", transform: hov ? "scale(1.06)" : "none" }} />
         <SaveListingButton listingId={room.id} overlay size={15} />
         <span style={{ position: "absolute", top: 12, left: 12, background: C.available, color: "#fff", fontFamily: font, fontSize: 10.5, fontWeight: 700, borderRadius: 999, padding: "4px 10px", boxShadow: "0 2px 6px rgba(79,122,74,0.2)" }}>Còn trống</span>
