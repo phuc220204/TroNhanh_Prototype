@@ -9,7 +9,7 @@ import { useSubscriptionContext } from "../../shared/contexts/SubscriptionContex
 import { TRIAL_DAYS } from "../../shared/services/subscription-service";
 import { useBreakpoint } from "../../shared/components/useBreakpoint";
 import { qk } from "../../shared/query/keys";
-import { Button, EmptyState, Skeleton } from "../../shared/components/common";
+import { Button, EmptyState, LegalConsentCheckbox, Skeleton } from "../../shared/components/common";
 import { toUserMessage } from "../../shared/services/supabase-error";
 import { formatDate, formatVnd } from "../../shared/utils/format";
 import {
@@ -137,6 +137,7 @@ export function SubscriptionPlansPage() {
   const [buyingPlanId, setBuyingPlanId] = useState<string | null>(null);
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
   const [isActivatingTrial, setIsActivatingTrial] = useState(false);
+  const [hasAcceptedTerms, setHasAcceptedTerms] = useState(false);
 
   const plansQuery = useQuery({ queryKey: qk.saasPlans.list, queryFn: getSubscriptionPlans, staleTime: 5 * 60 * 1000 });
   const paidQuery = useQuery({ queryKey: qk.saasPlans.paidPlanIds(user?.id), queryFn: getMyPaidPlanIds, enabled: Boolean(user?.id) });
@@ -155,6 +156,7 @@ export function SubscriptionPlansPage() {
   const plans = (plansQuery.data ?? []).filter((p) => p.price > 0);
 
   const handleBuy = async (planId: string) => {
+    if (!hasAcceptedTerms) return;
     setBuyingPlanId(planId);
     setCheckoutError(null);
     try {
@@ -227,6 +229,10 @@ export function SubscriptionPlansPage() {
         ) : plans.length === 0 ? (
           <EmptyState title="Chưa có gói nào đang bán" description="Vui lòng quay lại sau hoặc liên hệ hỗ trợ." />
         ) : (
+          <>
+          <div style={{ marginBottom: 16 }}>
+            <LegalConsentCheckbox variant="payment" checked={hasAcceptedTerms} onChange={setHasAcceptedTerms} disabled={buyingPlanId !== null} data-testid="saas-terms-checkbox" />
+          </div>
           <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(auto-fill, minmax(300px, 1fr))", gap: 16 }}>
             {plans.map((plan) => (
               <PlanCard
@@ -235,11 +241,12 @@ export function SubscriptionPlansPage() {
                 isRenewal={paidPlanIds.includes(plan.id)}
                 isCurrent={status !== "NONE" && currentPlan?.id === plan.id && status !== "TRIAL"}
                 isBuying={buyingPlanId === plan.id}
-                disabled={buyingPlanId !== null || paidQuery.isPending}
+                disabled={buyingPlanId !== null || paidQuery.isPending || !hasAcceptedTerms}
                 onBuy={() => void handleBuy(plan.id)}
               />
             ))}
           </div>
+          </>
         )}
       </div>
     </LandlordShell>
