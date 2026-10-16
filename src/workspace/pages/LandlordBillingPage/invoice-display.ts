@@ -23,6 +23,26 @@ export function toDisplayStatusKey(invoice: InvoiceItem): InvoiceStatusKey {
   return dueState === "overdue" ? "overdue" : toInvoiceStatusKey(invoice.status);
 }
 
+/**
+ * Thứ tự danh sách hóa đơn: quá hạn lên đầu (trễ lâu nhất trước), sau đó kỳ mới
+ * nhất trước; cùng kỳ thì theo mã phòng. Kỳ "YYYY-MM" ⇒ so chuỗi là so thời gian.
+ */
+export function sortInvoicesForDisplay(invoices: InvoiceItem[]): InvoiceItem[] {
+  const isOverdue = (invoice: InvoiceItem) => toDisplayStatusKey(invoice) === "overdue";
+  return [...invoices].sort((a, b) => {
+    const overdueA = isOverdue(a);
+    const overdueB = isOverdue(b);
+    if (overdueA !== overdueB) return overdueA ? -1 : 1;
+    if (overdueA && overdueB) {
+      const dueOrder = String(a.due_date ?? "").localeCompare(String(b.due_date ?? ""));
+      if (dueOrder !== 0) return dueOrder;
+    }
+    const periodOrder = String(b.period).localeCompare(String(a.period));
+    if (periodOrder !== 0) return periodOrder;
+    return (a.rooms?.room_code ?? "").localeCompare(b.rooms?.room_code ?? "", "vi", { numeric: true });
+  });
+}
+
 /** "dd/mm" — ngày hẹn thu lại hiện gọn dưới trạng thái. */
 export const formatShortDate = (value: string) => {
   const [, month, day] = value.slice(0, 10).split("-");

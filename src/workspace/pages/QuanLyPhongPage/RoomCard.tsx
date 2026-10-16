@@ -3,6 +3,7 @@ import { C, font, radius, shadow } from "../../../shared/theme";
 import { Badge } from "../../../shared/components/common";
 import type { Room } from "../../types/room";
 import { RoomActions, type RoomActionType } from "./RoomActions";
+import { RoomDebtBadge } from "./RoomDebtBadge";
 
 const NOT_DECLARED = "Chưa khai báo";
 
@@ -51,7 +52,10 @@ export function RoomCard({ room, onSelect, onAction }: RoomCardProps) {
           </div>
           <div style={{ fontSize: 14, color: C.textSecondary, marginTop: 4 }}>{formatRoomMeta(room)}</div>
         </div>
-        <Badge kind="room" status={room.status} />
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 6, flexShrink: 0 }}>
+          <Badge kind="room" status={room.status} />
+          <RoomDebtBadge debt={room.debt} />
+        </div>
       </div>
 
       <div style={{ display: "flex", alignItems: "baseline", gap: 6 }}>

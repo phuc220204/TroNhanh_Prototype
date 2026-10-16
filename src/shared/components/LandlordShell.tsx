@@ -143,7 +143,7 @@ export function LandlordShell({
               margin: "0 0 8px",
             }}
           >
-            Tính năng dành riêng cho gói SaaS
+            Tính năng dành riêng cho gói Quản lý vận hành
           </h2>
           <p
             style={{

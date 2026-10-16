@@ -4,7 +4,17 @@
     {
       "name": "tro-nhanh-dev",
       "runtimeExecutable": "pnpm",
-      "runtimeArgs": ["dev"],
+      "runtimeArgs": [
+        "dev"
+      ],
+      "port": 5173
+    },
+    {
+      "name": "tro-nhanh-dev-node",
+      "runtimeExecutable": "C:\\Program Files\\nodejs\\node.exe",
+      "runtimeArgs": [
+        "node_modules/vite/bin/vite.js"
+      ],
       "port": 5173
     }
   ]

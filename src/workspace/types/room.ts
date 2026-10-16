@@ -23,6 +23,14 @@ export interface Bill {
   paid: boolean;
 }
 
+/** Nợ của phòng: còn hóa đơn chưa thu đủ. `overdue` = có hóa đơn đã quá `due_date`. */
+export interface RoomDebt {
+  state: "overdue" | "outstanding";
+  /** Số ngày quá hạn của hóa đơn trễ nhất; 0 khi chưa quá hạn. */
+  overdueDays: number;
+  invoiceCount: number;
+}
+
 export interface Room {
   id: string;
   code: string;
@@ -37,6 +45,7 @@ export interface Room {
   occupant: Occupant | null;
   contract: Contract | null;
   bill: Bill | null;
+  debt: RoomDebt | null;
 }
 
 export interface Property {
