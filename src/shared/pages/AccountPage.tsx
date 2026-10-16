@@ -48,8 +48,13 @@ export function AccountPage() {
     return () => { cancelled = true; };
   }, [user?.id]);
 
+  // Người chỉ đi thuê chưa từng đăng tin cho thuê ⇒ ô "Tin cho thuê" (luôn 0)
+  // chỉ gây rối; đếm xong mà > 0 mới hiện.
+  const hasRentalListings = (counts?.rentalListings ?? 0) > 0;
   const cards: { label: string; value: number | null; to: string; Icon: typeof Building2 }[] = [
-    { label: "Tin cho thuê", value: counts?.rentalListings ?? null, to: "/tai-khoan/tin-cho-thue", Icon: Building2 },
+    ...(hasRentalListings
+      ? [{ label: "Tin cho thuê", value: counts?.rentalListings ?? null, to: "/tai-khoan/tin-cho-thue", Icon: Building2 }]
+      : []),
     { label: "Tin nhu cầu", value: counts?.demandPosts ?? null, to: "/tai-khoan/tin-nhu-cau", Icon: Search },
     { label: "Tin đã lưu", value: counts?.savedListings ?? null, to: "/yeu-thich", Icon: Heart },
   ];

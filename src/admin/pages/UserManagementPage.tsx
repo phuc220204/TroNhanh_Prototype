@@ -1,14 +1,35 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Users, TriangleAlert, Search } from "lucide-react";
 import { AdminShell } from "../components/AdminShell";
-import { EmptyState, Skeleton, Button } from "../../shared/components/common";
+import { EmptyState, Skeleton, Button, Pagination } from "../../shared/components/common";
 import { C, font, radius, space } from "../../shared/theme";
 import { qk } from "../../shared/query/keys";
 import { toUserMessage } from "../../shared/services/supabase-error";
 import { listUsers, grantRole, revokeRole, type GrantableRole } from "../services/admin-user-service";
+import { listSubscriptions } from "../services/admin-business-service";
+import { formatDate } from "../../shared/utils/format";
+import type { SubscriptionStatus } from "../../shared/types/status";
 
 const GRANTABLE: GrantableRole[] = ["Seller", "Moderator"];
+
+/** Lọc theo vai trò ở client: `admin_list_users` trả tối đa 200 người mới nhất. */
+type RoleFilter = "all" | "Seller" | "Moderator" | "Admin" | "none";
+const ROLE_FILTERS: { key: RoleFilter; label: string }[] = [
+  { key: "all", label: "Tất cả" },
+  { key: "Seller", label: "Seller" },
+  { key: "Moderator", label: "Moderator" },
+  { key: "Admin", label: "Admin" },
+  { key: "none", label: "Chưa có vai trò" },
+];
+const PAGE_SIZE = 20;
+
+const SUBSCRIPTION_LABEL: Record<SubscriptionStatus, string> = {
+  NONE: "Chưa có gói",
+  TRIAL: "Dùng thử",
+  ACTIVE: "Đang hoạt động",
+  READ_ONLY: "Hết hạn — chỉ xem",
+};
 
 export function UserManagementPage() {
   const [search, setSearch] = useState("");
@@ -27,6 +48,33 @@ export function UserManagementPage() {
   });
 
   const rows = usersQuery.data ?? [];
+  const [roleFilter, setRoleFilter] = useState<RoleFilter>("all");
+  const [page, setPage] = useState(1);
+
+  // Gói của từng tài khoản (RPC admin riêng — không đổi `admin_list_users`).
+  // Lỗi thì cột gói ghi "—", danh sách người dùng vẫn dùng được.
+  const subscriptionsQuery = useQuery({ queryKey: qk.admin.subscriptions, queryFn: listSubscriptions });
+  const subscriptionByUser = useMemo(
+    () => new Map((subscriptionsQuery.data ?? []).map((s) => [s.seller_id, s])),
+    [subscriptionsQuery.data],
+  );
+
+  const filteredRows = useMemo(() => rows.filter((u) => {
+    if (roleFilter === "all") return true;
+    if (roleFilter === "none") return u.roles.length === 0;
+    return u.roles.includes(roleFilter);
+  }), [rows, roleFilter]);
+  const pageRows = filteredRows.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+
+  const describeSubscription = (userId: string) => {
+    if (subscriptionsQuery.isError) return "—";
+    if (subscriptionsQuery.isPending) return "…";
+    const subscription = subscriptionByUser.get(userId);
+    if (!subscription) return SUBSCRIPTION_LABEL.NONE;
+    const name = subscription.plan_name ? ` · ${subscription.plan_name}` : "";
+    const until = subscription.expire_date ? ` · đến ${formatDate(subscription.expire_date)}` : "";
+    return `${SUBSCRIPTION_LABEL[subscription.status]}${name}${until}`;
+  };
 
   return (
     <AdminShell active="users">
@@ -58,7 +106,7 @@ export function UserManagementPage() {
               }}
             />
           </div>
-          <Button type="submit">Tìm</Button>
+          <Button type="submit" onClick={() => setPage(1)}>Tìm</Button>
         </form>
 
         {roleMutation.isError && (
@@ -67,19 +115,44 @@ export function UserManagementPage() {
           </div>
         )}
 
+        <div role="group" aria-label="Lọc theo vai trò" style={{ display: "flex", gap: space[2], flexWrap: "wrap", marginBottom: space[4] }}>
+          {ROLE_FILTERS.map((f) => {
+            const isActive = f.key === roleFilter;
+            return (
+              <button
+                key={f.key}
+                type="button"
+                aria-pressed={isActive}
+                onClick={() => { setRoleFilter(f.key); setPage(1); }}
+                data-testid={`admin-user-role-filter-${f.key}`}
+                style={{ fontFamily: font, fontSize: 13, fontWeight: 700, color: isActive ? C.white : C.textSecondary, background: isActive ? C.primary : C.white, border: `1px solid ${isActive ? C.primary : C.border}`, borderRadius: radius.pill, padding: `${space[2]}px ${space[4]}px`, cursor: "pointer" }}
+              >
+                {f.label}
+              </button>
+            );
+          })}
+        </div>
+
         {usersQuery.isPending ? (
           <Skeleton variant="row" count={5} />
         ) : usersQuery.isError ? (
           <EmptyState icon={TriangleAlert} title="Không tải được danh sách" description={toUserMessage(usersQuery.error)} />
-        ) : rows.length === 0 ? (
+        ) : filteredRows.length === 0 ? (
+          rows.length > 0 ? (
+            <EmptyState icon={Users} title="Không có người dùng nào với vai trò này" description="Chọn bộ lọc vai trò khác." data-testid="admin-user-filter-empty" />
+          ) : (
           <EmptyState
             icon={Users}
             title="Không có người dùng nào"
             description="Danh sách chỉ hiển thị với tài khoản Admin. Nếu bạn là Moderator, mục này sẽ trống."
           />
+          )
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: space[2] }}>
-            {rows.map((u) => (
+            <p data-testid="admin-user-count" style={{ fontFamily: font, fontSize: 12.5, color: C.textSecondary, margin: `0 0 ${space[1]}px` }}>
+              {filteredRows.length} người dùng{rows.length >= 200 ? " (trong 200 tài khoản mới nhất — tìm theo tên/email để thu hẹp)" : ""}
+            </p>
+            {pageRows.map((u) => (
               <div
                 key={u.user_id}
                 data-testid="admin-user-row"
@@ -94,6 +167,9 @@ export function UserManagementPage() {
                     {u.full_name || "(chưa đặt tên)"}
                   </p>
                   <p style={{ fontFamily: font, fontSize: 12.5, color: C.textSecondary, margin: "2px 0 0" }}>{u.email}</p>
+                  <p data-testid="admin-user-meta" style={{ fontFamily: font, fontSize: 12, color: C.textSecondary, margin: "4px 0 0" }}>
+                    Tạo ngày {formatDate(u.created_at)} · Gói: {describeSubscription(u.user_id)}
+                  </p>
                 </div>
 
                 <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
@@ -127,6 +203,7 @@ export function UserManagementPage() {
                 </div>
               </div>
             ))}
+            <Pagination page={page} pageSize={PAGE_SIZE} total={filteredRows.length} onChange={setPage} data-testid="admin-user-pagination" style={{ marginTop: space[3] }} />
           </div>
         )}
       </div>
