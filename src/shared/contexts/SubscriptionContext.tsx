@@ -18,6 +18,11 @@ export interface SubscriptionContextValue {
   isReadOnly: boolean;
   canWrite: boolean;
   isLoading: boolean;
+  /**
+   * Tải gói thất bại (mạng, máy chủ). Khi `true`, `status` KHÔNG đáng tin —
+   * đừng hiện màn mời dùng thử; hiện lỗi + nút thử lại.
+   */
+  isError: boolean;
   refresh: () => void;
   activateTrial: () => Promise<void>;
 }
@@ -30,6 +35,7 @@ const DEFAULT_CONTEXT: SubscriptionContextValue = {
   isReadOnly: false,
   canWrite: false,
   isLoading: false,
+  isError: false,
   refresh: () => {},
   activateTrial: async () => {},
 };
@@ -40,7 +46,7 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth();
   const queryClient = useQueryClient();
 
-  const { data, isLoading } = useQuery<SubscriptionData>({
+  const { data, isLoading, isError } = useQuery<SubscriptionData>({
     queryKey: qk.subscription(user?.id),
     queryFn: () => getMySubscription(user?.id),
     enabled: !!user?.id,
@@ -71,6 +77,7 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
     isReadOnly,
     canWrite,
     isLoading,
+    isError,
     refresh,
     activateTrial,
   };
@@ -101,8 +108,9 @@ export function useCanWrite(): boolean {
  * Gộp cả hai thành "bạn không có quyền" là làm chủ trọ tưởng mình mất dữ liệu.
  */
 export function useWriteBlockReason(): string | null {
-  const { status, canWrite } = useContext(SubscriptionContext);
+  const { status, canWrite, isError } = useContext(SubscriptionContext);
   if (canWrite) return null;
+  if (isError) return "Chưa tải được thông tin gói dịch vụ. Kiểm tra kết nối mạng rồi tải lại trang.";
   if (status === "READ_ONLY") {
     return "Gói dịch vụ đã hết hạn. Dữ liệu của bạn vẫn được giữ nguyên — hãy gia hạn để tiếp tục chỉnh sửa.";
   }
