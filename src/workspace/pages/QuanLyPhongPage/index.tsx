@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import { useNavigate, useLocation } from "react-router";
+import { useNavigate, useLocation, useSearchParams } from "react-router";
 import { Plus, Building2, ChevronDown, RefreshCw } from "lucide-react";
 import { C, font, shadow } from "../../../shared/theme";
 import { useBreakpoint } from "../../../shared/components/useBreakpoint";
@@ -18,6 +18,7 @@ import { RoomsView } from "./RoomsView";
 import { OccupantsView } from "./OccupantsView";
 import { SettingsView } from "./SettingsView";
 import { RoomDetailModal } from "./RoomDetailModal";
+import { getRoomDebt } from "./RoomDebtBadge";
 import { UtilityReadingForm } from "./UtilityReadingForm";
 import { InvoicePreview } from "./InvoicePreview";
 import { AddOccupantModal } from "./AddOccupantModal";
@@ -67,8 +68,17 @@ const mapDbRoomToRoom = (dbRoom: any): Room => {
     occupant,
     contract,
     bill: null,
+    debt: getRoomDebt(dbRoom.invoices),
   };
 };
+
+/** Khu mặc định khi URL chưa chọn khu: khu nhiều phòng nhất (hòa thì khu đứng trước). */
+function pickDefaultProperty(properties: Property[]): Property | null {
+  return properties.reduce<Property | null>(
+    (best, property) => (!best || property.rooms.length > best.rooms.length ? property : best),
+    null,
+  );
+}
 
 const ROOM_TABS: { id: LandlordNavId; label: string }[] = [
   { id: "rooms", label: "Phòng" },
@@ -96,10 +106,17 @@ export function QuanLyPhongPage() {
   const activeTab: LandlordNavId = rawTab && (ROOM_PAGE_TABS as readonly string[]).includes(rawTab)
     ? (rawTab as LandlordNavId)
     : "rooms";
-  const goToTab = (tab: LandlordNavId) => navigate(`/chu-tro/quan-ly-phong?tab=${tab}`);
-
+  const [searchParams, setSearchParams] = useSearchParams();
+  // `?khu=<id>`: giữ khu đang chọn khi đổi tab và khi tải lại trang. Sidebar
+  // điều hướng sang `?tab=…` không kèm khu ⇒ trang vẫn mounted, state giữ khu cũ
+  // và effect bên dưới ghi lại vào URL.
+  const khuParam = searchParams.get("khu");
   const [properties, setProperties] = useState<Property[]>([]);
-  const [selectedId, setSelectedId] = useState<string>("");
+  const [selectedId, setSelectedId] = useState<string>(() => khuParam ?? "");
+  const goToTab = (tab: LandlordNavId) => {
+    const khu = selectedProperty ? `&khu=${selectedProperty.id}` : "";
+    navigate(`/chu-tro/quan-ly-phong?tab=${tab}${khu}`);
+  };
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<RoomFilter>("all");
   const [sort, setSort] = useState<RoomSort>("code");
@@ -150,10 +167,8 @@ export function QuanLyPhongPage() {
           } as any;
         });
 
+        // Khu chưa chọn / id lạ ⇒ `selectedProperty` tự rơi về khu nhiều phòng nhất.
         setProperties(mapped);
-        if (!selectedId || !mapped.find((p) => p.id === selectedId)) {
-          setSelectedId(mapped[0]!.id);
-        }
       } else {
         setProperties([]);
       }
@@ -171,9 +186,33 @@ export function QuanLyPhongPage() {
     loadDbData();
   }, [user]);
 
+  // Thứ tự: `?khu=` hợp lệ (link, back/forward) → khu chọn gần nhất → khu nhiều phòng nhất.
   const selectedProperty = useMemo(() => {
-    return properties.find((p) => p.id === selectedId) || properties[0] || null;
-  }, [properties, selectedId]);
+    return properties.find((p) => p.id === khuParam)
+      || properties.find((p) => p.id === selectedId)
+      || pickDefaultProperty(properties);
+  }, [properties, khuParam, selectedId]);
+
+  const writeKhuToUrl = (propertyId: string) => {
+    setSearchParams((params) => {
+      params.set("khu", propertyId);
+      return params;
+    }, { replace: true });
+  };
+
+  const selectProperty = (propertyId: string) => {
+    setSelectedId(propertyId);
+    writeKhuToUrl(propertyId);
+  };
+
+  // Đồng bộ khu đang hiện vào state + URL (replace, không thêm lịch sử): URL thiếu
+  // `khu` (sidebar đổi tab) hoặc id lạ/đã xóa thì ghi lại khu đang hiện.
+  // Chờ tải xong: khu vừa tạo chưa có trong `properties` thì không được ghi đè lựa chọn.
+  useEffect(() => {
+    if (loading || !selectedProperty) return;
+    if (selectedId !== selectedProperty.id) setSelectedId(selectedProperty.id);
+    if (khuParam !== selectedProperty.id) writeKhuToUrl(selectedProperty.id);
+  }, [loading, selectedProperty?.id, khuParam]);
 
   return (
     <LandlordShell active="rooms" mobileTitle="Quản lý phòng">
@@ -247,7 +286,7 @@ export function QuanLyPhongPage() {
                       key={p.id}
                       data-testid="property-option"
                       onClick={() => {
-                        setSelectedId(p.id);
+                        selectProperty(p.id);
                         setSwitcherOpen(false);
                       }}
                       style={{
@@ -422,7 +461,7 @@ export function QuanLyPhongPage() {
       {showAddRoom && (
         <AddRoomModal
           properties={properties.map((p) => ({ id: p.id, name: p.name }))}
-          defaultPropertyId={selectedId}
+          defaultPropertyId={selectedProperty?.id}
           onClose={() => setShowAddRoom(false)}
           onCreated={() => void loadDbData(false)}
         />
@@ -433,7 +472,7 @@ export function QuanLyPhongPage() {
           onClose={() => setShowAddProperty(false)}
           onCreated={(id) => {
             setShowAddProperty(false);
-            setSelectedId(id);
+            selectProperty(id);
             loadDbData();
           }}
         />

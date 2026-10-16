@@ -2,6 +2,7 @@ import { C } from "../../../shared/theme";
 import { Badge, Table, type Column } from "../../../shared/components/common";
 import type { Room } from "../../types/room";
 import { RoomActions, type RoomActionType } from "./RoomActions";
+import { RoomDebtBadge } from "./RoomDebtBadge";
 
 const COLUMNS: Column<Room>[] = [
   { key: "code", label: "Phòng" },
@@ -34,7 +35,12 @@ export function RoomsTable({ rooms, onSelect, onAction }: RoomsTableProps) {
           case "code":
             return <strong style={{ fontSize: 15, whiteSpace: "nowrap" }}>Phòng {room.code}</strong>;
           case "status":
-            return <Badge kind="room" status={room.status} />;
+            return (
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                <Badge kind="room" status={room.status} />
+                <RoomDebtBadge debt={room.debt} />
+              </div>
+            );
           case "price":
             return <strong style={{ color: C.primary, whiteSpace: "nowrap" }}>{room.price}</strong>;
           case "occupant":

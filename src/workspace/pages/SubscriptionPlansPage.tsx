@@ -107,7 +107,7 @@ function PlanCard({ plan, isRenewal, isCurrent, isBuying, disabled, onBuy }: {
     <div data-testid="saas-plan-card" style={{ background: C.white, border: `1.5px solid ${isCurrent ? C.primary : C.border}`, borderRadius: radius.xl, padding: 20, display: "flex", flexDirection: "column", gap: 12, boxShadow: shadow.sm, fontFamily: font }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
         <h2 style={{ margin: 0, fontSize: 17, fontWeight: 800, color: C.textPrimary }}>{plan.name}</h2>
-        {isCurrent && <span style={{ fontSize: 11, fontWeight: 800, color: C.primary, background: C.cream, borderRadius: radius.pill, padding: "3px 10px" }}>Gói hiện tại</span>}
+        {isCurrent && <span data-testid="saas-plan-current-badge" style={{ fontSize: 11, fontWeight: 800, color: C.primary, background: C.cream, borderRadius: radius.pill, padding: "3px 10px" }}>Gói hiện tại</span>}
       </div>
       <div>
         <div style={{ fontSize: 24, fontWeight: 900, color: C.primary }}>{formatVnd(price)}</div>
@@ -153,6 +153,14 @@ export function SubscriptionPlansPage() {
   const paidPlanIds = paidQuery.data ?? [];
   // Gói giá 0 là gói dùng thử — kích hoạt bằng nút dùng thử, không bán qua payOS.
   const plans = (plansQuery.data ?? []).filter((p) => p.price > 0);
+  // Gói đã trả tiền (ACTIVE) hoặc đã hết hạn (READ_ONLY) mới đánh dấu thẻ "Gói hiện tại".
+  const hasPaidStatus = status === "ACTIVE" || status === "READ_ONLY";
+  const currentPlanCard = hasPaidStatus ? plans.find((p) => p.id === currentPlan?.id) ?? null : null;
+  // Gói kích hoạt thủ công / gói cũ đã ngừng bán thì `plan` có thể rỗng hoặc là
+  // gói dùng thử (giá 0) ⇒ vẫn ghi tên sản phẩm thay vì để trống.
+  const currentPlanName = status === "NONE"
+    ? null
+    : currentPlanCard?.name ?? (currentPlan?.price > 0 ? currentPlan?.name : null) ?? (hasPaidStatus ? "Gói Quản lý vận hành" : null);
 
   const handleBuy = async (planId: string) => {
     setBuyingPlanId(planId);
@@ -195,11 +203,16 @@ export function SubscriptionPlansPage() {
             <div>
               <div style={{ fontSize: 14.5, fontWeight: 800, color: C.textPrimary }}>
                 {isSubscriptionLoading ? <Skeleton variant="text" label="Đang tải gói hiện tại" style={{ width: 160 }} /> : STATUS_LABEL[status] ?? status}
-                {currentPlan?.name && status !== "NONE" ? ` · ${currentPlan.name}` : ""}
+                {currentPlanName && <span data-testid="saas-current-plan-name">{` · ${currentPlanName}`}</span>}
               </div>
               {expireDate && status !== "NONE" && (
                 <div style={{ fontSize: 12.5, color: C.textSecondary }}>
                   {status === "READ_ONLY" ? "Hết hạn ngày" : "Hiệu lực đến"} {formatDate(expireDate)} · dữ liệu luôn được giữ nguyên
+                </div>
+              )}
+              {hasPaidStatus && !currentPlanCard && plans.length > 0 && (
+                <div data-testid="saas-current-plan-unlisted" style={{ fontSize: 12.5, color: C.textSecondary }}>
+                  Gói của bạn không còn trong danh sách bán — mua bất kỳ gói nào bên dưới khi còn hạn thì thời gian được cộng dồn.
                 </div>
               )}
             </div>
@@ -233,7 +246,7 @@ export function SubscriptionPlansPage() {
                 key={plan.id}
                 plan={plan}
                 isRenewal={paidPlanIds.includes(plan.id)}
-                isCurrent={status !== "NONE" && currentPlan?.id === plan.id && status !== "TRIAL"}
+                isCurrent={currentPlanCard?.id === plan.id}
                 isBuying={buyingPlanId === plan.id}
                 disabled={buyingPlanId !== null || paidQuery.isPending}
                 onBuy={() => void handleBuy(plan.id)}
