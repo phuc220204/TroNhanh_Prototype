@@ -12,7 +12,7 @@ import {
 } from "lucide-react";
 import { C, font, shadow } from "../../../shared/theme";
 import { Badge } from "../../../shared/components/common";
-import type { RoomStatus } from "../../../shared/types/status";
+import type { InvoiceStatus, RoomStatus } from "../../../shared/types/status";
 import { normalizeRoomStatus } from "../../../shared/utils/statusMaps";
 import { useCanWrite, useWriteBlockReason } from "../../../shared/contexts/SubscriptionContext";
 
@@ -108,9 +108,10 @@ export function StatusChip({ status }: { status: RoomStatus }) {
 }
 
 /** Tình trạng thanh toán kỳ gần nhất. null = chưa có hóa đơn. */
-export function PayText({ paid }: { paid: boolean | null }) {
-  if (paid === null) return <span style={{ color: C.textSecondary }}>—</span>;
-  return <Badge kind="invoice" status={paid ? "paid" : "unpaid"} />;
+/** Trạng thái thanh toán hóa đơn gần nhất của phòng — đã tính "Quá hạn" theo `due_date`. */
+export function PayText({ status }: { status: InvoiceStatus | null }) {
+  if (status === null) return <span style={{ color: C.textSecondary }}>—</span>;
+  return <Badge kind="invoice" status={status} data-testid={`dashboard-room-pay-${status}`} />;
 }
 
 /* ══════════════════════════════════════════

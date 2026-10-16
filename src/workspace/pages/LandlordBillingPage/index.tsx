@@ -33,6 +33,9 @@ export function LandlordBillingPage() {
   });
   const [selectedPropertyId, setSelectedPropertyId] = useState<string>(ALL);
   const [roomSearch, setRoomSearch] = useState("");
+  // "Xem hóa đơn" ở một phòng (dashboard): /chu-tro/hoa-don?phong=<roomId>. Lọc
+  // theo id chứ không theo mã phòng — nhiều khu cùng có "P101".
+  const [selectedRoomId, setSelectedRoomId] = useState<string | null>(() => searchParams.get("phong"));
   const [selectedInvoice, setSelectedInvoice] = useState<InvoiceItem | null>(null);
   const [isRecordPaymentOpen, setIsRecordPaymentOpen] = useState(false);
   const [isLinkedInvoiceMissing, setIsLinkedInvoiceMissing] = useState(false);
@@ -75,18 +78,36 @@ export function LandlordBillingPage() {
   const visibleInvoices = useMemo(() => {
     const keyword = roomSearch.trim().toLowerCase();
     return invoices.filter((inv) => {
+      if (selectedRoomId && inv.room_id !== selectedRoomId) return false;
       if (selectedPropertyId !== ALL && inv.rooms?.property_id !== selectedPropertyId) return false;
       if (keyword && !(inv.rooms?.room_code ?? "").toLowerCase().includes(keyword)) return false;
       return true;
     });
-  }, [invoices, selectedPropertyId, roomSearch]);
+  }, [invoices, selectedRoomId, selectedPropertyId, roomSearch]);
 
-  const hasActiveFilter = selectedPeriod !== ALL || selectedStatus !== "" || selectedPropertyId !== ALL || roomSearch.trim() !== "";
+  /** Nhãn của phòng đang lọc, lấy từ chính hóa đơn của phòng đó. */
+  const selectedRoomLabel = useMemo(() => {
+    if (!selectedRoomId) return null;
+    const rooms = invoices.find((inv) => inv.room_id === selectedRoomId)?.rooms;
+    if (!rooms) return "đã chọn";
+    return rooms.properties?.name ? `${rooms.room_code} · ${rooms.properties.name}` : rooms.room_code;
+  }, [invoices, selectedRoomId]);
+
+  const clearRoomFilter = () => {
+    setSelectedRoomId(null);
+    setSearchParams((params) => {
+      params.delete("phong");
+      return params;
+    }, { replace: true });
+  };
+
+  const hasActiveFilter = selectedPeriod !== ALL || selectedStatus !== "" || selectedPropertyId !== ALL || roomSearch.trim() !== "" || selectedRoomId !== null;
   const clearFilters = () => {
     setSelectedPeriod(ALL);
     setSelectedStatus("");
     setSelectedPropertyId(ALL);
     setRoomSearch("");
+    clearRoomFilter();
   };
   const totalOutstanding = visibleInvoices.reduce((sum, inv) => sum + getRemainingAmount(inv), 0);
 
@@ -164,6 +185,16 @@ export function LandlordBillingPage() {
             </div>
           </div>
         </div>
+
+        {selectedRoomId && (
+          <div
+            data-testid="invoice-room-filter-chip"
+            style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 12, background: C.cream, border: `1px solid ${C.border}`, borderRadius: radius.md, padding: "8px 14px", marginBottom: 16, fontFamily: font, fontSize: 13, color: C.textPrimary }}
+          >
+            <span>Đang xem hóa đơn của phòng <strong>{selectedRoomLabel}</strong></span>
+            <Button variant="ghost" size="sm" onClick={clearRoomFilter} data-testid="invoice-room-filter-clear">Xem mọi phòng</Button>
+          </div>
+        )}
 
         {isLinkedInvoiceMissing && (
           <div

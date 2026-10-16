@@ -43,8 +43,9 @@ function Tile({ tile }: { tile: StatTile }) {
 }
 
 /**
- * 4 ô tổng quan trên một hàng. Ô "Cần xử lý" gom tin Chờ duyệt + Bị từ chối —
- * hai trạng thái người bán phải để ý — và bấm vào để lọc ngay.
+ * 4 ô tổng quan trên một hàng. Ô "Cần xử lý" gom tin Bị từ chối + Hết hạn + Chờ
+ * duyệt — các trạng thái người bán phải để ý — và bấm vào để lọc ngay. Tin Hết
+ * hạn (BR-026) không còn hiện với người tìm phòng nên cần gia hạn.
  */
 export function ListingStats({ listings, isMobile, onSelectStatus }: {
   listings: DbListing[];
@@ -54,9 +55,15 @@ export function ListingStats({ listings, isMobile, onSelectStatus }: {
   const count = (status: string) => listings.filter((l) => l.status === status).length;
   const pending = count("PendingApproval");
   const rejected = count("Rejected");
+  const expired = count("Expired");
   const views = listings.reduce((sum, l) => sum + (l.views ?? 0), 0);
   const contacts = listings.reduce((sum, l) => sum + (l.contacts ?? 0), 0);
-  const needsAction = pending + rejected;
+  const needsAction = pending + rejected + expired;
+  const actionHint = [
+    rejected > 0 ? `${rejected} bị từ chối` : null,
+    expired > 0 ? `${expired} hết hạn` : null,
+    pending > 0 ? `${pending} chờ duyệt` : null,
+  ].filter(Boolean).join(" · ");
 
   const tiles: StatTile[] = [
     { id: "total", label: "Tổng tin đăng", value: listings.length, icon: FileText, color: C.primary, bg: C.cream },
@@ -67,12 +74,14 @@ export function ListingStats({ listings, isMobile, onSelectStatus }: {
     },
     {
       id: "attention", label: "Cần xử lý", value: needsAction,
-      hint: needsAction > 0 ? `${pending} chờ duyệt · ${rejected} bị từ chối` : "Mọi tin đều ổn",
+      hint: needsAction > 0 ? actionHint : "Mọi tin đều ổn",
       icon: TriangleAlert,
       color: needsAction > 0 ? LISTING_META.pendingApproval.color : C.textSecondary,
       bg: needsAction > 0 ? LISTING_META.pendingApproval.bg : C.cream,
-      // Tin bị từ chối cần sửa ngay ⇒ ưu tiên mở tab đó.
-      onClick: needsAction > 0 ? () => onSelectStatus(rejected > 0 ? "Rejected" : "PendingApproval") : undefined,
+      // Ưu tiên việc người bán tự làm được: sửa tin bị từ chối → gia hạn tin hết hạn.
+      onClick: needsAction > 0
+        ? () => onSelectStatus(rejected > 0 ? "Rejected" : expired > 0 ? "Expired" : "PendingApproval")
+        : undefined,
     },
     {
       id: "views", label: "Lượt xem", value: formatVND(views) || "0",
