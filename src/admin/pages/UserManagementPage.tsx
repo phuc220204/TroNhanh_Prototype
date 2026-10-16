@@ -14,13 +14,14 @@ import type { SubscriptionStatus } from "../../shared/types/status";
 const GRANTABLE: GrantableRole[] = ["Seller", "Moderator"];
 
 /** Lọc theo vai trò ở client: `admin_list_users` trả tối đa 200 người mới nhất. */
-type RoleFilter = "all" | "Seller" | "Moderator" | "Admin" | "none";
+type RoleFilter = "all" | "Seller" | "Moderator" | "Admin" | "renterOnly";
 const ROLE_FILTERS: { key: RoleFilter; label: string }[] = [
   { key: "all", label: "Tất cả" },
   { key: "Seller", label: "Seller" },
   { key: "Moderator", label: "Moderator" },
   { key: "Admin", label: "Admin" },
-  { key: "none", label: "Chưa có vai trò" },
+  // Mọi tài khoản đều có vai trò Renter ⇒ lọc "chỉ đi thuê" thay vì "chưa có vai trò" (luôn rỗng).
+  { key: "renterOnly", label: "Chỉ người thuê" },
 ];
 const PAGE_SIZE = 20;
 
@@ -61,7 +62,7 @@ export function UserManagementPage() {
 
   const filteredRows = useMemo(() => rows.filter((u) => {
     if (roleFilter === "all") return true;
-    if (roleFilter === "none") return u.roles.length === 0;
+    if (roleFilter === "renterOnly") return !u.roles.some((role) => role === "Seller" || role === "Moderator" || role === "Admin");
     return u.roles.includes(roleFilter);
   }), [rows, roleFilter]);
   const pageRows = filteredRows.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);

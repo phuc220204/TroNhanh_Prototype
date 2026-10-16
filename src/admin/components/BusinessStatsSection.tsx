@@ -44,7 +44,9 @@ export function BusinessStatsSection({ columns, isMobile }: BusinessStatsSection
 
   const stats = statsQuery.data;
   const revenue = stats ? stats.saas_revenue + stats.boost_revenue + stats.demand_boost_revenue : 0;
-  const monthLabel = new Intl.DateTimeFormat("vi-VN", { month: "2-digit", year: "numeric" }).format(new Date());
+  // Tự ghép "10/2026": Intl vi-VN trả "tháng 10, 2026" ⇒ nhãn bị lặp chữ "tháng".
+  const now = new Date();
+  const monthLabel = `${String(now.getMonth() + 1).padStart(2, "0")}/${now.getFullYear()}`;
 
   const cards: StatCard[] = stats ? [
     { key: "active", label: "Gói đang hoạt động", value: numberFormat.format(stats.active_subscriptions), detail: "Gói Quản lý vận hành ACTIVE còn hạn", Icon: BadgeCheck, accent: C.available },
