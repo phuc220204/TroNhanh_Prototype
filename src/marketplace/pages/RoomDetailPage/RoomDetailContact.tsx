@@ -78,7 +78,7 @@ export function StickyContactCard({ listing, onChat, onPhone, user }: { listing:
         <div style={{ marginTop: 10, padding: "10px 14px", background: C.caramelSoft, borderRadius: 10, display: "flex", alignItems: "flex-start", gap: 7 }}>
           <Shield size={13} color={C.secondary} style={{ marginTop: 2, flexShrink: 0 }} />
           <p style={{ fontFamily: font, fontSize: 12, color: C.textSecondary, margin: 0, lineHeight: 1.55 }}>
-            Trọ Nhanh khuyến khích trao đổi trong nền tảng để lưu lại nội dung tư vấn. Hãy kiểm tra phòng trực tiếp trước khi đặt cọc.
+            Trọ Nhanh khuyến khích trao đổi trong nền tảng để lưu lại nội dung tư vấn.
           </p>
         </div>
       </div>

@@ -131,7 +131,7 @@ export function SearchRoomCard({ room, mobile, onClick }: { room: SearchRoom; mo
       <div style={{ position: "relative", flexShrink: 0, width: mobile ? 140 : "100%" }}>
         <img src={room.img} alt={room.title} style={{ width: "100%", height: mobile ? 140 : 172, objectFit: "cover", display: "block" }} />
         <SaveListingButton listingId={room.id} overlay size={16} />
-        <span style={{ position: "absolute", top: 10, left: 10, background: C.available, color: C.white, fontFamily: font, fontSize: 11, fontWeight: 700, borderRadius: 999, padding: "3px 10px" }}>Trống</span>
+        <span style={{ position: "absolute", top: 10, left: 10, background: C.available, color: C.white, fontFamily: font, fontSize: 11, fontWeight: 700, borderRadius: 999, padding: "3px 10px" }}>Còn trống</span>
         <ListingTag badge={room.badge} style={{ position: "absolute", bottom: 10, left: 10 }} />
       </div>
       <div style={{ padding: "12px 14px 14px", display: "flex", flexDirection: "column", flex: 1, minWidth: 0 }}>
@@ -258,7 +258,11 @@ export function ResultsHeader({ count, filters, onRemoveChip, sortBy, onSortChan
       <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", flexWrap: "wrap", gap: 12 }}>
         <div>
           <h2 style={{ fontFamily: font, fontSize: 21, fontWeight: 700, color: C.textPrimary, margin: 0 }}>Tìm thấy <span style={{ color: C.primary }}>{count} phòng</span> phù hợp</h2>
-          <p style={{ fontFamily: font, fontSize: 13, color: C.textSecondary, margin: "4px 0 0" }}>Dựa trên khu vực, giá và tiện ích bạn đã chọn</p>
+          <p style={{ fontFamily: font, fontSize: 13, color: C.textSecondary, margin: "4px 0 0" }}>
+            {getActiveSearchChips(filters).length > 0
+              ? "Dựa trên khu vực, giá và tiện ích bạn đã chọn"
+              : "Tất cả tin đang hiển thị, mới nhất trước. Dùng bộ lọc để thu hẹp kết quả."}
+          </p>
         </div>
         <div style={{ position: "relative" }}>
           <select aria-label="Sắp xếp kết quả" data-testid="search-sort" value={sortBy} onChange={(event) => onSortChange(event.target.value as SearchSort)} style={{ padding: "9px 32px 9px 12px", minHeight: 44, border: `1.5px solid ${C.border}`, borderRadius: 10, background: C.white, fontFamily: font, fontSize: 13, color: C.textPrimary, cursor: "pointer", appearance: "none", outline: "none" }}>

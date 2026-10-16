@@ -36,11 +36,14 @@ export function HomePage() {
   const [dbRoomWants, setDbRoomWants] = useState<any[]>([]);
   const [dbRoommateWants, setDbRoommateWants] = useState<any[]>([]);
   const [isLoadingHome, setIsLoadingHome] = useState(true);
+  const [hasListingsError, setHasListingsError] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
     let isCurrent = true;
     const loadHomeData = async () => {
       setIsLoadingHome(true);
+      setHasListingsError(false);
       try {
         // allSettled: lỗi tin nhu cầu không được kéo mất khối phòng nổi bật (và ngược lại).
         const [featuredResult, demandResult] = await Promise.allSettled([
@@ -73,13 +76,15 @@ export function HomePage() {
         setDbRoommateWants(demandData.filter(d => d.kind === "RoommateWanted"));
       } catch (err) {
         logError("HomePage.loadHomeData", err);
+        if (isCurrent) setHasListingsError(true);
       } finally {
         if (isCurrent) setIsLoadingHome(false);
       }
     };
     void loadHomeData();
     return () => { isCurrent = false; };
-  }, []);
+  }, [reloadKey]);
+  const retryHome = () => setReloadKey((key) => key + 1);
 
   const rooms = dbRooms;
   const roomWants = dbRoomWants;
@@ -100,7 +105,7 @@ export function HomePage() {
         <div style={{ flex: 1, overflowY: "auto" }}>
           <HeroSection onSearch={onSearch} isMobile />
 
-          <FeaturedRoomsSection rooms={rooms} loading={isLoadingHome} onRoomClick={onRoomClick} onSearch={onSearch} onViewAll={onViewAll} onPost={onLandlordPost} cols={1} />
+          <FeaturedRoomsSection rooms={rooms} loading={isLoadingHome} hasError={hasListingsError} onRetry={retryHome} onRoomClick={onRoomClick} onSearch={onSearch} onViewAll={onViewAll} onPost={onLandlordPost} cols={1} />
 
           <MarketplaceSections roomWants={roomWants} roommateWants={roommateWants} loading={isLoadingHome} mobile onInfo={setInfoModal} />
           <WhyUsSection mobile />
@@ -126,7 +131,7 @@ export function HomePage() {
 
       <main style={{ flex: 1 }}>
         <HeroSection onSearch={onSearch} isMobile={isTablet} />
-        <FeaturedRoomsSection rooms={rooms} loading={isLoadingHome} onRoomClick={onRoomClick} onSearch={onSearch} onViewAll={onViewAll} cols={gridCols} />
+        <FeaturedRoomsSection rooms={rooms} loading={isLoadingHome} hasError={hasListingsError} onRetry={retryHome} onRoomClick={onRoomClick} onSearch={onSearch} onViewAll={onViewAll} cols={gridCols} />
         <MarketplaceSections roomWants={roomWants} roommateWants={roommateWants} loading={isLoadingHome} tablet={isTablet} onInfo={setInfoModal} />
         <WhyUsSection />
         <PostingCTASection onRenterPost={() => setPostTypeModal(true)} onLandlordPost={onLandlordPost} />

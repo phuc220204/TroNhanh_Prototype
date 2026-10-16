@@ -1,11 +1,16 @@
 import { createHashRouter, redirect } from "react-router";
 import { RequireAuth } from "../shared/components/RequireAuth";
 import { RequireAdminOrModerator } from "../shared/components/RequireRole";
+// Import tĩnh (không lazy): màn lỗi phải có sẵn ngay cả khi tải chunk thất bại.
+import { RouteErrorScreen } from "../shared/components/RouteErrorScreen";
 
 export const router = createHashRouter([
   {
     path: "/",
     HydrateFallback: () => null,
+    // Bắt lỗi render/loader/lazy-chunk của mọi route con — màn lỗi tiếng Việt
+    // thay cho màn mặc định "Unexpected Application Error!" của React Router.
+    ErrorBoundary: RouteErrorScreen,
     lazy: async () => ({ Component: (await import("./Root")).default }),
     children: [
       // Marketplace / Public Shell

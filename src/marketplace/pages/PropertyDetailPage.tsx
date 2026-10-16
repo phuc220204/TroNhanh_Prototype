@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { qk } from "../../shared/query/keys";
 import { Home, Star, MapPin, TriangleAlert } from "lucide-react";
 import { PublicNavbar } from "../../shared/components/PublicNavbar";
-import { EmptyState, Skeleton } from "../../shared/components/common";
+import { Button, EmptyState, Skeleton } from "../../shared/components/common";
 import { C, font, radius, space } from "../../shared/theme";
 import { toUserMessage } from "../../shared/services/supabase-error";
 import { getPropertyPublicProfile, listPropertyReviews } from "../services/review-service";
@@ -41,6 +41,13 @@ export function PropertyDetailPage() {
       <div style={{ maxWidth: 860, margin: "0 auto", padding: `${space[8]}px ${space[5]}px` }}>
         {profileQuery.isPending ? (
           <Skeleton variant="card" count={2} />
+        ) : profileQuery.isError ? (
+          <EmptyState
+            icon={TriangleAlert}
+            title="Chưa tải được trang khu trọ"
+            description={toUserMessage(profileQuery.error)}
+            action={<Button variant="outline" onClick={() => void profileQuery.refetch()}>Thử lại</Button>}
+          />
         ) : !property ? (
           <EmptyState
             icon={Home}

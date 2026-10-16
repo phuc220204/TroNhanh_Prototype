@@ -386,6 +386,9 @@ export async function getFeaturedListings(limit = 6): Promise<ListingCardItem[]>
     pageSize: limit,
     page: 1,
   });
+  // searchListings không throw (trả `hasError`) — ở đây throw để gọi viên phân biệt
+  // "lỗi tải" với "chưa có tin" (trang chủ từng hiện "Chưa có tin đăng" khi mất mạng).
+  if (result.hasError) throw new Error("FEATURED_LISTINGS_UNAVAILABLE");
   return result.data;
 }
 
@@ -421,12 +424,16 @@ export async function getListingById(id: string) {
       .is("deleted_at", null)
       .maybeSingle();
 
+    // 22P02 = id không phải uuid (link gõ sai) ⇒ "không tìm thấy", không phải lỗi hệ thống.
+    if (error?.code === "22P02") return null;
     if (error) throw error;
     if (!data) return data;
     return { ...data, contact_phone: data.contact_phone ?? data.contact_phone_masked ?? null };
   } catch (err) {
+    // Throw thay vì trả null: trước đây lỗi mạng hiện "Không tìm thấy phòng",
+    // người xem tưởng tin đã bị gỡ. Gọi viên tự phân biệt null (không có) / lỗi.
     logError("listing-queries.getListingById", err);
-    return null;
+    throw err;
   }
 }
 

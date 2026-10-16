@@ -124,6 +124,8 @@ export async function getDemandPostById(id: string): Promise<DemandPostItem | nu
       .eq("id", id)
       .maybeSingle();
 
+    // 22P02 = id không phải uuid (link gõ sai) ⇒ "không tìm thấy", không phải lỗi hệ thống.
+    if (error?.code === "22P02") return null;
     if (error) throw error;
     if (!data) return null;
     return formatDemandPostItem(data);
