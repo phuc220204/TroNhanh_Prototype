@@ -3,13 +3,14 @@ import { useSearchParams } from "react-router";
 import { useQuery } from "@tanstack/react-query";
 import { CheckCircle2, Clock, Crown, TriangleAlert } from "lucide-react";
 import { LandlordShell } from "../../shared/components/LandlordShell";
-import { C, font, radius, shadow } from "../../shared/theme";
+import { C, font, radius } from "../../shared/theme";
 import { useAuth } from "../../shared/contexts/AuthContext";
 import { useSubscriptionContext } from "../../shared/contexts/SubscriptionContext";
 import { TRIAL_DAYS } from "../../shared/services/subscription-service";
 import { useBreakpoint } from "../../shared/components/useBreakpoint";
 import { qk } from "../../shared/query/keys";
 import { Button, EmptyState, Skeleton } from "../../shared/components/common";
+import { PlanCard } from "../../shared/components/PlanCard";
 import { toUserMessage } from "../../shared/services/supabase-error";
 import { formatDate, formatVnd } from "../../shared/utils/format";
 import {
@@ -20,7 +21,6 @@ import {
   getSaasOrderStatus,
   getSubscriptionPlans,
   redirectToSaasCheckout,
-  type SubscriptionPlan,
 } from "../../shared/services/saas-plan-service";
 
 const STATUS_LABEL: Record<string, string> = {
@@ -93,46 +93,11 @@ function PaymentReturnNotice({ orderCode, result, onPaid, onDismiss }: {
   );
 }
 
-function PlanCard({ plan, isRenewal, isCurrent, isBuying, disabled, onBuy }: {
-  plan: SubscriptionPlan;
-  isRenewal: boolean;
-  isCurrent: boolean;
-  isBuying: boolean;
-  disabled: boolean;
-  onBuy: () => void;
-}) {
-  const price = isRenewal ? plan.renewal_price : plan.price;
-  const perMonth = Math.round(price / Math.max(1, plan.duration_months));
-  return (
-    <div data-testid="saas-plan-card" style={{ background: C.white, border: `1.5px solid ${isCurrent ? C.primary : C.border}`, borderRadius: radius.xl, padding: 20, display: "flex", flexDirection: "column", gap: 12, boxShadow: shadow.sm, fontFamily: font }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
-        <h2 style={{ margin: 0, fontSize: 17, fontWeight: 800, color: C.textPrimary }}>{plan.name}</h2>
-        {isCurrent && <span style={{ fontSize: 11, fontWeight: 800, color: C.primary, background: C.cream, borderRadius: radius.pill, padding: "3px 10px" }}>Gói hiện tại</span>}
-      </div>
-      <div>
-        <div style={{ fontSize: 24, fontWeight: 900, color: C.primary }}>{formatVnd(price)}</div>
-        <div style={{ fontSize: 12.5, color: C.textSecondary }}>
-          cho {plan.duration_months} tháng · ≈ {formatVnd(perMonth)}/tháng
-          {isRenewal && plan.renewal_price < plan.price && <> · giá gia hạn (giá mới {formatVnd(plan.price)})</>}
-        </div>
-      </div>
-      <ul style={{ margin: 0, paddingLeft: 18, fontSize: 13, color: C.textSecondary, lineHeight: 1.7 }}>
-        <li>Không giới hạn số khu trọ và số phòng</li>
-        <li>Người ở, hợp đồng, điện nước, hóa đơn & nhắc thu tiền</li>
-        <li>Mua sớm khi còn hạn: thời gian được cộng dồn</li>
-      </ul>
-      <Button variant={isCurrent ? "primary" : "outline"} loading={isBuying} disabled={disabled} onClick={onBuy} data-testid={`saas-plan-buy-${plan.id}`} style={{ marginTop: "auto" }}>
-        {isRenewal ? "Gia hạn gói" : "Mua gói"}
-      </Button>
-    </div>
-  );
-}
-
 /** /chu-tro/goi-dich-vu — mua / gia hạn gói quản lý vận hành qua payOS. Không bị khóa khi chưa có gói. */
 export function SubscriptionPlansPage() {
   const { user } = useAuth();
   const { isMobile } = useBreakpoint();
-  const { status, plan: currentPlan, expireDate, refresh, activateTrial, isLoading: isSubscriptionLoading } = useSubscriptionContext();
+  const { status, plan: currentPlan, expireDate, refresh, activateTrial, isLoading: isSubscriptionLoading, isError: isSubscriptionError } = useSubscriptionContext();
   const [searchParams, setSearchParams] = useSearchParams();
   const [buyingPlanId, setBuyingPlanId] = useState<string | null>(null);
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
@@ -194,7 +159,9 @@ export function SubscriptionPlansPage() {
             <Crown size={20} color={C.primary} />
             <div>
               <div style={{ fontSize: 14.5, fontWeight: 800, color: C.textPrimary }}>
-                {isSubscriptionLoading ? <Skeleton variant="text" label="Đang tải gói hiện tại" style={{ width: 160 }} /> : STATUS_LABEL[status] ?? status}
+                {isSubscriptionLoading
+                  ? <Skeleton variant="text" label="Đang tải gói hiện tại" style={{ width: 160 }} />
+                  : isSubscriptionError ? "Chưa tải được gói hiện tại" : STATUS_LABEL[status] ?? status}
                 {currentPlan?.name && status !== "NONE" ? ` · ${currentPlan.name}` : ""}
               </div>
               {expireDate && status !== "NONE" && (
@@ -204,7 +171,10 @@ export function SubscriptionPlansPage() {
               )}
             </div>
           </div>
-          {status === "NONE" && (
+          {isSubscriptionError && (
+            <Button variant="outline" onClick={refresh} data-testid="saas-subscription-retry">Thử lại</Button>
+          )}
+          {status === "NONE" && !isSubscriptionError && !isSubscriptionLoading && (
             <Button variant="outline" loading={isActivatingTrial} onClick={() => void handleTrial()} data-testid="saas-start-trial-btn">
               Dùng thử miễn phí {TRIAL_DAYS} ngày
             </Button>

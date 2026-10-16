@@ -19,6 +19,7 @@ export const router = createHashRouter([
       ...(import.meta.env.DEV
         ? [{ path: "styleguide", lazy: async () => ({ Component: (await import("../marketplace/pages/StyleGuidePage")).StyleGuidePage }) }]
         : []),
+      { path: "bang-gia", lazy: async () => ({ Component: (await import("../shared/pages/PricingPage")).PricingPage }) },
       { path: "dang-nhap", lazy: async () => ({ Component: (await import("../marketplace/pages/LoginPage")).LoginPage }) },
       { path: "dang-ky", lazy: async () => ({ Component: (await import("../marketplace/pages/RegisterPage")).RegisterPage }) },
 
