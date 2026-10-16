@@ -3,7 +3,7 @@ import { Link, useNavigate } from "react-router";
 import { C, font, radius, space } from "../../theme";
 import { useBreakpoint } from "../../components/useBreakpoint";
 import { PublicNavbar } from "../../components/PublicNavbar";
-import { LEGAL_ROUTES, LEGAL_VERSION, SUPPORT_EMAIL, type LegalDocKind } from "../../constants/legal";
+import { LEGAL_OPERATOR_NAME, LEGAL_ROUTES, LEGAL_VERSION, SUPPORT_EMAIL, type LegalDocKind } from "../../constants/legal";
 import { LEGAL_DOCS } from "./content";
 
 const DOC_ORDER: LegalDocKind[] = ["terms", "privacy", "refund"];
@@ -72,6 +72,8 @@ function LegalPage({ kind }: { kind: LegalDocKind }) {
         ))}
 
         <p style={{ fontSize: 13.5, color: C.textSecondary, lineHeight: 1.7, marginTop: space[8], paddingTop: space[5], borderTop: `1px solid ${C.border}` }}>
+          Đơn vị vận hành: <strong style={{ color: C.textPrimary }} data-testid="legal-operator">{LEGAL_OPERATOR_NAME}</strong>
+          <br />
           Câu hỏi về chính sách: <a href={`mailto:${SUPPORT_EMAIL}`} style={{ color: C.primary, fontWeight: 700 }}>{SUPPORT_EMAIL}</a>
         </p>
       </main>

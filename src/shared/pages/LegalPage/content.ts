@@ -1,4 +1,4 @@
-import { LEGAL_OPERATOR_NAME, SUPPORT_EMAIL, type LegalDocKind } from "../../constants/legal";
+import { SUPPORT_EMAIL, type LegalDocKind } from "../../constants/legal";
 
 export interface LegalSection {
   heading: string;
@@ -19,7 +19,7 @@ export interface LegalDoc {
 export const LEGAL_DOCS: Record<LegalDocKind, LegalDoc> = {
   terms: {
     title: "Điều khoản sử dụng",
-    intro: `Trọ Nhanh là nền tảng kết nối người tìm phòng với người cho thuê và cung cấp công cụ quản lý khu trọ, do ${LEGAL_OPERATOR_NAME} vận hành. Khi tạo tài khoản hoặc sử dụng dịch vụ, bạn đồng ý với các điều khoản dưới đây.`,
+    intro: `Trọ Nhanh là nền tảng kết nối người tìm phòng với người cho thuê và cung cấp công cụ quản lý khu trọ. Khi tạo tài khoản hoặc sử dụng dịch vụ, bạn đồng ý với các điều khoản dưới đây.`,
     sections: [
       {
         heading: "1. Vai trò của Trọ Nhanh",
@@ -76,7 +76,7 @@ export const LEGAL_DOCS: Record<LegalDocKind, LegalDoc> = {
 
   privacy: {
     title: "Chính sách bảo mật",
-    intro: `Chính sách này giải thích Trọ Nhanh (do ${LEGAL_OPERATOR_NAME} vận hành) thu thập, sử dụng và bảo vệ dữ liệu cá nhân của bạn như thế nào, theo Nghị định 13/2023/NĐ-CP về bảo vệ dữ liệu cá nhân.`,
+    intro: `Chính sách này giải thích Trọ Nhanh thu thập, sử dụng và bảo vệ dữ liệu cá nhân của bạn như thế nào, theo Nghị định 13/2023/NĐ-CP về bảo vệ dữ liệu cá nhân.`,
     sections: [
       {
         heading: "1. Dữ liệu chúng tôi thu thập",

@@ -3,9 +3,9 @@
  * Đổi nội dung chính sách ⇒ tăng LEGAL_VERSION để biết người dùng đã đồng ý bản nào.
  */
 
-// TODO(proposal): chủ dự án điền họ tên người vận hành trước khi merge/deploy.
-// Trang chính sách hiện nguyên văn chuỗi này — để trống là sai luật NĐ 52/2013.
-export const LEGAL_OPERATOR_NAME = "[Họ tên người vận hành]";
+// Chủ dự án chốt 16/10/2026: ghi tên thương hiệu. Khi có giấy phép / mã số thuế,
+// thay bằng tên cá nhân hoặc doanh nghiệp chịu trách nhiệm (NĐ 52/2013).
+export const LEGAL_OPERATOR_NAME = "Trọ Nhanh";
 
 export const SUPPORT_EMAIL = "tronhanh2026@gmail.com";
 
