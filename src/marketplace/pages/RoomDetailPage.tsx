@@ -7,7 +7,8 @@ import { PublicNavbar } from "../../shared/components/PublicNavbar";
 import { useAuth } from "../../shared/contexts/AuthContext";
 import { getListingImage, listingImageUrls, type ListingCardItem } from "../services/listing-mappers";
 import { getListingById, incrementViewCount, getSimilarListings } from "../services/listing-queries";
-import { logError } from "../../shared/services/supabase-error";
+import { logError, toUserMessage } from "../../shared/services/supabase-error";
+import { useToast } from "../../shared/contexts/ToastContext";
 import { ListingHeaderMeta } from "../components/ListingCardMeta";
 import { startConversation } from "../../shared/services/messaging-service";
 import {
@@ -26,10 +27,13 @@ export function RoomDetailPage() {
   const { isMobile, width } = useBreakpoint();
   const isCompact = width < 1024;
   const { user } = useAuth();
+  const { showToast } = useToast();
 
   const [listing, setListing]           = useState<any>(null);
   const [similarListings, setSimilarListings] = useState<ListingCardItem[]>([]);
   const [isLoading, setIsLoading]       = useState(true);
+  const [hasLoadError, setHasLoadError] = useState(false);
+  const [reloadKey, setReloadKey]       = useState(0);
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [lightboxIdx, setLightboxIdx]   = useState(0);
   const [phoneModal, setPhoneModal]     = useState(false);
@@ -43,6 +47,7 @@ export function RoomDetailPage() {
     let cancelled = false;
     const fetchListing = async () => {
       setIsLoading(true);
+      setHasLoadError(false);
       try {
         const data = await getListingById(id);
         if (cancelled) return;
@@ -56,13 +61,14 @@ export function RoomDetailPage() {
         }
       } catch (err) {
         logError("RoomDetailPage.fetchListing", err);
+        if (!cancelled) setHasLoadError(true);
       } finally {
         if (!cancelled) setIsLoading(false);
       }
     };
     void fetchListing();
     return () => { cancelled = true; };
-  }, [id]);
+  }, [id, reloadKey]);
 
   const openSimilar = (similarId: string) => {
     navigate(`/phong/${similarId}`);
@@ -76,12 +82,18 @@ export function RoomDetailPage() {
       navigate(`/dang-nhap?redirect=/phong/${listing.id}`);
       return;
     }
-    if (listing.seller_id === user.id) return;
+    // Trước đây hai nhánh dưới đều im lặng: bấm "Gửi tin nhắn" mà không có gì xảy
+    // ra. Trang tin nhu cầu đã báo bằng toast — làm giống vậy (BR-030).
+    if (listing.seller_id === user.id) {
+      showToast("Đây là tin đăng của bạn nên không thể tự nhắn tin.", { variant: "error" });
+      return;
+    }
     try {
       const convId = await startConversation("RentalListing", listing.id);
       navigate(`/tin-nhan/${convId}`);
-    } catch (err: any) {
+    } catch (err) {
       logError("RoomDetailPage.openChat", err);
+      showToast(`Chưa mở được cuộc trò chuyện: ${toUserMessage(err)}`, { variant: "error" });
     }
   };
   const openPhone = () => setPhoneModal(true);
@@ -101,6 +113,16 @@ export function RoomDetailPage() {
     return (
       <div style={{ background: C.bg, minHeight: "100vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
         <p style={{ fontFamily: font, fontSize: 16, color: C.textSecondary }}>Đang tải thông tin chi tiết phòng...</p>
+      </div>
+    );
+  }
+
+  if (hasLoadError) {
+    return (
+      <div data-testid="room-detail-error" style={{ background: C.bg, minHeight: "100vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 24, textAlign: "center" }}>
+        <p style={{ fontFamily: font, fontSize: 16, fontWeight: 700, color: C.textPrimary, margin: "0 0 6px" }}>Chưa tải được thông tin phòng</p>
+        <p style={{ fontFamily: font, fontSize: 14, color: C.textSecondary, margin: "0 0 16px" }}>Kết nối tới máy chủ đang gián đoạn. Vui lòng thử lại.</p>
+        <button type="button" onClick={() => setReloadKey((key) => key + 1)} style={{ padding: "10px 20px", background: C.primary, color: C.white, border: "none", borderRadius: 10, cursor: "pointer", fontFamily: font, fontWeight: 700 }}>Thử lại</button>
       </div>
     );
   }

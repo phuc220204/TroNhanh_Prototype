@@ -310,7 +310,8 @@ export function CostTable({ listing }: { listing: any }) {
     { Icon: Zap, label: "Tiền điện", value: costValues.electric },
     { Icon: Droplets, label: "Tiền nước", value: costValues.water },
     { Icon: Wrench, label: "Phí dịch vụ", value: costValues.service },
-    { Icon: Key, label: "Đặt cọc", value: costValues.deposit }
+    // Không có "Đặt cọc": tiền cọc trả một lần, không phải chi phí hàng tháng, và
+    // đã hiện ở "Thông tin cơ bản" — trước đây trang ghi "Đặt cọc" hai lần.
   ];
 
   if (costValues.other) {
@@ -418,6 +419,19 @@ export function ReviewsSection({ listing }: { listing: any }) {
   const avg = reviews.length
     ? reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length
     : 0;
+
+  // Lỗi tải ≠ "chưa có đánh giá": khu có đánh giá xấu mà lỗi mạng hiện "chưa có"
+  // là thông tin sai cho người đang cân nhắc thuê.
+  if (propertyId && reviewsQuery.isError) {
+    return (
+      <Section title="Đánh giá khu trọ">
+        <div data-testid="reviews-error" style={{ padding: 20, background: C.white, border: `1px solid ${C.border}`, borderRadius: 16, textAlign: "center" }}>
+          <p style={{ fontFamily: font, fontSize: 14, fontWeight: 600, color: C.textPrimary, margin: "0 0 10px" }}>Chưa tải được đánh giá</p>
+          <button type="button" onClick={() => void reviewsQuery.refetch()} style={{ padding: "8px 16px", background: C.white, border: `1.5px solid ${C.border}`, borderRadius: 10, fontFamily: font, fontSize: 13, fontWeight: 700, color: C.textSecondary, cursor: "pointer" }}>Thử lại</button>
+        </div>
+      </Section>
+    );
+  }
 
   if (!propertyId || (!reviewsQuery.isPending && reviews.length === 0)) {
     return (

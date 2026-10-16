@@ -4,7 +4,7 @@ import { SlidersHorizontal } from "lucide-react";
 import { C, font } from "../../shared/theme";
 import { useBreakpoint } from "../../shared/components/useBreakpoint";
 import { PublicNavbarDesktop, PublicNavbarMobile } from "../../shared/components/PublicNavbar";
-import { BottomTabBar } from "../../shared/components/common";
+import { BottomTabBar, Pagination } from "../../shared/components/common";
 import { provinceName } from "../../shared/utils/vn-regions";
 import { mapAmenityToKey, mapTypeToKey } from "../services/listing-mappers";
 import { searchListings } from "../services/listing-queries";
@@ -28,6 +28,9 @@ import {
   SearchRoomCard,
 } from "./SearchResultsPage/SearchResultsComponents";
 
+/** Số tin mỗi trang. Trước đây lấy cứng 50 tin trang 1 và đếm theo số tin đã lấy ⇒ khu đông tin chỉ hiện "50 phòng", phần còn lại mất hút. */
+const SEARCH_PAGE_SIZE = 24;
+
 export function SearchResultsPage() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -37,7 +40,13 @@ export function SearchResultsPage() {
   const [filters, setFilters] = useState<SearchFilters>(() => filtersFromSearch(location.search));
   const [pendingFilters, setPendingFilters] = useState<SearchFilters>(() => filtersFromSearch(location.search));
   const [rooms, setRooms] = useState<SearchRoom[]>([]);
+  const [totalCount, setTotalCount] = useState(0);
   const [sortBy, setSortBy] = useState<SearchSort>("newest");
+  // Trang gắn với "khóa" bộ lọc + sắp xếp: đổi bộ lọc là tự về trang 1 ngay trong
+  // lần render đó (không cần effect reset ⇒ không gọi API hai lần).
+  const queryKey = JSON.stringify([filters, sortBy]);
+  const [pageState, setPageState] = useState({ key: queryKey, page: 1 });
+  const page = pageState.key === queryKey ? pageState.page : 1;
   const [isLoading, setIsLoading] = useState(true);
   const [hasLoadError, setHasLoadError] = useState(false);
   const [retryCount, setRetryCount] = useState(0);
@@ -69,11 +78,18 @@ export function SearchResultsPage() {
           propertyTypes: filters.type !== "Tất cả" ? [filters.type] : undefined,
           amenities: filters.amenities.length > 0 ? filters.amenities : undefined,
           sort: sortBy,
-          page: 1,
-          pageSize: 50,
+          page,
+          pageSize: SEARCH_PAGE_SIZE,
         });
         if (!isCurrentRequest) return;
+        // Trang hiện tại không còn tin (tin vừa hết hạn/bị gỡ giữa hai lần bấm) ⇒ về trang 1
+        // thay vì để người dùng kẹt ở trang trống không có nút phân trang.
+        if (!result.hasError && result.data.length === 0 && page > 1) {
+          setPageState({ key: queryKey, page: 1 });
+          return;
+        }
         setHasLoadError(result.hasError);
+        setTotalCount(result.totalCount);
         setRooms(result.data.map((item) => ({
           id: item.id,
           title: item.title,
@@ -94,6 +110,7 @@ export function SearchResultsPage() {
           logError("SearchResultsPage.fetchRooms", error);
           setHasLoadError(true);
           setRooms([]);
+          setTotalCount(0);
         }
       } finally {
         if (isCurrentRequest) setIsLoading(false);
@@ -101,7 +118,15 @@ export function SearchResultsPage() {
     };
     void fetchRooms();
     return () => { isCurrentRequest = false; };
-  }, [filters, sortBy, retryCount]);
+  }, [filters, sortBy, page, retryCount]);
+
+  const goToPage = (next: number) => {
+    setPageState({ key: queryKey, page: next });
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+  const pagination = (
+    <Pagination page={page} pageSize={SEARCH_PAGE_SIZE} total={totalCount} onChange={goToPage} data-testid="search-pagination" style={{ marginTop: 28 }} />
+  );
 
   const loadErrorContent = (
     <div role="alert" data-testid="search-results-error" style={{ fontFamily: font, color: C.textPrimary, textAlign: "center", padding: 32 }}>
@@ -136,7 +161,7 @@ export function SearchResultsPage() {
     return (
       <div style={{ background: C.bg, minHeight: "100vh", display: "flex", flexDirection: "column" }}>
         <PublicNavbarMobile onSearch={() => navigate(-1)} />
-        <MobileSummaryBar count={rooms.length} isLoading={isLoading} hasError={hasLoadError} onFilter={openFilters} />
+        <MobileSummaryBar count={totalCount} isLoading={isLoading} hasError={hasLoadError} onFilter={openFilters} />
         <MobileActiveChips filters={filters} onRemove={removeChip} />
         <div style={{ flex: 1, overflowY: "auto" }}>
           {isLoading ? (
@@ -144,6 +169,7 @@ export function SearchResultsPage() {
           ) : hasLoadError ? loadErrorContent : rooms.length > 0 ? (
             <div style={{ display: "flex", flexDirection: "column", gap: 16, padding: "16px 16px 24px" }}>
               {rooms.map((room) => <SearchRoomCard key={room.id} room={room} mobile onClick={() => navigate(`/phong/${room.id}`)} />)}
+              {pagination}
             </div>
           ) : <div style={{ padding: 16 }}><SearchEmptyState onClear={clearAll} /></div>}
         </div>
@@ -171,7 +197,7 @@ export function SearchResultsPage() {
               <SlidersHorizontal size={15} /> Bộ lọc
             </button>
           )}
-          {!hasLoadError && <ResultsHeader count={rooms.length} filters={filters} onRemoveChip={removeChip} sortBy={sortBy} onSortChange={setSortBy} />}
+          {!hasLoadError && <ResultsHeader count={totalCount} filters={filters} onRemoveChip={removeChip} sortBy={sortBy} onSortChange={setSortBy} />}
           {isLoading ? (
             <div data-testid="search-results-loading" style={{ fontFamily: font, fontSize: 14, color: C.textSecondary, textAlign: "center", padding: 72 }}>Đang tìm kiếm phòng phù hợp...</div>
           ) : hasLoadError ? loadErrorContent : rooms.length > 0 ? (
@@ -179,6 +205,7 @@ export function SearchResultsPage() {
               <div style={{ display: "grid", gridTemplateColumns: `repeat(${gridColumns}, minmax(0, 1fr))`, gap: 20 }}>
                 {rooms.map((room) => <SearchRoomCard key={room.id} room={room} onClick={() => navigate(`/phong/${room.id}`)} />)}
               </div>
+              {pagination}
               <div style={{ textAlign: "center", marginTop: 48 }}>
                 <button type="button" onClick={() => navigate(-1)} style={{ padding: "12px 26px", border: `1.5px solid ${C.primary}`, borderRadius: 10, background: "transparent", color: C.primary, fontFamily: font, fontSize: 15, fontWeight: 600, cursor: "pointer" }}>Quay lại</button>
               </div>
