@@ -2,9 +2,10 @@ import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { qk } from "../../../shared/query/keys";
 import { getPropertiesByOwnerOrThrow } from "../../services/property-service";
 import { getRoomsByOwnerOrThrow, type RoomItem } from "../../services/room-service";
-import type { RoomStatus } from "../../../shared/types/status";
+import type { InvoiceStatus, RoomStatus } from "../../../shared/types/status";
 import { normalizeContractStatus, normalizeInvoiceStatus, normalizeRoomStatus } from "../../../shared/utils/statusMaps";
 import { getDashboardMetrics } from "../../services/dashboard-service";
+import { getDaysUntilDue } from "../../services/invoice-due";
 
 /**
  * Dữ liệu dashboard chủ trọ qua React Query.
@@ -60,21 +61,30 @@ export function useDashboardData(ownerId: string | undefined, propertyId: string
 }
 
 /** Một dòng trong bảng "Phòng" của dashboard, dựng từ dữ liệu phòng thật. */
-export function toDashboardRoom(room: RoomItem) {
+export function toDashboardRoom(room: RoomItem, now = new Date()) {
   const status: RoomStatus = normalizeRoomStatus(room.status) ?? "available";
   const activeContract = (room.contracts ?? []).find((c) => normalizeContractStatus(c.status) === "active");
   const occupant = activeContract?.occupancies?.find((o: { full_name?: string | null }) => o.full_name)?.full_name ?? null;
   // Kỳ dạng "YYYY-MM" ⇒ so chuỗi là so thời gian.
   const latestInvoice = [...(room.invoices ?? [])].sort((a, b) => String(b.period).localeCompare(String(a.period)))[0];
-  const invoiceStatus = latestInvoice ? normalizeInvoiceStatus(latestInvoice.status) : null;
-  const paid = invoiceStatus == null ? null : invoiceStatus === "paid";
+  const dbInvoiceStatus = latestInvoice ? normalizeInvoiceStatus(latestInvoice.status) : null;
+  // Chưa có job chuyển Unpaid → Overdue (BR-004): quá `due_date` mà chưa thu đủ
+  // thì hiện "Quá hạn", khớp với khối "Hóa đơn cần nhắc" ngay bên cạnh.
+  const daysUntilDue = latestInvoice?.due_date ? getDaysUntilDue(latestInvoice.due_date, now) : null;
+  const paymentStatus: InvoiceStatus | null = dbInvoiceStatus && dbInvoiceStatus !== "paid" && daysUntilDue !== null && daysUntilDue < 0
+    ? "overdue"
+    : dbInvoiceStatus;
+  const paid = paymentStatus == null ? null : paymentStatus === "paid";
 
   return {
+    roomId: room.id,
+    propertyId: room.property_id,
     code: room.room_code || room.room_number || "",
     property: room.properties?.name || "Khu trọ",
     status,
     occupant,
     paid,
+    paymentStatus,
     task: status === "available"
       ? "Tạo tin đăng"
       : status === "rented" && paid === false

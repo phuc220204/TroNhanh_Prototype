@@ -41,6 +41,8 @@ export const qk = {
     featured: (limit: number) => ["listings", "featured", limit] as const,
     detail: (id: string) => ["listings", "detail", id] as const,
     mine: (sellerId: string | undefined) => ["listings", "mine", sellerId] as const,
+    /** Số tin của người bán theo trạng thái — nằm dưới `mine` ⇒ invalidate `mine` là làm mới luôn. */
+    mineCount: (sellerId: string | undefined, status: string) => ["listings", "mine", sellerId, "count", status] as const,
     media: (listingId: string) => ["listings", "media", listingId] as const,
   },
 
@@ -87,6 +89,8 @@ export const qk = {
     mine: (ownerId: string | undefined) => ["rooms", "mine", ownerId] as const,
     detail: (id: string) => ["rooms", "detail", id] as const,
     vacant: (ownerId: string | undefined) => ["rooms", "vacant", ownerId] as const,
+    /** Giá trị điền sẵn form đăng tin từ một phòng trống ("Tạo tin đăng"). */
+    listingPrefill: (roomId: string) => ["rooms", "listingPrefill", roomId] as const,
   },
 
   occupancies: {

@@ -4,6 +4,8 @@ import { Badge, Button, Skeleton } from "../../../shared/components/common";
 import { formatDate, formatVnd } from "../../../shared/utils/format";
 import type { Property } from "../../types/room";
 import type { OccupancyItem } from "../../services/occupancy-service";
+import { CONTRACT_STATUS_META } from "../../../shared/utils/statusMaps";
+import { classifyContractEnd, formatContractEndLabel } from "../../services/contract-due";
 
 type ContractRow = NonNullable<OccupancyItem["contracts"]>[number];
 
@@ -48,6 +50,27 @@ function contractPeriod(row: OccupancyRow): string {
   return row.contract
     ? `${formatDate(row.contract.start_date)} → ${formatDate(row.contract.end_date)}`
     : formatDate(row.occ.start_date);
+}
+
+/**
+ * "Quá hạn N ngày" / "Còn N ngày" cạnh thời hạn hợp đồng. Hợp đồng quá `end_date`
+ * vẫn ở `Active` (chưa có job tự chuyển) nên phải tự tính để chủ trọ thấy.
+ */
+function ContractEndBadge({ row }: { row: OccupancyRow }) {
+  if (!row.occ.is_active || !row.contract) return null;
+  const endInfo = classifyContractEnd(row.contract.end_date, row.contract.status, new Date());
+  if (!endInfo) return null;
+  const tone = endInfo.state === "expired"
+    ? CONTRACT_STATUS_META.expired
+    : { color: C.warning, bg: C.warningBg };
+  return (
+    <span
+      data-testid={endInfo.state === "expired" ? "contract-overdue-badge" : "contract-expiring-badge"}
+      style={{ display: "inline-block", fontFamily: font, fontSize: 11, fontWeight: 700, color: tone.color, background: tone.bg, borderRadius: radius.pill, padding: "2px 8px", marginTop: 4, whiteSpace: "nowrap" }}
+    >
+      {formatContractEndLabel(endInfo.daysUntilEnd)}
+    </span>
+  );
 }
 
 function LinkStatus({ row, onOpenLinkModal, onCancelLink }: {
@@ -196,7 +219,7 @@ export function OccupancyTable({
               <LinkStatus row={row} onOpenLinkModal={onOpenLinkModal} onCancelLink={onCancelLink} />
             </div>
             <div style={{ display: "flex", justifyContent: "space-between", gap: 10, marginTop: 8, fontSize: 12.5, color: C.textSecondary }}>
-              <span>{contractPeriod(row)}</span>
+              <span>{contractPeriod(row)} <ContractEndBadge row={row} /></span>
               {row.contract && <strong style={{ color: C.primary }}>{formatVnd(row.contract.rent_price)}/tháng</strong>}
             </div>
             {row.canManageContract && (
@@ -235,7 +258,10 @@ export function OccupancyTable({
               </td>
               <td style={cellStyle}>{row.occ.phone_number || "—"}</td>
               <td style={cellStyle}>{row.occ.occupant_count} người</td>
-              <td style={{ ...cellStyle, fontSize: 12.5 }}>{contractPeriod(row)}</td>
+              <td style={{ ...cellStyle, fontSize: 12.5 }}>
+                <div>{contractPeriod(row)}</div>
+                <ContractEndBadge row={row} />
+              </td>
               <td style={{ ...cellStyle, color: C.textPrimary }}>{row.contract ? formatVnd(row.contract.deposit) : "—"}</td>
               <td style={{ ...cellStyle, fontSize: 13.5, fontWeight: 700, color: C.primary }}>{row.contract ? formatVnd(row.contract.rent_price) : "—"}</td>
               <td style={cellStyle}><LinkStatus row={row} onOpenLinkModal={onOpenLinkModal} onCancelLink={onCancelLink} /></td>

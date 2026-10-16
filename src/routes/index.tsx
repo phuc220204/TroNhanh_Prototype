@@ -60,7 +60,22 @@ export const router = createHashRouter([
           { path: "dang-tin-nhu-cau", lazy: async () => ({ Component: (await import("../marketplace/pages/PostDemandPage")).PostDemandPage }) },
           { path: "dang-tin-cho-thue", lazy: async () => ({ Component: (await import("../marketplace/pages/DangTinPage")).DangTinPage }) },
           { path: "dang-tin-cho-thue/:id", lazy: async () => ({ Component: (await import("../marketplace/pages/DangTinPage")).DangTinPage }) },
-          { path: "chu-tro", lazy: async () => ({ Component: (await import("../workspace/pages/ChuTroDashboardPage")).ChuTroDashboardPage }) },
+          // Dashboard (workspace) cần số tin hết hạn (marketplace) cho "Việc cần làm".
+          // Ghép ở router: mỗi shell đọc bảng của mình, dashboard chỉ nhận một con số
+          // qua prop — không import chéo marketplace ↔ workspace (CLAUDE.md §2.1).
+          {
+            path: "chu-tro",
+            lazy: async () => {
+              const [{ ChuTroDashboardPage }, { useMyExpiredListingCount }] = await Promise.all([
+                import("../workspace/pages/ChuTroDashboardPage"),
+                import("../marketplace/hooks/useMyExpiredListingCount"),
+              ]);
+              function ChuTroDashboardRoute() {
+                return <ChuTroDashboardPage expiredListingCount={useMyExpiredListingCount()} />;
+              }
+              return { Component: ChuTroDashboardRoute };
+            },
+          },
           { path: "chu-tro/quan-ly-phong", lazy: async () => ({ Component: (await import("../workspace/pages/QuanLyPhongPage")).QuanLyPhongPage }) },
           { path: "chu-tro/tim-nguoi-thue", lazy: async () => ({ Component: (await import("../marketplace/pages/FindRenterPage")).FindRenterPage }) },
           { path: "chu-tro/danh-gia", lazy: async () => ({ Component: (await import("../marketplace/pages/LandlordReviewsPage")).LandlordReviewsPage }) },
