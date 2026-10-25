@@ -210,7 +210,8 @@ export function toUserMessage(e: unknown): string {
   // xem docs/OTP_SETUP_SPEEDSMS.md §Xử lý sự cố.
   if (/sms_send_failed|hook/i.test(authSignal))
     return "Hệ thống chưa gửi được SMS. Hãy thử đăng ký bằng email.";
-  if (/password should be at least/i.test(text)) return "Mật khẩu quá ngắn (tối thiểu 6 ký tự).";
+  if (/password should be at least|weak_password|password is too weak/i.test(authSignal)) return "Mật khẩu chưa đủ mạnh: tối thiểu 8 ký tự, gồm cả chữ và số.";
+  if (/same_password|should be different from the old/i.test(authSignal)) return "Mật khẩu mới phải khác mật khẩu cũ.";
   if (/rate limit|too many requests/i.test(text)) return "Bạn thao tác quá nhanh. Vui lòng thử lại sau.";
 
   // 4. Mạng

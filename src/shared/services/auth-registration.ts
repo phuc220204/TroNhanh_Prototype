@@ -1,4 +1,5 @@
 import { normalizeVietnamPhone } from "../utils/phone.ts";
+import { getPasswordProblem } from "../utils/password.ts";
 
 export interface RegistrationInput {
   fullName: string;
@@ -51,9 +52,8 @@ export function normalizeRegistrationInput(input: RegistrationInput): Normalized
   if (rawPhone && !phone) {
     throw new RegistrationInputError("Số điện thoại Việt Nam chưa hợp lệ, ví dụ 0912345678.");
   }
-  if (input.password.length < 6) {
-    throw new RegistrationInputError("Mật khẩu phải chứa ít nhất 6 ký tự.");
-  }
+  const passwordProblem = getPasswordProblem(input.password);
+  if (passwordProblem) throw new RegistrationInputError(passwordProblem);
 
   return { fullName, email, phone, password: input.password };
 }
@@ -83,10 +83,13 @@ export async function registerWithCredentials(
   });
 
   if (error) throw error;
-  if (!data.user) throw new Error("Supabase không trả về tài khoản mới. Hãy thử lại.");
+  if (!data.user) throw new RegistrationInputError("Chưa tạo được tài khoản. Vui lòng thử lại sau ít phút.");
+  // Không có phiên ⇒ Supabase đang bật xác nhận email/SĐT (cấu hình lệch với luồng
+  // đăng ký không OTP) hoặc định danh đã có tài khoản. Người dùng chỉ cần biết bước
+  // tiếp theo; nguyên nhân kỹ thuật ghi ở docs/OTP_SETUP_SPEEDSMS.md.
   if (!data.session) {
-    throw new Error(
-      "Supabase chưa cấp phiên đăng nhập. Hãy tắt xác nhận Email và Phone trong Auth trước khi đăng ký; nếu định danh đã có tài khoản, hãy đăng nhập tài khoản đó.",
+    throw new RegistrationInputError(
+      "Tài khoản đã được ghi nhận nhưng chưa đăng nhập được. Nếu bạn nhận được email xác nhận, hãy bấm link trong email; sau đó đăng nhập bằng thông tin vừa đăng ký.",
     );
   }
 

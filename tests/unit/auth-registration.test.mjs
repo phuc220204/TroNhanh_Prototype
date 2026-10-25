@@ -22,7 +22,7 @@ function makeAuth({ user = { id: "new-user" }, session = { access_token: "sessio
 test("accepts email-only registration and creates email as the primary identity", async () => {
   const { auth, calls } = makeAuth();
   const result = await registerWithCredentials(auth, {
-    fullName: "  Nguyễn An ", email: " AN@example.com ", phone: "", password: "secret1",
+    fullName: "  Nguyễn An ", email: " AN@example.com ", phone: "", password: "secret12",
   });
 
   assert.equal(result.primary, "email");
@@ -34,7 +34,7 @@ test("accepts email-only registration and creates email as the primary identity"
 test("accepts phone-only registration without calling OTP APIs", async () => {
   const { auth, calls } = makeAuth();
   const result = await registerWithCredentials(auth, {
-    fullName: "Bình", email: "", phone: "0912 345 678", password: "secret1",
+    fullName: "Bình", email: "", phone: "0912 345 678", password: "secret12",
   });
 
   assert.equal(result.primary, "phone");
@@ -45,7 +45,7 @@ test("accepts phone-only registration without calling OTP APIs", async () => {
 test("uses phone first, then attaches email to the same account", async () => {
   const { auth, calls } = makeAuth();
   const result = await registerWithCredentials(auth, {
-    fullName: "Chi", email: "chi@example.com", phone: "0901234567", password: "secret1",
+    fullName: "Chi", email: "chi@example.com", phone: "0901234567", password: "secret12",
   });
 
   assert.equal(result.primary, "phone");
@@ -56,16 +56,20 @@ test("uses phone first, then attaches email to the same account", async () => {
 });
 
 test("requires at least one identifier and rejects malformed optional identifiers", () => {
-  assert.throws(() => normalizeRegistrationInput({ fullName: "An", email: "", phone: "", password: "secret1" }), RegistrationInputError);
-  assert.throws(() => normalizeRegistrationInput({ fullName: "An", email: "bad-email", phone: "", password: "secret1" }), RegistrationInputError);
-  assert.throws(() => normalizeRegistrationInput({ fullName: "An", email: "an@example.com", phone: "012345", password: "secret1" }), RegistrationInputError);
+  assert.throws(() => normalizeRegistrationInput({ fullName: "An", email: "", phone: "", password: "secret12" }), RegistrationInputError);
+  assert.throws(() => normalizeRegistrationInput({ fullName: "An", email: "bad-email", phone: "", password: "secret12" }), RegistrationInputError);
+  assert.throws(() => normalizeRegistrationInput({ fullName: "An", email: "an@example.com", phone: "012345", password: "secret12" }), RegistrationInputError);
+  // Mật khẩu: ≥ 8 ký tự và có cả chữ lẫn số.
+  assert.throws(() => normalizeRegistrationInput({ fullName: "An", email: "an@example.com", phone: "", password: "abc123" }), /ít nhất 8 ký tự/);
+  assert.throws(() => normalizeRegistrationInput({ fullName: "An", email: "an@example.com", phone: "", password: "abcdefgh" }), /cả chữ và số/);
+  assert.throws(() => normalizeRegistrationInput({ fullName: "An", email: "an@example.com", phone: "", password: "12345678" }), /cả chữ và số/);
 });
 
 test("does not merge accounts when the secondary email is already in use", async () => {
   const duplicate = new Error("User already registered");
   const { auth } = makeAuth({ updateError: duplicate });
   const result = await registerWithCredentials(auth, {
-    fullName: "An", email: "existing@example.com", phone: "0912345678", password: "secret1",
+    fullName: "An", email: "existing@example.com", phone: "0912345678", password: "secret12",
   });
 
   assert.equal(result.user.id, "new-user");
@@ -76,7 +80,7 @@ test("does not merge accounts when the secondary email is already in use", async
 test("requires a session, indicating confirmations must be disabled for no-OTP signup", async () => {
   const { auth } = makeAuth({ session: null });
   await assert.rejects(
-    registerWithCredentials(auth, { fullName: "An", email: "an@example.com", phone: "", password: "secret1" }),
-    /tắt xác nhận Email và Phone/,
+    registerWithCredentials(auth, { fullName: "An", email: "an@example.com", phone: "", password: "secret12" }),
+    /chưa đăng nhập được/,
   );
 });

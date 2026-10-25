@@ -9,6 +9,7 @@ import { logError, toUserMessage } from "../../shared/services/supabase-error";
 import { clearPostAuthRedirect, toSafeRedirect, withAuthRedirect } from "../../shared/utils/auth-redirect";
 import { registerWithCredentials, RegistrationInputError } from "../../shared/services/auth-registration";
 import { updateMyProfile } from "../../shared/services/profile-service";
+import { PASSWORD_RULE_HINT } from "../../shared/utils/password";
 
 export function RegisterPage() {
   const navigate = useNavigate();
@@ -231,10 +232,14 @@ export function RegisterPage() {
             </div>
           </div>
 
+          <p data-testid="register-identity-hint" style={{ margin: "-4px 0 0", fontSize: 12.5, color: C.textSecondary, lineHeight: 1.5 }}>
+            Nhập <strong>ít nhất một</strong> trong hai: số điện thoại hoặc email. Đó là thông tin bạn dùng để đăng nhập.
+          </p>
+
           {/* Phone number field */}
           <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
             <label htmlFor="register-phone" style={{ fontSize: 13, fontWeight: 600, color: C.textPrimary }}>
-              Số điện thoại <span style={{ fontWeight: 500, color: C.textSecondary }}>(không bắt buộc)</span>
+              Số điện thoại
             </label>
             <div style={{ position: "relative" }}>
               <Phone
@@ -276,7 +281,7 @@ export function RegisterPage() {
           {/* Email field */}
           <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
             <label htmlFor="register-email" style={{ fontSize: 13, fontWeight: 600, color: C.textPrimary }}>
-              Địa chỉ Email <span style={{ fontWeight: 500, color: C.textSecondary }}>(không bắt buộc)</span>
+              Địa chỉ Email
             </label>
             <div style={{ position: "relative" }}>
               <Mail
@@ -318,7 +323,7 @@ export function RegisterPage() {
           {/* Password field */}
           <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
             <label htmlFor="register-password" style={{ fontSize: 13, fontWeight: 600, color: C.textPrimary }}>
-              Mật khẩu (tối thiểu 6 ký tự)
+              Mật khẩu <span style={{ fontWeight: 500, color: C.textSecondary }}>({PASSWORD_RULE_HINT.toLowerCase()})</span>
             </label>
             <div style={{ position: "relative" }}>
               <Lock

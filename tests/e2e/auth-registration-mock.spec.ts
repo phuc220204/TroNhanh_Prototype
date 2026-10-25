@@ -73,7 +73,7 @@ async function mockAuthSignup(page: Page) {
 
 async function fillRequiredFields(page: Page) {
   await page.getByTestId("register-fullname").fill("Người dùng thử");
-  await page.getByTestId("register-password").fill("demo-password");
+  await page.getByTestId("register-password").fill("demo-pass123");
   await page.getByTestId("register-terms-checkbox").check();
 }
 
@@ -174,7 +174,7 @@ test.describe("Đăng ký không OTP (Supabase Auth được mock)", () => {
     const seen = await mockPasswordSignin(page);
     await page.goto("/#/dang-nhap");
     await page.getByTestId("login-identifier").fill("legacy@example.test");
-    await page.getByTestId("login-password").fill("demo-password");
+    await page.getByTestId("login-password").fill("demo-pass123");
     await expect(page.getByRole("button", { name: /Google/ })).toBeVisible();
     await page.getByTestId("login-submit").click();
 
@@ -188,7 +188,7 @@ test.describe("Đăng ký không OTP (Supabase Auth được mock)", () => {
     const seen = await mockPasswordSignin(page);
     await page.goto("/#/dang-nhap");
     await page.getByTestId("login-identifier").fill("0912 345 678");
-    await page.getByTestId("login-password").fill("demo-password");
+    await page.getByTestId("login-password").fill("demo-pass123");
     await page.getByTestId("login-submit").click();
 
     await expect.poll(() => seen.credentials).not.toBeNull();
