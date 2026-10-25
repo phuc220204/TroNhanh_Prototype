@@ -5,6 +5,8 @@ export interface RegistrationInput {
   email: string;
   phone: string;
   password: string;
+  /** Phiên bản chính sách người dùng đã tick đồng ý (LEGAL_VERSION). Bỏ trống = chưa đồng ý. */
+  acceptedTermsVersion?: string;
 }
 
 export interface NormalizedRegistrationInput {
@@ -66,13 +68,17 @@ export async function registerWithCredentials(
 ) {
   const normalized = normalizeRegistrationInput(input);
   const primaryIsPhone = Boolean(normalized.phone);
+  // Lưu bằng chứng đồng ý (NĐ 13/2023) cùng tài khoản: bản chính sách + thời điểm.
+  const consent: Record<string, string> = input.acceptedTermsVersion
+    ? { terms_version: input.acceptedTermsVersion, terms_accepted_at: new Date().toISOString() }
+    : {};
   const { data, error } = await auth.signUp({
     ...(normalized.phone ? { phone: normalized.phone } : { email: normalized.email }),
     password: normalized.password,
     options: {
       data: primaryIsPhone
-        ? { full_name: normalized.fullName, contact_phone: normalized.phone! }
-        : { full_name: normalized.fullName },
+        ? { full_name: normalized.fullName, contact_phone: normalized.phone!, ...consent }
+        : { full_name: normalized.fullName, ...consent },
     },
   });
 

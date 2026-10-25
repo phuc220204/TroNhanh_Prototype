@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Rocket } from "lucide-react";
-import { Button, ModalShell } from "../../shared/components/common";
+import { Button, LegalConsentCheckbox, ModalShell } from "../../shared/components/common";
 import { C, font } from "../../shared/theme";
 import { toUserMessage } from "../../shared/services/supabase-error";
 import {
@@ -21,6 +21,7 @@ export function DemandBoostModal({ post, onClose }: { post: DemandPostItem; onCl
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [hasAcceptedTerms, setHasAcceptedTerms] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -41,7 +42,7 @@ export function DemandBoostModal({ post, onClose }: { post: DemandPostItem; onCl
   }, []);
 
   const handlePay = async () => {
-    if (selectedDays === null) return;
+    if (selectedDays === null || !hasAcceptedTerms) return;
     try {
       setIsSubmitting(true);
       setSubmitError(null);
@@ -66,7 +67,7 @@ export function DemandBoostModal({ post, onClose }: { post: DemandPostItem; onCl
           <Button
             icon={<Rocket size={15} />}
             loading={isSubmitting}
-            disabled={selectedDays === null || !!loadError}
+            disabled={selectedDays === null || !!loadError || !hasAcceptedTerms}
             onClick={() => void handlePay()}
             data-testid="demand-boost-pay"
           >
@@ -121,6 +122,7 @@ export function DemandBoostModal({ post, onClose }: { post: DemandPostItem; onCl
         </div>
       )}
 
+      <LegalConsentCheckbox variant="payment" checked={hasAcceptedTerms} onChange={setHasAcceptedTerms} disabled={isSubmitting} data-testid="demand-boost-terms-checkbox" />
       {submitError ? (
         <p role="alert" style={{ fontFamily: font, fontSize: 13.5, color: C.error, margin: 0 }}>{submitError}</p>
       ) : null}
