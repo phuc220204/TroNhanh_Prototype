@@ -8,6 +8,7 @@ import { C, font } from "../../../shared/theme";
 import { ModalShell } from "../../../shared/components/common/ModalShell";
 import { EmptyState, Skeleton } from "../../../shared/components/common";
 import { logError } from "../../../shared/services/supabase-error";
+import { LEGAL_ROUTES } from "../../../shared/constants/legal";
 import { useAuth } from "../../../shared/contexts/AuthContext";
 import { startConversation } from "../../../shared/services/messaging-service";
 import { DemandPostCard } from "../../components/DemandPostCard";
@@ -447,6 +448,15 @@ export function SiteFooter({ mobile }: { mobile?: boolean }) {
           <span style={{ fontFamily: font, fontSize: 12.5, color: C.textSecondary }}>
             © {new Date().getFullYear()} Trọ Nhanh Platform. All rights reserved.
           </span>
+          <nav aria-label="Chính sách" data-testid="footer-legal-links" style={{ display: "flex", flexWrap: "wrap", gap: 16 }}>
+            {[
+              { label: "Điều khoản sử dụng", to: LEGAL_ROUTES.terms },
+              { label: "Chính sách bảo mật", to: LEGAL_ROUTES.privacy },
+              { label: "Chính sách hoàn tiền", to: LEGAL_ROUTES.refund },
+            ].map(({ label, to }) => (
+              <button type="button" key={to} onClick={() => navigate(to)} style={{ fontFamily: font, fontSize: 12.5, color: C.textSecondary, cursor: "pointer", background: "none", border: "none", padding: 0, textDecoration: "underline", textUnderlineOffset: 3 }}>{label}</button>
+            ))}
+          </nav>
         </div>
       </div>
     </footer>

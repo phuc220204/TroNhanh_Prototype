@@ -342,6 +342,22 @@ demo_link_me_to_seeded_occupancy(p_property_id uuid) returns uuid
 
 ---
 
+## 15. Báo cáo vi phạm & khóa tài khoản (migration `20261016120000`)
+
+```sql
+report_content(p_target_type text, p_target_id uuid, p_reason text, p_details text) returns uuid   -- authenticated
+list_open_reports() returns table(...)                                                               -- is_moderator()
+resolve_reports(p_target_type text, p_target_id uuid, p_hide boolean, p_note text) returns integer   -- is_moderator()
+admin_set_user_lock(p_user_id uuid, p_locked boolean, p_reason text) returns timestamptz             -- has_role(...,'Admin')
+```
+
+- `content_reports`: RLS bật; người báo cáo đọc báo cáo của mình, Moderator đọc tất cả; **không** có policy ghi; anon không có quyền nào (`20261016120100`).
+- `report_content`: chỉ nội dung đang hiển thị (`REPORT_TARGET_NOT_FOUND`); không báo cáo nội dung của mình (`CANNOT_REPORT_OWN_CONTENT`); 1 người × 1 đối tượng (`ALREADY_REPORTED`); `Other` bắt buộc mô tả. Báo cáo đánh giá tăng `reviews.report_count`, **không** đổi `status`, để tránh một báo cáo ác ý cũng ẩn được đánh giá thật.
+- `resolve_reports`: `p_hide` ⇒ ẩn nội dung + `moderation_logs` (bắt buộc `p_note`) + đóng báo cáo `Resolved`; ngược lại ⇒ `Dismissed`. Một transaction.
+- `admin_set_user_lock`: đặt `auth.users.banned_until` (GoTrue chặn đăng nhập/làm mới token) và xóa `auth.sessions`; ghi `moderation_logs` (`User`, `Lock`/`Unlock`). Không khóa được chính mình hay Admin khác. Access token đang cầm còn sống ≤ 1 giờ.
+
+---
+
 ## Bảng tra nhanh — RPC nào ở migration nào
 
 | Migration | RPC | Phụ thuộc |

@@ -3,6 +3,7 @@ import { Link, useLocation } from "react-router";
 import {
   Shield,
   CheckSquare,
+  Flag,
   MessageSquare,
   Users,
   Settings,
@@ -14,7 +15,7 @@ import { C, font, radius, space } from "../../shared/theme";
 import { useAuth } from "../../shared/contexts/AuthContext";
 import { useBreakpoint } from "../../shared/components/useBreakpoint";
 
-export type AdminNavId = "dashboard" | "moderation" | "reviews" | "users" | "settings";
+export type AdminNavId = "dashboard" | "moderation" | "reports" | "reviews" | "users" | "settings";
 
 interface AdminShellProps {
   active?: AdminNavId;
@@ -24,6 +25,7 @@ interface AdminShellProps {
 const ADMIN_NAV_ITEMS: { id: AdminNavId; label: string; path: string; icon: LucideIcon }[] = [
   { id: "dashboard", label: "Tổng quan", path: "/quan-tri", icon: Shield },
   { id: "moderation", label: "Kiểm duyệt tin đăng", path: "/quan-tri/kiem-duyet-tin", icon: CheckSquare },
+  { id: "reports", label: "Báo cáo vi phạm", path: "/quan-tri/bao-cao", icon: Flag },
   { id: "reviews", label: "Quản lý đánh giá", path: "/quan-tri/danh-gia", icon: MessageSquare },
   { id: "users", label: "Quản lý người dùng", path: "/quan-tri/nguoi-dung", icon: Users },
   { id: "settings", label: "Cài đặt hệ thống", path: "/quan-tri/cai-dat", icon: Settings },

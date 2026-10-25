@@ -1,9 +1,10 @@
+import { useMemo } from "react";
 import { C, font, radius } from "../../../shared/theme";
 import { Badge } from "../../../shared/components/common";
 import { formatDate, formatPeriod, formatVnd } from "../../../shared/utils/format";
 import { getLatestCollectionNote, getRemainingAmount, type InvoiceItem } from "../../services/billing-service";
 import { classifyInvoiceDue, formatDueLabel, getDaysUntilDue } from "../../services/invoice-due";
-import { formatShortDate, toDisplayStatusKey } from "./invoice-display";
+import { formatShortDate, sortInvoicesForDisplay, toDisplayStatusKey } from "./invoice-display";
 
 interface InvoiceListProps {
   invoices: InvoiceItem[];
@@ -41,7 +42,8 @@ const openOnKey = (open: () => void) => (event: React.KeyboardEvent) => {
 };
 
 /** Danh sách hóa đơn: bảng trên máy tính, thẻ trên điện thoại (thu tiền là việc làm trên điện thoại). */
-export function InvoiceList({ invoices, isMobile, onOpen }: InvoiceListProps) {
+export function InvoiceList({ invoices: unsortedInvoices, isMobile, onOpen }: InvoiceListProps) {
+  const invoices = useMemo(() => sortInvoicesForDisplay(unsortedInvoices), [unsortedInvoices]);
   if (isMobile) {
     return (
       <div data-testid="invoice-card-list" style={{ display: "flex", flexDirection: "column", gap: 10 }}>

@@ -11,6 +11,7 @@ import { logError, toUserMessage } from "../../shared/services/supabase-error";
 import { useToast } from "../../shared/contexts/ToastContext";
 import { ListingAvailabilityBadge, ListingHeaderMeta } from "../components/ListingCardMeta";
 import { startConversation } from "../../shared/services/messaging-service";
+import { ReportButton } from "../components/ReportButton";
 import {
   AmenitiesGrid, CostTable, DescriptionSection, GalleryLightbox, ImageGallery,
   NearbySection, QuickStats, ReviewsSection, SimilarRooms, TitleBlock,
@@ -213,6 +214,9 @@ export function RoomDetailPage() {
                 Trọ Nhanh không tham gia giao dịch. Hãy gặp mặt và kiểm tra phòng trực tiếp trước khi đặt cọc.
               </p>
             </div>
+            <div style={{ marginTop: 10 }}>
+              <ReportButton targetType="RentalListing" targetId={listing.id} ownerId={listing.seller_id} appearance="block" />
+            </div>
           </div>
         </div>
 
@@ -273,6 +277,9 @@ export function RoomDetailPage() {
                 <p style={{ fontFamily: font, fontSize: 12, color: C.textSecondary, margin: 0, lineHeight: 1.6 }}>
                   Trọ Nhanh không tham gia giao dịch. Hãy gặp mặt và kiểm tra phòng trực tiếp trước khi đặt cọc.
                 </p>
+              </div>
+              <div style={{ marginTop: 10 }}>
+                <ReportButton targetType="RentalListing" targetId={listing.id} ownerId={listing.seller_id} appearance="block" />
               </div>
             </div>
           </div>

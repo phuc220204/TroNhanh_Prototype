@@ -12,6 +12,11 @@ export interface DashboardKpi {
   Icon: LucideIcon;
   /** BR-012: `true` = mặc định ẩn, chỉ hiện khi bấm "Hiện số liệu ẩn". */
   secret: boolean;
+  /**
+   * Chỉ che `hint` (số tiền) — số đếm vẫn luôn hiện. Mọi số tiền trên dashboard
+   * đi chung một công tắc "Hiện số liệu" (BR-012), không chỗ che chỗ hở.
+   */
+  secretHint?: boolean;
   testId?: string;
 }
 
@@ -44,11 +49,13 @@ export function KpiGrid({ kpis, isRevealed, onToggleReveal, isMobile }: KpiGridP
         <div style={{ display: "flex", gap: 10, overflowX: "auto", paddingBottom: 6, marginBottom: 22 }}>
           {kpis.map(k => {
             const isSecret = k.secret && !isRevealed;
+            const isHintSecret = (k.secret || k.secretHint === true) && !isRevealed;
             return (
               <div key={k.label} data-testid={k.testId} style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: radius.md, padding: "13px 16px", minWidth: 120, flexShrink: 0 }}>
                 <p style={{ fontFamily: font, fontSize: 10.5, fontWeight: 700, color: C.textSecondary, margin: "0 0 6px", textTransform: "uppercase", letterSpacing: "0.04em" }}>{k.label}</p>
                 <span style={{ fontFamily: font, fontSize: 26, fontWeight: 900, color: k.accent, lineHeight: 1 }}>{isSecret ? "•••" : k.value}</span>
-                {k.hint && <p style={{ fontFamily: font, fontSize: 11, color: C.textSecondary, margin: "5px 0 0" }}>{isSecret ? "••••" : k.hint}</p>}
+                {k.hint && <p style={{ fontFamily: font, fontSize: 11, color: C.textSecondary, margin: "5px 0 0" }}>{isHintSecret ? "••••" : k.hint}</p>}
+                {k.caption && <p style={{ fontFamily: font, fontSize: 11, color: C.textSecondary, margin: "3px 0 0" }}>{k.caption}</p>}
               </div>
             );
           })}
@@ -66,6 +73,7 @@ export function KpiGrid({ kpis, isRevealed, onToggleReveal, isMobile }: KpiGridP
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(210px, 1fr))", gap: 12, marginBottom: 28 }}>
         {kpis.map(k => {
           const isSecret = k.secret && !isRevealed;
+          const isHintSecret = (k.secret || k.secretHint === true) && !isRevealed;
           const { Icon } = k;
           return (
             <div key={k.label} data-testid={k.testId} style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: radius.xl, padding: "16px 18px", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
@@ -75,7 +83,7 @@ export function KpiGrid({ kpis, isRevealed, onToggleReveal, isMobile }: KpiGridP
                   {isSecret ? "••••••" : k.value}
                   {!isSecret && k.unit && <span style={{ fontSize: 12, fontWeight: 500, color: C.textSecondary, marginLeft: 4 }}>{k.unit}</span>}
                 </span>
-                {k.hint && <p style={{ fontFamily: font, fontSize: 11, color: C.textSecondary, margin: "4px 0 0" }}>{isSecret ? "••••" : k.hint}</p>}
+                {k.hint && <p style={{ fontFamily: font, fontSize: 11, color: C.textSecondary, margin: "4px 0 0" }}>{isHintSecret ? "••••" : k.hint}</p>}
                 {k.caption && <p style={{ fontFamily: font, fontSize: 11, color: C.textSecondary, margin: "4px 0 0" }}>{k.caption}</p>}
               </div>
               <div style={{ width: 36, height: 36, flexShrink: 0, borderRadius: 10, background: C.cream, display: "flex", alignItems: "center", justifyContent: "center", color: k.accent }}>

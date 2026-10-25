@@ -4,6 +4,7 @@ import { qk } from "../../shared/query/keys";
 import { Home, Star, MapPin, TriangleAlert } from "lucide-react";
 import { PublicNavbar } from "../../shared/components/PublicNavbar";
 import { Button, EmptyState, Skeleton } from "../../shared/components/common";
+import { ReportButton } from "../components/ReportButton";
 import { C, font, radius, space } from "../../shared/theme";
 import { toUserMessage } from "../../shared/services/supabase-error";
 import { getPropertyPublicProfile, listPropertyReviews } from "../services/review-service";
@@ -111,6 +112,7 @@ export function PropertyDetailPage() {
                         <p style={{ fontFamily: font, fontSize: 13, color: C.textPrimary, margin: 0, lineHeight: 1.55 }}>{r.seller_reply}</p>
                       </div>
                     )}
+                    <ReportButton targetType="Review" targetId={r.id} ownerId={r.author_user_id} />
                   </div>
                 ))}
               </div>
