@@ -91,7 +91,7 @@ export function useListingForm(
   boostChoiceAvailable = false,
 ) {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
 
   const [step, setStep] = useState(0);
   const [success, setSuccess] = useState(false);
@@ -127,7 +127,8 @@ export function useListingForm(
       price: prefill.price ? formatVND(prefill.price) : "",
       maxPeople: prefill.maxPeople || "",
       floor: prefill.floor || "",
-      phone: prefill.phone || "",
+      // Tin mới: lấy SĐT trong hồ sơ nếu prefill không có (người đăng vẫn sửa được).
+      phone: prefill.phone || (listingId ? "" : profile?.contact_phone) || "",
       curfewType: "free" as "free" | "curfew",
       curfewTime: "",
       coords: (prefill.coords ?? null) as ListingCoords | null,
@@ -136,10 +137,11 @@ export function useListingForm(
       description: "",
       nearby: [] as Array<{ category: string; name: string; dist: string }>,
       
-      electric: "",
-      water: "",
-      waterUnit: "person" as "person" | "cubic",
-      service: "",
+      // Đơn giá từ "Tạo tin từ phòng trống" (ListingPrefill). `0` phí dịch vụ là hợp lệ.
+      electric: prefill.electric != null ? String(prefill.electric) : "",
+      water: prefill.water != null ? String(prefill.water) : "",
+      waterUnit: (prefill.waterUnit || "person") as "person" | "cubic",
+      service: prefill.service != null ? String(prefill.service) : "",
       deposit: "",
       other: "",
     },
@@ -147,6 +149,14 @@ export function useListingForm(
     validateOnChange: false,
     onSubmit: async () => handlePostSubmit(false, shouldShowBoostStep && boostChoiceAvailable ? selectedBoostDays : null),
   });
+
+  // Hồ sơ có thể tải xong SAU khi form khởi tạo ⇒ điền SĐT một lần nếu ô còn trống.
+  const hasFilledProfilePhone = useRef(false);
+  useEffect(() => {
+    if (listingId || hasFilledProfilePhone.current || !profile?.contact_phone) return;
+    hasFilledProfilePhone.current = true;
+    if (!formik.values.phone) void formik.setFieldValue("phone", profile.contact_phone);
+  }, [listingId, profile?.contact_phone]);
 
   useEffect(() => {
     if (!listingId) return;
@@ -519,6 +529,8 @@ export function useListingForm(
           latitude: isValidLatLng(formik.values.coords) ? formik.values.coords.lat : null,
           longitude: isValidLatLng(formik.values.coords) ? formik.values.coords.lng : null,
           metadata,
+          // Gắn sẵn phòng khi đi từ "Tạo tin đăng" ở phòng trống; RPC kiểm tra quyền sở hữu phòng.
+          roomId: prefill.roomId ?? null,
           submit: isDraft ? false : true,
         });
 

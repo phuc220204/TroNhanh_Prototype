@@ -1,5 +1,9 @@
 import { test, expect } from "@playwright/test";
 import { ACCOUNTS, go, login, runTag } from "./helpers";
+import { assertWritesAllowed } from "./e2e-env";
+
+// Spec này GHI dữ liệu thật — chặn nếu đang trỏ vào production (xem e2e-env.ts).
+test.beforeAll(assertWritesAllowed);
 
 /**
  * Đánh giá khu trọ — luồng có CỔNG chống gian lận nghiêm ngặt nhất trong sản phẩm.

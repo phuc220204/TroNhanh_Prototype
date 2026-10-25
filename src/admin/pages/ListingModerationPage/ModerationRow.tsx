@@ -1,6 +1,7 @@
 import { Check, X, ExternalLink, EyeOff, RotateCcw } from "lucide-react";
 import { C, font, radius, space } from "../../../shared/theme";
 import { Button } from "../../../shared/components/common/Button";
+import { ImageWithFallback } from "../../../shared/components/common/ImageWithFallback";
 import { LISTING_META } from "../../../shared/utils/statusMaps";
 import { toListingStatus } from "../../../shared/types/status";
 import { listingImageUrls } from "../../../marketplace/services/listing-mappers";
@@ -52,9 +53,11 @@ export function ModerationRowCard({ row, busy, onApprove, onReject, onHide, onRe
         borderRadius: radius.lg, padding: space[4],
       }}
     >
-      <img
+      <ImageWithFallback
         src={cover}
-        alt=""
+        alt="Ảnh bìa tin"
+        iconSize={20}
+        hideLabel
         style={{ width: 108, height: 80, objectFit: "cover", borderRadius: radius.sm, flexShrink: 0, background: C.cream }}
       />
 

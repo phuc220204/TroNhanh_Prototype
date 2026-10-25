@@ -1,29 +1,7 @@
 /**
  * Listing Data Mappers & Helpers
- * Central home for image fallbacks, amenity keys, property type keys, and DB row to UI card conversion.
+ * Central home for listing image URLs, amenity keys, property type keys, and DB row to UI card conversion.
  */
-
-export const DEFAULT_IMAGES: string[] = [
-  "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=600&q=80",
-  "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=600&q=80",
-  "https://images.unsplash.com/photo-1493809842364-78817add7ffb?w=600&q=80",
-  "https://images.unsplash.com/photo-1512918728675-ed5a9ecdebfd?w=600&q=80",
-  "https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=600&q=80",
-  "https://images.unsplash.com/photo-1555854877-bab0e564b8d5?w=600&q=80",
-  "https://images.unsplash.com/photo-1484154218962-a197022b5858?w=600&q=80",
-  "https://images.unsplash.com/photo-1489171078254-c3365d6e359f?w=600&q=80",
-  "https://images.unsplash.com/photo-1598928506311-c55ded91a20c?w=600&q=80",
-];
-
-export const getListingImage = (idStr: string): string => {
-  if (!idStr) return DEFAULT_IMAGES[0]!;
-  let hash = 0;
-  for (let i = 0; i < idStr.length; i++) {
-    hash = idStr.charCodeAt(i) + ((hash << 5) - hash);
-  }
-  const idx = Math.abs(hash) % DEFAULT_IMAGES.length;
-  return DEFAULT_IMAGES[idx]!;
-};
 
 export const mapAmenityToKey = (amenity: string): string => {
   const norm = amenity.toLowerCase().trim();
@@ -66,7 +44,8 @@ export function hasActiveVerifiedBoost(row: any): boolean {
 }
 
 /**
- * Return listing image URLs prioritizing listing_media database table, or falling back to deterministic Unsplash images.
+ * Ảnh thật của tin: ưu tiên bảng listing_media (theo sort_order), rồi cột images cũ.
+ * Không có ảnh ⇒ mảng rỗng.
  */
 export function listingImageUrls(row: any): string[] {
   if (row?.listing_media && Array.isArray(row.listing_media) && row.listing_media.length > 0) {
@@ -77,7 +56,9 @@ export function listingImageUrls(row: any): string[] {
   if (row?.images && Array.isArray(row.images) && row.images.length > 0) {
     return row.images.map((img: string) => publicUrl(img));
   }
-  return [getListingImage(row?.id ? String(row.id) : "fallback")];
+  // Không có ảnh thật ⇒ mảng rỗng. UI hiện ô "Chưa có ảnh" (ImageWithFallback),
+  // KHÔNG độn ảnh mẫu — người thuê sẽ tưởng là ảnh thật của phòng.
+  return [];
 }
 
 export interface ListingCardItem {
@@ -145,7 +126,7 @@ export function toListingCard(row: any): ListingCardItem {
     amenities: rawAmenities,
     type: row.property_type || "Phòng trọ",
     badge,
-    img: imgs[0] || getListingImage(row?.id ? String(row.id) : "fallback"),
+    img: imgs[0] ?? "",
     // Không bịa số liên hệ cho row thiếu dữ liệu; UI sẽ vô hiệu hóa nút gọi.
     // Khách chưa đăng nhập chỉ đọc được số đã che (BR-014, migration 20261009100000).
     contact_phone: row.contact_phone || row.contact_phone_masked || "",

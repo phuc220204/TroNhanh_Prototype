@@ -15,7 +15,7 @@ import { logError } from "../../shared/services/supabase-error";
 export type ModerationAction = "Approve" | "Reject" | "Hide" | "Restore";
 
 /** Bộ lọc của hàng chờ. "All" = mọi trạng thái. */
-export type ModerationFilter = "PendingApproval" | "Rejected" | "Active" | "All";
+export type ModerationFilter = "PendingApproval" | "Rejected" | "Active" | "Expired" | "Hidden" | "All";
 
 export interface ModerationRow {
   id: string;

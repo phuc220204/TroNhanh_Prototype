@@ -5,10 +5,10 @@ import { C, font } from "../../shared/theme";
 import { useBreakpoint } from "../../shared/components/useBreakpoint";
 import { PublicNavbar } from "../../shared/components/PublicNavbar";
 import { useAuth } from "../../shared/contexts/AuthContext";
-import { getListingImage, listingImageUrls, type ListingCardItem } from "../services/listing-mappers";
+import { listingImageUrls, type ListingCardItem } from "../services/listing-mappers";
 import { getListingById, incrementViewCount, getSimilarListings } from "../services/listing-queries";
 import { logError } from "../../shared/services/supabase-error";
-import { ListingHeaderMeta } from "../components/ListingCardMeta";
+import { ListingAvailabilityBadge, ListingHeaderMeta } from "../components/ListingCardMeta";
 import { startConversation } from "../../shared/services/messaging-service";
 import { ReportButton } from "../components/ReportButton";
 import {
@@ -115,19 +115,9 @@ export function RoomDetailPage() {
     );
   }
 
-  // Ảnh thật từ listing_media theo sort_order; tin cũ chưa có media thì
-  // listingImageUrls() tự trả về 1 ảnh Unsplash deterministic làm fallback.
-  const mediaImages = listingImageUrls(listing);
-  const detailImages =
-    mediaImages.length > 1
-      ? mediaImages
-      : [
-          mediaImages[0] ?? getListingImage(listing.id),
-          getListingImage(listing.id + "_1"),
-          getListingImage(listing.id + "_2"),
-          getListingImage(listing.id + "_3"),
-          getListingImage(listing.id + "_4"),
-        ];
+  // Chỉ ảnh thật (listing_media theo sort_order). Không có ảnh ⇒ gallery hiện
+  // ô "Chưa có ảnh"; KHÔNG độn ảnh mẫu — người thuê sẽ tưởng là ảnh của phòng.
+  const detailImages = listingImageUrls(listing);
 
   /* ── MOBILE ─────────────────────────────────────────── */
   if (isCompact) {
@@ -147,10 +137,7 @@ export function RoomDetailPage() {
             <div style={{ marginBottom: 20, paddingBottom: 20, borderBottom: `1px solid ${C.border}` }}>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10, flexWrap: "wrap", gap: 6 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-                  <span style={{ background: "#E8F5E1", color: "#4A7A34", fontFamily: font, fontSize: 12, fontWeight: 700, borderRadius: 999, padding: "3px 12px" }}>
-                    ● Trống
-                  </span>
-                  <span style={{ fontFamily: font, fontSize: 12, color: C.textSecondary }}>Đăng gần đây</span>
+                  <ListingAvailabilityBadge listing={listing} />
                 </div>
                 {/* Compact price inline */}
                 <div style={{ display: "flex", alignItems: "baseline", gap: 3 }}>

@@ -19,6 +19,8 @@ const FILTERS: { key: ModerationFilter; label: string }[] = [
   { key: "PendingApproval", label: "Chờ duyệt" },
   { key: "Rejected", label: "Bị từ chối" },
   { key: "Active", label: "Đang hiển thị" },
+  { key: "Expired", label: "Hết hạn" },
+  { key: "Hidden", label: "Đã ẩn" },
   { key: "All", label: "Tất cả" },
 ];
 
