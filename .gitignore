@@ -1,5 +1,8 @@
 node_modules
 .env
+# Env cục bộ của Vite — dùng cho project Supabase test của E2E (DEMO_ACCOUNTS.md §6.1)
+.env.local
+.env.*.local
 
 # Playwright — sinh ra mỗi lần chạy test, không commit
 /test-results/
