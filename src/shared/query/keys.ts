@@ -98,6 +98,8 @@ export const qk = {
     byRoom: (roomId: string) => ["occupancies", "room", roomId] as const,
     /** Occupancy của chính Renter — dùng ở /tai-khoan/phong-cua-toi */
     mine: (userId: string | undefined) => ["occupancies", "mine", userId] as const,
+    /** Tên chủ trọ của các lời mời liên kết đang chờ (đối chiếu trước khi xác nhận). */
+    pendingLinkDetails: (userId: string | undefined) => ["occupancies", "pendingLinkDetails", userId] as const,
   },
 
   contracts: {
@@ -167,6 +169,10 @@ export const qk = {
     usersAll: ["admin", "users"] as const,
     reportedReviews: ["admin", "reportedReviews"] as const,
     users: (search: string) => ["admin", "users", search] as const,
+    /** Gói của từng tài khoản — cột "Gói" ở /quan-tri/nguoi-dung. */
+    subscriptions: ["admin", "subscriptions"] as const,
+    /** Gói ACTIVE/TRIAL, doanh thu payOS tháng này, đơn cần đối soát. */
+    businessStats: ["admin", "businessStats"] as const,
     settings: ["admin", "settings"] as const,
   },
 } as const;

@@ -1758,6 +1758,17 @@ export type Database = {
         Args: { p_contract_id: string; p_occupant: Json }
         Returns: string
       }
+      admin_business_stats: {
+        Args: never
+        Returns: {
+          active_subscriptions: number
+          boost_revenue: number
+          demand_boost_revenue: number
+          needs_review_orders: number
+          saas_revenue: number
+          trial_subscriptions: number
+        }[]
+      }
       admin_dashboard_stats: {
         Args: never
         Returns: {
@@ -1765,6 +1776,15 @@ export type Database = {
           pending_listings: number
           reported_reviews: number
           total_users: number
+        }[]
+      }
+      admin_list_subscriptions: {
+        Args: never
+        Returns: {
+          expire_date: string
+          plan_name: string
+          seller_id: string
+          status: string
         }[]
       }
       admin_list_users: {
@@ -1922,6 +1942,13 @@ export type Database = {
           ref_type: string
           status: string
           updated_at: string
+        }[]
+      }
+      get_my_pending_link_details: {
+        Args: never
+        Returns: {
+          landlord_name: string
+          occupancy_id: string
         }[]
       }
       get_my_properties_review_summary: {
