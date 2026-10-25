@@ -22,6 +22,10 @@ import {
 import { UtilityModal } from "./UtilityModal";
 import { KpiGrid, type DashboardKpi } from "./KpiGrid";
 import { DueInvoicesPanel } from "./DueInvoicesPanel";
+import { TodoPanel, buildTodoItems } from "./TodoPanel";
+import { buildLandlordTodos } from "../../services/landlord-todos";
+import { getRoomListingPrefill } from "../../services/listing-prefill-service";
+import { toUserMessage } from "../../../shared/services/supabase-error";
 // Bản dùng chung ở `workspace/components/`, KHÔNG phải bản sao cũ trong thư mục
 // này. Bản cũ gửi `owner_id` từ client (§6.1), `insert` thẳng vào `rooms` từ
 // component thay vì qua service layer, và không có ô đơn giá riêng của phòng —
@@ -35,7 +39,16 @@ import { AddRoomModal } from "../../components/AddRoomModal";
 const SUPPORT_EMAIL = "tronhanh2026@gmail.com";
 const SUPPORT_EMAIL_HREF = `mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent("[Trọ Nhanh] Yêu cầu hỗ trợ")}`;
 
-export function ChuTroDashboardPage() {
+interface ChuTroDashboardPageProps {
+  /**
+   * Số tin cho thuê đã hết hạn — router đếm qua hook của marketplace rồi truyền
+   * xuống (dashboard không đọc `rental_listings`, §2.1). `null` = chưa biết ⇒
+   * không hiện mục này.
+   */
+  expiredListingCount?: number | null;
+}
+
+export function ChuTroDashboardPage({ expiredListingCount = null }: ChuTroDashboardPageProps = {}) {
   const navigate = useNavigate();
   const { isMobile } = useBreakpoint();
   const { user, profile } = useAuth();
@@ -63,6 +76,24 @@ export function ChuTroDashboardPage() {
   const toListings = () => navigate("/tai-khoan/tin-cho-thue");
   const toPost = () => navigate("/dang-tin-cho-thue");
 
+  /**
+   * "Tạo tin đăng" từ một phòng trống (CLAUDE.md §2.2): đọc phòng + khu của chính
+   * mình rồi mở form đăng tin đã điền sẵn và gắn sẵn phòng. Đọc lỗi thì vẫn mở
+   * form trống — không chặn người dùng đăng tin.
+   */
+  const toPostFromRoom = async (roomId: string) => {
+    try {
+      const prefill = await queryClient.fetchQuery({
+        queryKey: qk.rooms.listingPrefill(roomId),
+        queryFn: () => getRoomListingPrefill(roomId),
+      });
+      navigate("/dang-tin-cho-thue", { state: prefill ? { prefill } : undefined });
+    } catch (error) {
+      showToast(`Chưa điền sẵn được thông tin phòng: ${toUserMessage(error)}`, { testId: "dashboard-toast" });
+      toPost();
+    }
+  };
+
   const handlePropertyChange = (value: string) => setProperty(value);
 
   /** Làm mới sau thao tác ghi: phòng + mọi KPI của chủ trọ này. */
@@ -85,7 +116,10 @@ export function ChuTroDashboardPage() {
 
   // Bản cũ đọc `occupant_name` / `payment_status` / `bill` — các trường của dữ
   // liệu mock, không có trong DB ⇒ cột "Người ở" và "Thanh toán" luôn trống.
-  const displayRooms = useMemo(() => filteredRooms.slice(0, 4).map(toDashboardRoom), [filteredRooms]);
+  const displayRooms = useMemo(() => filteredRooms.slice(0, 4).map((room) => toDashboardRoom(room)), [filteredRooms]);
+  const vacantRooms = useMemo(() => filteredRooms.filter((room) => room.status === "Available"), [filteredRooms]);
+  /** Banner "N phòng đang trống": đúng 1 phòng thì điền sẵn phòng đó; nhiều phòng thì chưa biết chọn phòng nào. */
+  const postFromVacancyBanner = () => (vacantRooms.length === 1 ? void toPostFromRoom(vacantRooms[0]!.id) : toPost());
 
 
   const handleUtilitySaved = () => {
@@ -125,14 +159,34 @@ export function ChuTroDashboardPage() {
   const toInvoices = () => navigate("/chu-tro/hoa-don");
   /** "Hóa đơn cần nhắc" gồm cả quá hạn lẫn sắp đến hạn ⇒ mở sẵn lọc "Chưa thu đủ". */
   const toOutstandingInvoices = () => navigate("/chu-tro/hoa-don?trang-thai=Outstanding");
+  const toRoomInvoices = (roomId: string) => navigate(`/chu-tro/hoa-don?phong=${roomId}`);
+  const toPropertyTab = (tab: "rooms" | "occupants", propertyId: string) =>
+    navigate(`/chu-tro/quan-ly-phong?tab=${tab}&khu=${propertyId}`);
 
-  const handleRoomTask = (task: string) => {
-    if (task === "Tạo tin đăng") {
-      toPost();
-    } else if (task === "Xem hóa đơn" || task === "Nhắc nợ") {
-      toInvoices();
-    } else if (task === "Xem hợp đồng" || task === "Gia hạn") {
-      navigate("/chu-tro/quan-ly-phong?tab=occupants");
+  // "Việc cần làm" theo khu đang chọn — cùng phạm vi với KPI bên dưới.
+  const todoItems = buildTodoItems({
+    todos: buildLandlordTodos(filteredRooms),
+    overdueInvoiceCount: dbKpis?.overdueInvoiceCount ?? 0,
+    overdueInvoiceAmount: dbKpis?.overdueInvoiceAmount ?? 0,
+    expiredListingCount,
+    actions: {
+      onOpenContracts: (propertyId) => toPropertyTab("occupants", propertyId),
+      onOpenRooms: (propertyId) => toPropertyTab("rooms", propertyId),
+      onOpenOverdueInvoices: () => navigate("/chu-tro/hoa-don?trang-thai=Overdue"),
+      onOpenExpiredListings: () => navigate("/tai-khoan/tin-cho-thue?trang-thai=Expired"),
+    },
+  });
+  const greeting = todoItems.length === 0
+    ? "Mọi thứ trong tầm kiểm soát. Chúc bạn một ngày làm việc hiệu quả!"
+    : `Bạn có ${todoItems.length} việc cần xử lý — xem mục "Việc cần làm" bên dưới.`;
+
+  const handleRoomTask = (room: ReturnType<typeof toDashboardRoom>) => {
+    if (room.task === "Tạo tin đăng") {
+      void toPostFromRoom(room.roomId);
+    } else if (room.task === "Xem hóa đơn") {
+      toRoomInvoices(room.roomId);
+    } else if (room.task === "Xem hợp đồng") {
+      toPropertyTab("occupants", room.propertyId);
     }
   };
 
@@ -202,9 +256,11 @@ export function ChuTroDashboardPage() {
       <LandlordShell active="overview" mobileTitle="Tổng quan">
         <div style={{ padding: "16px 16px 100px" }}>
           <p style={{ fontFamily: font, fontSize: 19, fontWeight: 800, color: C.textPrimary, margin: "0 0 4px" }}>Chào {displayName} 👋</p>
-          <p style={{ fontFamily: font, fontSize: 13, color: C.textSecondary, margin: "0 0 14px" }}>Mọi thứ trong tầm kiểm soát. Chúc bạn một ngày làm việc hiệu quả!</p>
+          <p data-testid="dashboard-greeting" style={{ fontFamily: font, fontSize: 13, color: C.textSecondary, margin: "0 0 14px" }}>{greeting}</p>
 
           <div style={{ marginBottom: 18 }}><PropertySelector value={property} onChange={handlePropertyChange} options={displayProperties} mobile /></div>
+
+          <TodoPanel items={todoItems} isMobile />
 
           {/* Vacant Rooms Banner */}
           {emptyRoomsCount > 0 ? (
@@ -213,7 +269,7 @@ export function ChuTroDashboardPage() {
                 <Home size={16} color={C.available} />
                 <span style={{ fontFamily: font, fontSize: 13, fontWeight: 700, color: C.textPrimary }}>{emptyRoomsCount} phòng đang trống</span>
               </div>
-              <button onClick={toPost} style={{ background: "none", border: "none", color: C.available, fontFamily: font, fontSize: 13, fontWeight: 700, cursor: "pointer", padding: 0 }}>Tạo tin đăng</button>
+              <button onClick={postFromVacancyBanner} data-testid="dashboard-vacancy-post-btn" style={{ background: "none", border: "none", color: C.available, fontFamily: font, fontSize: 13, fontWeight: 700, cursor: "pointer", padding: 0 }}>Tạo tin đăng</button>
             </div>
           ) : null}
 
@@ -238,9 +294,9 @@ export function ChuTroDashboardPage() {
                 </div>
                 <div style={{ display: "flex", justifyContent: "space-between", fontFamily: font, fontSize: 13 }}>
                   <span style={{ color: C.textSecondary }}>Thanh toán</span>
-                  <PayText paid={r.paid} />
+                  <PayText status={r.paymentStatus} />
                 </div>
-                {r.task && <div style={{ marginTop: 10 }} onClick={e => e.stopPropagation()}><RoomTaskBtn task={r.task} onClick={() => handleRoomTask(r.task)} /></div>}
+                {r.task && <div style={{ marginTop: 10 }} onClick={e => e.stopPropagation()}><RoomTaskBtn task={r.task} onClick={() => handleRoomTask(r)} /></div>}
               </div>
             ))}
           </div>
@@ -297,7 +353,7 @@ export function ChuTroDashboardPage() {
           }}>
             <div style={{ zIndex: 2 }}>
               <h1 style={{ fontFamily: font, fontSize: 24, fontWeight: 800, color: C.textPrimary, margin: "0 0 6px", letterSpacing: "-0.01em" }}>Chào {displayName} 👋</h1>
-              <p style={{ fontFamily: font, fontSize: 13.5, color: C.textSecondary, margin: "0 0 18px", maxWidth: 450, lineHeight: 1.45 }}>Mọi thứ trong tầm kiểm soát. Chúc bạn một ngày làm việc hiệu quả!</p>
+              <p data-testid="dashboard-greeting" style={{ fontFamily: font, fontSize: 13.5, color: C.textSecondary, margin: "0 0 18px", maxWidth: 450, lineHeight: 1.45 }}>{greeting}</p>
               <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
                 <PrimaryBtn requiresWrite onClick={() => handleQuickToolClick("room")} data-testid="dashboard-add-room-btn"><Plus size={15} /> Thêm phòng</PrimaryBtn>
                 <GhostBtn onClick={toPost}><Plus size={15} /> Đăng tin</GhostBtn>
@@ -311,6 +367,8 @@ export function ChuTroDashboardPage() {
           <div style={{ marginBottom: 24 }}>
             <PropertySelector value={property} onChange={handlePropertyChange} options={displayProperties} />
           </div>
+
+          <TodoPanel items={todoItems} />
 
           {/* Vacant Rooms Banner */}
           {emptyRoomsCount > 0 ? (
@@ -329,7 +387,7 @@ export function ChuTroDashboardPage() {
                   <p style={{ fontFamily: font, fontSize: 12.5, color: C.textSecondary, margin: 0 }}>Có thể tạo tin đăng để tìm người ở.</p>
                 </div>
               </div>
-              <button onClick={toPost} style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "none", border: "none", color: C.available, fontFamily: font, fontSize: 13.5, fontWeight: 700, cursor: "pointer", padding: 0 }}>
+              <button onClick={postFromVacancyBanner} data-testid="dashboard-vacancy-post-btn" style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "none", border: "none", color: C.available, fontFamily: font, fontSize: 13.5, fontWeight: 700, cursor: "pointer", padding: 0 }}>
                 Tạo tin đăng <ChevronRight size={16} />
               </button>
             </div>
@@ -374,8 +432,8 @@ export function ChuTroDashboardPage() {
                       <td style={{ fontFamily: font, fontSize: 13.5, color: C.textSecondary, padding: "13px 14px" }}>{r.property}</td>
                       <td style={{ padding: "13px 14px" }}><StatusChip status={r.status} /></td>
                       <td style={{ fontFamily: font, fontSize: 13.5, color: C.textPrimary, padding: "13px 14px" }}>{r.occupant ?? <span style={{ color: C.textSecondary }}>—</span>}</td>
-                      <td style={{ padding: "13px 14px" }}><PayText paid={r.paid} /></td>
-                      <td style={{ padding: "13px 14px" }}>{r.task ? <RoomTaskBtn task={r.task} onClick={() => handleRoomTask(r.task)} /> : <span style={{ fontFamily: font, fontSize: 13, color: C.textSecondary }}>—</span>}</td>
+                      <td style={{ padding: "13px 14px" }}><PayText status={r.paymentStatus} /></td>
+                      <td style={{ padding: "13px 14px" }}>{r.task ? <RoomTaskBtn task={r.task} onClick={() => handleRoomTask(r)} /> : <span style={{ fontFamily: font, fontSize: 13, color: C.textSecondary }}>—</span>}</td>
                     </tr>
                   ))}
                 </tbody>

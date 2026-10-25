@@ -35,6 +35,8 @@ export interface CreateListingInput {
   metadata?: object | null;
   /** false = lưu nháp (Draft). Mặc định true = gửi đăng. */
   submit?: boolean;
+  /** Phòng gắn với tin (tạo tin từ phòng trống). RPC assert phòng thuộc người đăng (`ROOM_NOT_OWNED`). */
+  roomId?: string | null;
 }
 
 /**
@@ -69,6 +71,7 @@ export async function createListing(input: CreateListingInput): Promise<string> 
         latitude: input.latitude ?? null,
         longitude: input.longitude ?? null,
         metadata: input.metadata ?? {},
+        room_id: input.roomId ?? null,
       } as any,
       p_amenities: input.amenities ?? [],
       p_media: (input.media ?? []) as any,

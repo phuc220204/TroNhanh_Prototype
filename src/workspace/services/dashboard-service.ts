@@ -20,9 +20,14 @@ export async function getDashboardMetrics(ownerId: string, propertyId?: string) 
 
     let invoicesQuery = supabase
       .from("invoices")
-      .select("id,room_id,total_amount,status,period,due_date,payments(amount,paid_at,purpose),rooms!inner(property_id,room_code,properties(name))")
+      .select("id,room_id,total_amount,status,period,due_date,payments(amount,paid_at,purpose),rooms!inner(property_id,room_code,deleted_at,properties!inner(name,deleted_at))")
       .eq("owner_id", ownerId)
-      .is("deleted_at", null);
+      .is("deleted_at", null)
+      // Hóa đơn của phòng/khu đã xóa mềm không còn là tiền phải thu. Xóa khu
+      // không xóa hóa đơn ⇒ phải lọc qua embed `!inner`, nếu không KPI "chưa thu"
+      // cộng cả hóa đơn của khu đã xóa.
+      .is("rooms.deleted_at", null)
+      .is("rooms.properties.deleted_at", null);
     if (propertyId) invoicesQuery = invoicesQuery.eq("rooms.property_id", propertyId);
 
     const [roomsResult, invoicesResult] = await Promise.all([roomsQuery, invoicesQuery]);

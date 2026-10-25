@@ -1,6 +1,6 @@
 import { useState, useMemo, createContext, useContext, ReactNode, Children, isValidElement, cloneElement, ReactElement } from "react";
 import { useLocation, useNavigate } from "react-router";
-import { ChevronRight, Lock } from "lucide-react";
+import { ChevronRight, Lock, WifiOff } from "lucide-react";
 import { C, font } from "../theme";
 import { useBreakpoint } from "./useBreakpoint";
 import { useSubscriptionContext } from "../contexts/SubscriptionContext";
@@ -8,7 +8,7 @@ import { TRIAL_DAYS } from "../services/subscription-service";
 import { SubscriptionBanner } from "./landlord/SubscriptionBanner";
 import { Sidebar, MobileHeader, MobileTabBar, SAAS_NAV_IDS, ROOM_PAGE_TABS, type LandlordNavId } from "./landlord/SidebarNav";
 import { TrialRegisterModal } from "./landlord/TrialModal";
-import { Button, Skeleton } from "./common";
+import { Button, EmptyState, Skeleton } from "./common";
 
 export type { LandlordNavId };
 
@@ -62,7 +62,7 @@ export function LandlordShell({
   const { isMobile } = useBreakpoint();
   const location = useLocation();
   const navigate = useNavigate();
-  const { status: subStatus, trialDaysLeft, activateTrial, isLoading: isSubscriptionLoading } = useSubscriptionContext();
+  const { status: subStatus, trialDaysLeft, activateTrial, isLoading: isSubscriptionLoading, isError: isSubscriptionError, refresh: refreshSubscription } = useSubscriptionContext();
 
   const [showTrialRegister, setShowTrialRegister] = useState(false);
 
@@ -97,7 +97,8 @@ export function LandlordShell({
   // người chưa có gói vào chỉ thấy một trang số liệu rỗng, không hiểu vì sao;
   // màn khóa dưới đây giải thích và mời dùng thử.
   const isSaaSTab = SAAS_NAV_IDS.includes(activeTab);
-  const isSaaSBlocked = subStatus === "NONE" && isSaaSTab;
+  // Lỗi tải gói ⇒ `subStatus` mặc định "NONE" nhưng KHÔNG có nghĩa là chưa có gói.
+  const isSaaSBlocked = subStatus === "NONE" && isSaaSTab && !isSubscriptionError;
 
   const renderContent = () => {
     // Đang tải gói: status tạm là "NONE" ⇒ nếu không chờ, người ĐÃ có gói thấy
@@ -105,6 +106,18 @@ export function LandlordShell({
     if (isSaaSTab && isSubscriptionLoading) {
       return (
         <Skeleton data-testid="landlord-shell-loading" variant="row" count={6} style={{ padding: "24px 0" }} />
+      );
+    }
+    if (isSaaSTab && isSubscriptionError) {
+      return (
+        <EmptyState
+          data-testid="landlord-subscription-error"
+          icon={WifiOff}
+          title="Chưa tải được thông tin gói dịch vụ"
+          description="Dữ liệu của bạn vẫn an toàn. Kiểm tra kết nối mạng rồi thử lại."
+          action={<Button variant="primary" onClick={refreshSubscription}>Thử lại</Button>}
+          style={{ minHeight: "calc(100vh - 160px)" }}
+        />
       );
     }
     if (isSaaSBlocked) {

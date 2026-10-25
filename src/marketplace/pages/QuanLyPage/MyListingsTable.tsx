@@ -2,8 +2,8 @@ import React from "react";
 import { useNavigate } from "react-router";
 import { Eye, Link2, MessageSquare, Plus, FileText, SearchX } from "lucide-react";
 import { C, font, radius } from "../../../shared/theme";
-import { Skeleton } from "../../../shared/components/common";
-import { getListingImage, listingImageUrls } from "../../services/listing-mappers";
+import { ImageWithFallback, Skeleton } from "../../../shared/components/common";
+import { listingImageUrls } from "../../services/listing-mappers";
 import { formatVND } from "../../utils/listingMetadata";
 import type { BoostOrderSummary } from "../../services/boost-orders-service";
 import { StatusChip, ListingActionGroup, RejectionNotice } from "./ListingRowActions";
@@ -179,7 +179,7 @@ export function MyListingsTable({
       onEdit={() => navigate(`/dang-tin-cho-thue/${l.id}`)}
     />
   );
-  const imageFor = (l: DbListing) => listingImageUrls(l)[0] || getListingImage(l.id);
+  const imageFor = (l: DbListing) => listingImageUrls(l)[0];
   // Cùng testid + data-* cho cả bảng lẫn thẻ ⇒ E2E chạy được ở mọi kích thước.
   const rowAttrs = (l: DbListing) => ({ "data-testid": "my-listing-row", "data-listing-id": l.id, "data-listing-status": l.status });
 
@@ -189,7 +189,7 @@ export function MyListingsTable({
         {paginatedRows.map((l) => (
           <article key={l.id} {...rowAttrs(l)} style={{ ...panelStyle, padding: 14, display: "flex", flexDirection: "column", gap: 12, fontFamily: font }}>
             <div style={{ display: "flex", gap: 12 }}>
-              <img src={imageFor(l)} alt="" style={{ width: 72, height: 72, borderRadius: radius.md, objectFit: "cover", flexShrink: 0 }} />
+              <ImageWithFallback src={imageFor(l)} alt={l.title} iconSize={18} hideLabel style={{ width: 72, height: 72, borderRadius: radius.md, objectFit: "cover", flexShrink: 0 }} />
               <div style={{ minWidth: 0, flex: 1, display: "flex", flexDirection: "column", gap: 4 }}>
                 <div><StatusChip status={l.status} /></div>
                 <span style={{ fontSize: 14, fontWeight: 700, color: C.textPrimary, lineHeight: 1.35, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>{l.title}</span>
@@ -234,7 +234,7 @@ export function MyListingsTable({
               <tr key={l.id} {...rowAttrs(l)} style={{ borderBottom: `1px solid ${C.border}` }}>
                 <td style={{ ...cellStyle, maxWidth: 380 }}>
                   <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
-                    <img src={imageFor(l)} alt="" style={{ width: 56, height: 56, borderRadius: radius.md, objectFit: "cover", flexShrink: 0, border: `1px solid ${C.border}` }} />
+                    <ImageWithFallback src={imageFor(l)} alt={l.title} iconSize={16} hideLabel style={{ width: 56, height: 56, borderRadius: radius.md, objectFit: "cover", flexShrink: 0, border: `1px solid ${C.border}` }} />
                     <div style={{ minWidth: 0, display: "flex", flexDirection: "column", gap: 3 }}>
                       <span style={{ fontWeight: 700, fontSize: 13.5, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={l.title}>{l.title}</span>
                       <span style={{ fontSize: 12, color: C.textSecondary }}>{l.district} · {l.area} m² · {listingCode(l.id)}</span>

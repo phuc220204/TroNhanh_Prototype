@@ -141,9 +141,13 @@ export async function getInvoices(params: GetInvoicesParams): Promise<InvoiceIte
   try {
     let q = supabase
       .from("invoices")
-      .select("*, rooms!inner(room_code, property_id, properties(name)), invoice_items(*), payments(amount), invoice_collection_notes(reason, follow_up_date, created_at)")
+      .select("*, rooms!inner(room_code, property_id, deleted_at, properties!inner(name, deleted_at)), invoice_items(*), payments(amount), invoice_collection_notes(reason, follow_up_date, created_at)")
       .eq("owner_id", ownerId)
       .is("deleted_at", null)
+      // Phòng/khu đã xóa mềm: hóa đơn của chúng không hiện và không cộng vào
+      // "Còn phải thu". Xóa khu không xóa hóa đơn nên phải lọc qua embed `!inner`.
+      .is("rooms.deleted_at", null)
+      .is("rooms.properties.deleted_at", null)
       .order("created_at", { ascending: false });
 
     if (propertyId) {
@@ -186,9 +190,11 @@ export async function getInvoicePeriods(ownerId: string | undefined): Promise<st
   try {
     const { data, error } = await supabase
       .from("invoices")
-      .select("period")
+      .select("period, rooms!inner(deleted_at, properties!inner(deleted_at))")
       .eq("owner_id", ownerId)
       .is("deleted_at", null)
+      .is("rooms.deleted_at", null)
+      .is("rooms.properties.deleted_at", null)
       .order("period", { ascending: false });
 
     if (error) throw error;

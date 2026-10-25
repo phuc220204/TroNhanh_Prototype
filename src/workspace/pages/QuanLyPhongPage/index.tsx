@@ -112,6 +112,8 @@ export function QuanLyPhongPage() {
   // và effect bên dưới ghi lại vào URL.
   const khuParam = searchParams.get("khu");
   const [properties, setProperties] = useState<Property[]>([]);
+  // `?khu=<id>` (từ dashboard "Việc cần làm" hoặc khi tải lại) mở thẳng đúng khu.
+  // Id lạ / đã xóa thì `loadDbData` tự rơi về khu đầu tiên.
   const [selectedId, setSelectedId] = useState<string>(() => khuParam ?? "");
   const goToTab = (tab: LandlordNavId) => {
     const khu = selectedProperty ? `&khu=${selectedProperty.id}` : "";

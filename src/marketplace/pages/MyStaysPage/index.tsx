@@ -2,24 +2,26 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { qk } from "../../../shared/query/keys";
 import { useAuth } from "../../../shared/contexts/AuthContext";
-import { Home, TriangleAlert, UserCheck } from "lucide-react";
+import { Home, TriangleAlert } from "lucide-react";
 import { RenterShell } from "../../../shared/components/RenterShell";
 import { EmptyState, Skeleton, Button } from "../../../shared/components/common";
 import { C, font, radius, space } from "../../../shared/theme";
 import { toUserMessage } from "../../../shared/services/supabase-error";
 import {
   getMyStays,
+  getMyPendingLinkDetails,
   confirmOccupancyLink,
   postReview,
   type ReviewableStay,
 } from "../../services/review-service";
 import { ReviewModal } from "../../components/ReviewModal";
 import { StayCard } from "./StayCard";
+import { PendingLinkCard } from "./PendingLinkCard";
 
 
 export function MyStaysPage() {
   const queryClient = useQueryClient();
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const staysKey = qk.occupancies.mine(user?.id);
   const [reviewTarget, setReviewTarget] = useState<ReviewableStay | null>(null);
   const [reviewError, setReviewError] = useState<string | null>(null);
@@ -51,6 +53,14 @@ export function MyStaysPage() {
 
   const stays = staysQuery.data ?? [];
   const pendingLinks = stays.filter((s) => s.link_status === "Pending");
+
+  // Chỉ gọi khi có lời mời đang chờ. Lỗi thì thẻ vẫn hiện, ô "Chủ trọ" ghi "Chưa có tên".
+  const pendingDetailsQuery = useQuery({
+    queryKey: qk.occupancies.pendingLinkDetails(user?.id),
+    queryFn: getMyPendingLinkDetails,
+    enabled: pendingLinks.length > 0,
+  });
+  const landlordNames = new Map((pendingDetailsQuery.data ?? []).map((d) => [d.occupancy_id, d.landlord_name]));
   const activeStays = stays.filter((s) => s.link_status === "Confirmed" && s.contract_status === "Active");
   const pastStays = stays.filter((s) => s.link_status === "Confirmed" && s.contract_status !== "Active");
 
@@ -86,39 +96,15 @@ export function MyStaysPage() {
                 </h2>
                 <div style={{ display: "flex", flexDirection: "column", gap: space[3] }}>
                   {pendingLinks.map((s) => (
-                    <div
+                    <PendingLinkCard
                       key={s.occupancy_id}
-                      style={{ background: C.white, border: `1px solid ${C.secondary}`, borderRadius: radius.lg, padding: space[5] }}
-                    >
-                      <div style={{ display: "flex", alignItems: "center", gap: space[2], marginBottom: space[2] }}>
-                        <UserCheck size={16} color={C.primary} />
-                        <p style={{ fontFamily: font, fontSize: 14.5, fontWeight: 700, color: C.textPrimary, margin: 0 }}>
-                          Xác nhận bạn là người ở {s.property_name || "khu trọ"}
-                          {s.room_code ? ` · Phòng ${s.room_code}` : ""}
-                        </p>
-                      </div>
-                      <p style={{ fontFamily: font, fontSize: 13, color: C.textSecondary, margin: `0 0 ${space[3]}px`, lineHeight: 1.55 }}>
-                        Chủ trọ đã gắn tài khoản của bạn vào đợt ở này. Chỉ khi bạn xác nhận thì liên kết mới có hiệu lực,
-                        và bạn mới có thể đánh giá khu trọ về sau.
-                      </p>
-                      <div style={{ display: "flex", gap: space[2] }}>
-                        <Button
-                          disabled={linkMutation.isPending}
-                          onClick={() => linkMutation.mutate({ id: s.occupancy_id, accept: true })}
-                          data-testid="confirm-link-btn"
-                        >
-                          Xác nhận
-                        </Button>
-                        <Button
-                          variant="outline"
-                          disabled={linkMutation.isPending}
-                          onClick={() => linkMutation.mutate({ id: s.occupancy_id, accept: false })}
-                          data-testid="reject-link-btn"
-                        >
-                          Từ chối
-                        </Button>
-                      </div>
-                    </div>
+                      stay={s}
+                      landlordName={landlordNames.get(s.occupancy_id)}
+                      accountName={profile?.full_name}
+                      busy={linkMutation.isPending}
+                      onConfirm={() => linkMutation.mutate({ id: s.occupancy_id, accept: true })}
+                      onReject={() => linkMutation.mutate({ id: s.occupancy_id, accept: false })}
+                    />
                   ))}
                 </div>
               </section>

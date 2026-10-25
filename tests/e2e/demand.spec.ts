@@ -1,5 +1,9 @@
 import { test, expect, type Page } from "@playwright/test";
 import { ACCOUNTS, go, login, pickArea as pickAreaSelect, runTag } from "./helpers";
+import { assertWritesAllowed } from "./e2e-env";
+
+// Spec này GHI dữ liệu thật — chặn nếu đang trỏ vào production (xem e2e-env.ts).
+test.beforeAll(assertWritesAllowed);
 
 /**
  * Tin nhu cầu — cả hai loại `RoomWanted` và `RoommateWanted`.

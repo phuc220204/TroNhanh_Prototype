@@ -18,6 +18,9 @@ export default defineConfig({
   workers: 1,
   retries: 0,
   timeout: 90_000,
+  // Xóa mềm mọi bản ghi `-e2e-` sau lần chạy, kể cả khi spec đỏ. Spec ghi dữ
+  // liệu tự chặn khi trỏ vào production — xem `tests/e2e/e2e-env.ts`.
+  globalTeardown: "./tests/e2e/global-teardown.ts",
   expect: { timeout: 12_000 },
   reporter: [["list"], ["html", { open: "never", outputFolder: "playwright-report" }]],
 

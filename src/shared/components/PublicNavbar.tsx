@@ -278,6 +278,8 @@ export function PublicNavbarDesktop({
 
         <NavLink label="Tin nhu cầu" onClick={() => navigate("/tin-nhu-cau")} />
 
+        <NavLink label="Bảng giá" onClick={() => navigate("/bang-gia")} />
+
         {/* Yêu thích — nút này từng KHÔNG có `onClick` (bấm chỉ đổi màu nền) vì
             tính năng lưu tin chưa được làm. Giờ đã có bảng `saved_listings` +
             trang `/yeu-thich`, nên nó dẫn tới đúng chỗ. */}
@@ -420,7 +422,6 @@ export function PublicNavbarMobile({ onSearch }: { onSearch?: () => void }) {
   const { user, signOut, hasRole } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
   const isStaff = hasRole("Admin") || hasRole("Moderator");
-  const hasLandlordAccess = hasRole("Seller") || isStaff;
 
   useEffect(() => {
     if (!menuOpen) return;
@@ -444,6 +445,7 @@ export function PublicNavbarMobile({ onSearch }: { onSearch?: () => void }) {
       items: [
         { label: "Tìm phòng", action: go("/tim-phong") },
         { label: "Tin nhu cầu", action: go("/tin-nhu-cau") },
+        { label: "Bảng giá cho chủ trọ", action: go("/bang-gia") },
       ],
     },
     {
@@ -461,7 +463,10 @@ export function PublicNavbarMobile({ onSearch }: { onSearch?: () => void }) {
             { label: "Tin đăng của tôi", action: go("/tai-khoan/tin-cho-thue") },
             { label: "Tin nhắn", action: go("/tin-nhan") },
             { label: "Tin đã lưu", action: go("/yeu-thich") },
-            ...(hasLandlordAccess ? [{ label: "Dashboard chủ trọ", action: go("/chu-tro"), emphasized: true }] : []),
+            // Cùng điều kiện với menu desktop: mọi người đã đăng nhập. Khu chủ trọ gác
+            // bằng TRẠNG THÁI GÓI (màn mời dùng thử), không bằng role Seller — trước đây
+            // chủ trọ mới trên điện thoại không có lối nào vào bản dùng thử.
+            { label: "Dashboard chủ trọ", action: go("/chu-tro"), emphasized: true },
             ...(isStaff ? [{ label: "Quản trị hệ thống", action: go("/quan-tri"), emphasized: true }] : []),
           ],
         }]
