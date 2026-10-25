@@ -3,6 +3,8 @@
 > Đính file này kèm mọi task cần đăng nhập kiểm thử.
 > Cập nhật **2026-08-08**: thêm §1b (20 tài khoản demo) và sửa mô tả dữ liệu seed
 > ở §1 cho khớp `dbSeeder.ts` thật.
+> Cập nhật **2026-10-16**: §1 ghi lại dữ liệu THẬT đang có trên production (kiểm bằng
+> SQL chỉ đọc khi test UX); §2 đổi cách test cô lập vì `seller.b` hiện trống.
 
 ---
 
@@ -11,12 +13,15 @@
 Mật khẩu **giống nhau cho cả 4**: `TroNhanh@2026`
 Email confirmation đã **TẮT** → đăng ký/đăng nhập không cần xác nhận mail.
 
-| Email                    | Mật khẩu        | Vai trò            | Dữ liệu đã seed                                                |
+| Email                    | Tên hiển thị    | Vai trò            | Dữ liệu thực tế (16/10/2026)                                   |
 | ------------------------ | --------------- | ------------------ | -------------------------------------------------------------- |
-| `seller.a@tronhanh.demo` | `TroNhanh@2026` | Renter + Seller    | 3 khu · 12 phòng · hóa đơn · chỉ số điện nước · **4 tin, 2 tin đang boost** |
-| `seller.b@tronhanh.demo` | `TroNhanh@2026` | Renter + Seller    | y hệt `seller.a` — seeder chỉ có MỘT kịch bản                  |
-| `renter.a@tronhanh.demo` | `TroNhanh@2026` | Renter             | không có dữ liệu SaaS (đúng thiết kế)                          |
-| `admin@tronhanh.demo`    | `TroNhanh@2026` | **Admin** + Renter | không có dữ liệu SaaS                                          |
+| `seller.a@tronhanh.demo` | Nguyễn Thị A    | Renter + Seller    | Gói **ACTIVE** · 3 khu · 12 phòng · 22 hóa đơn · 4 tin cho thuê (đều **Hết hạn** sau BR-026) |
+| `seller.b@tronhanh.demo` | Trần Văn Bảy    | Renter + Seller    | **Trống**: 0 khu, 0 phòng, **chưa có gói** ⇒ thấy paywall dùng thử. Dùng để test chủ trọ mới |
+| `renter.a@tronhanh.demo` | Lê Minh Nhật    | Renter             | Có **lời mời liên kết P102** (khu Phan Văn Trị của seller.a) đang chờ xác nhận |
+| `admin@tronhanh.demo`    | Quản Trị Viên   | **Admin** + Renter | không có dữ liệu SaaS                                          |
+
+Mật khẩu xem dòng đầu mục này. **Agent không tự đăng nhập**: app localhost gửi mật
+khẩu tới Supabase production, nên người làm test tự đăng nhập trong ô trình duyệt.
 
 > ⚠️ **Đuôi `@tronhanh.demo` là bắt buộc, không đổi.** RPC `demo_link_me_to_seeded_occupancy()` chỉ tác động lên khu trọ mà chủ có email kết thúc `@tronhanh.demo` — đây là ràng buộc phạm vi cố ý để hàm demo không đụng dữ liệu thật.
 
@@ -65,12 +70,17 @@ là do dữ liệu.
 | Bạn đang test                                                                  | Đăng nhập bằng                      |
 | ------------------------------------------------------------------------------ | ----------------------------------- |
 | Đăng tin cho thuê · sửa tin · quản lý khu/phòng · điện nước · hóa đơn · VietQR | `seller.a`                          |
-| **Cô lập dữ liệu (BR-007)** — A không thấy gì của B và ngược lại               | `seller.b`                          |
+| **Cô lập dữ liệu (BR-007)** — xem cách test bên dưới                           | `seller.b`                          |
+| Chủ trọ mới chưa có gói (paywall, dùng thử)                                    | `seller.b`                          |
 | Đăng tin tìm phòng / ở ghép · nhắn tin · đánh giá khu trọ                      | `renter.a`                          |
 | Kiểm duyệt tin · quản lý user · bật/tắt chế độ kiểm duyệt                      | `admin`                             |
 | Marketplace công khai · che SĐT (BR-014)                                       | **cửa sổ ẩn danh**, không đăng nhập |
 
-**Cách test cô lập RLS:** làm gì đó bằng `seller.a`, rồi đăng nhập `seller.b` và xác nhận **không thấy gì** của A. Cả hai đều có 3 khu / 12 phòng nên phép thử này có ý nghĩa thật, không phải "pass vì bên kia rỗng".
+**Cách test cô lập RLS:** `seller.b` hiện trống, nên "không thấy gì trên giao
+diện" chưa chứng minh được gì. Đăng nhập `seller.b` trên localhost rồi truy vấn
+**thẳng** dữ liệu của seller.a qua `window.__sb` (chỉ có ở dev): khu trọ (kể cả
+`bank_account_number`), phòng, hóa đơn, hợp đồng, người ở, thanh toán. Mọi truy vấn phải
+trả **0 dòng**. Đã PASS ngày 16/10/2026.
 
 ---
 
