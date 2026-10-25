@@ -3,7 +3,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router";
 import {
   Building2, FileText, Plus, Zap, ChevronRight,
-  Home, Users, CheckSquare, AlertTriangle, TrendingUp, KeyRound, CalendarClock,
+  Home, Users, CheckSquare, AlertTriangle, TrendingUp, KeyRound, CalendarClock, LifeBuoy, Mail,
 } from "lucide-react";
 import { C, font, shadow } from "../../../shared/theme";
 import { useBreakpoint } from "../../../shared/components/useBreakpoint";
@@ -17,7 +17,7 @@ import { qk } from "../../../shared/query/keys";
 import { useDashboardData, toDashboardRoom } from "./useDashboardData";
 import {
   PrimaryBtn, GhostBtn, StatusChip, PayText, PropertySelector,
-  SegmentedBar, RoomTaskBtn, UtilityCard, Footer,
+  SegmentedBar, RoomTaskBtn, Footer,
 } from "./atoms";
 import { UtilityModal } from "./UtilityModal";
 import { KpiGrid, type DashboardKpi } from "./KpiGrid";
@@ -50,7 +50,7 @@ interface ChuTroDashboardPageProps {
 
 export function ChuTroDashboardPage({ expiredListingCount = null }: ChuTroDashboardPageProps = {}) {
   const navigate = useNavigate();
-  const { isMobile, isTablet } = useBreakpoint();
+  const { isMobile } = useBreakpoint();
   const { user, profile } = useAuth();
   const displayName = profile?.full_name || user?.email?.split("@")[0] || "Chủ trọ";
 
@@ -147,10 +147,12 @@ export function ChuTroDashboardPage({ expiredListingCount = null }: ChuTroDashbo
     { label: "Phòng đã có người ở", value: rentedRoomsCount, unit: "Phòng", hint: `${occupancyRate}% lấp đầy`, accent: C.primary, Icon: KeyRound, secret: true, testId: "dashboard-kpi-rented-rooms" },
     { label: "Người ở hiện tại", value: occupantCount, unit: "Người", accent: C.available, Icon: Users, secret: true },
     { label: "Phòng trống", value: emptyRoomsCount, unit: "Phòng", accent: C.available, Icon: CheckSquare, secret: false },
-    { label: "Hóa đơn chưa thu", value: dbKpis?.unpaidInvoiceCount ?? 0, unit: "HĐ", hint: formatMoney(dbKpis?.unpaidInvoiceAmount ?? 0), accent: C.repairing, Icon: AlertTriangle, secret: false },
-    { label: `Sắp đến hạn (${DUE_SOON_DAYS} ngày)`, value: dbKpis?.dueSoonInvoiceCount ?? 0, unit: "HĐ", hint: formatMoney(dbKpis?.dueSoonInvoiceAmount ?? 0), accent: C.warning, Icon: CalendarClock, secret: false, testId: "dashboard-kpi-due-soon" },
+    // Số tiền (`hint`) của các thẻ dưới đi chung công tắc "Hiện số liệu" với
+    // "Đã thu trong tháng" — trước đây che một chỗ mà hở 13,2 triệu ở thẻ bên cạnh.
+    { label: "Hóa đơn chưa thu", value: dbKpis?.unpaidInvoiceCount ?? 0, unit: "HĐ", hint: formatMoney(dbKpis?.unpaidInvoiceAmount ?? 0), accent: C.repairing, Icon: AlertTriangle, secret: false, secretHint: true, testId: "dashboard-kpi-unpaid" },
+    { label: `Sắp đến hạn (${DUE_SOON_DAYS} ngày)`, value: dbKpis?.dueSoonInvoiceCount ?? 0, unit: "HĐ", hint: formatMoney(dbKpis?.dueSoonInvoiceAmount ?? 0), accent: C.warning, Icon: CalendarClock, secret: false, secretHint: true, testId: "dashboard-kpi-due-soon" },
     { label: "Đã thu trong tháng", value: formatMoney(dbKpis?.collectedThisMonth ?? 0), unit: "", caption: periodLabel, accent: C.primaryDark, Icon: TrendingUp, secret: true },
-    { label: "Hóa đơn kỳ này", value: dbKpis?.invoiceCountThisPeriod ?? 0, unit: "HĐ", hint: `${formatMoney(dbKpis?.invoiceAmountThisPeriod ?? 0)} · ${periodLabel}`, accent: C.available, Icon: TrendingUp, secret: false },
+    { label: "Hóa đơn kỳ này", value: dbKpis?.invoiceCountThisPeriod ?? 0, unit: "HĐ", hint: formatMoney(dbKpis?.invoiceAmountThisPeriod ?? 0), caption: periodLabel, accent: C.available, Icon: TrendingUp, secret: false, secretHint: true, testId: "dashboard-kpi-period-invoices" },
   ];
   const reminderInvoices = dbKpis?.reminderInvoices ?? [];
   const openInvoice = (invoiceId: string) => navigate(`/chu-tro/hoa-don?hoa-don=${invoiceId}`);
@@ -210,7 +212,7 @@ export function ChuTroDashboardPage({ expiredListingCount = null }: ChuTroDashbo
 
   if (loading) {
     return (
-      <LandlordShell active="overview" mobileTitle="Dashboard">
+      <LandlordShell active="overview" mobileTitle="Tổng quan">
         <Skeleton variant="row" count={6} label="Đang tải tổng quan" style={{ padding: "24px 0" }} />
       </LandlordShell>
     );
@@ -218,7 +220,7 @@ export function ChuTroDashboardPage({ expiredListingCount = null }: ChuTroDashbo
 
   if (dashboardError) {
     return (
-      <LandlordShell active="overview" mobileTitle="Dashboard">
+      <LandlordShell active="overview" mobileTitle="Tổng quan">
         <div role="alert" style={{ maxWidth: 560, margin: "70px auto", padding: 24, background: C.white, border: `1px solid ${C.border}`, borderRadius: 16, textAlign: "center", fontFamily: font }}>
           <AlertTriangle size={30} color={C.repairing} />
           <h1 style={{ fontSize: 18, color: C.textPrimary, margin: "12px 0 6px" }}>Chưa tải được dữ liệu dashboard</h1>
@@ -231,7 +233,7 @@ export function ChuTroDashboardPage({ expiredListingCount = null }: ChuTroDashbo
 
   if (properties.length === 0) {
     return (
-      <LandlordShell active="overview" mobileTitle="Dashboard">
+      <LandlordShell active="overview" mobileTitle="Tổng quan">
         <div style={{ maxWidth: 600, margin: "60px auto", width: "100%", padding: "0 24px" }}>
           <EmptyState
             icon={<Building2 size={36} color={C.primary} />}
@@ -251,7 +253,7 @@ export function ChuTroDashboardPage({ expiredListingCount = null }: ChuTroDashbo
   /* ═══════════ MOBILE ═══════════ */
   if (isMobile) {
     return (
-      <LandlordShell active="overview" mobileTitle="Dashboard">
+      <LandlordShell active="overview" mobileTitle="Tổng quan">
         <div style={{ padding: "16px 16px 100px" }}>
           <p style={{ fontFamily: font, fontSize: 19, fontWeight: 800, color: C.textPrimary, margin: "0 0 4px" }}>Chào {displayName} 👋</p>
           <p data-testid="dashboard-greeting" style={{ fontFamily: font, fontSize: 13, color: C.textSecondary, margin: "0 0 14px" }}>{greeting}</p>
@@ -273,7 +275,7 @@ export function ChuTroDashboardPage({ expiredListingCount = null }: ChuTroDashbo
 
           <div aria-busy={isSwitchingProperty} style={{ opacity: isSwitchingProperty ? 0.55 : 1, transition: "opacity 150ms" }}><KpiGrid kpis={dynamicKPIS} isRevealed={revealKPIs} onToggleReveal={() => setRevealKPIs(!revealKPIs)} isMobile /></div>
 
-          <DueInvoicesPanel invoices={reminderInvoices} onOpenInvoice={openInvoice} onViewAll={toOutstandingInvoices} />
+          <DueInvoicesPanel invoices={reminderInvoices} onOpenInvoice={openInvoice} onViewAll={toOutstandingInvoices} isAmountRevealed={revealKPIs} />
 
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
             <span style={{ fontFamily: font, fontSize: 15, fontWeight: 800, color: C.textPrimary }}>Tình trạng phòng</span>
@@ -337,7 +339,7 @@ export function ChuTroDashboardPage({ expiredListingCount = null }: ChuTroDashbo
 
   /* ═══════════ DESKTOP ═══════════ */
   return (
-    <LandlordShell active="overview" mobileTitle="Dashboard">
+    <LandlordShell active="overview" mobileTitle="Tổng quan">
       <div style={{ display: "flex", gap: 24, padding: "28px 32px 0", maxWidth: 1500, width: "100%", margin: "0 auto", boxSizing: "border-box" }}>
 
         {/* MAIN COLUMN */}
@@ -403,7 +405,7 @@ export function ChuTroDashboardPage({ expiredListingCount = null }: ChuTroDashbo
 
           <div aria-busy={isSwitchingProperty} style={{ opacity: isSwitchingProperty ? 0.55 : 1, transition: "opacity 150ms" }}><KpiGrid kpis={dynamicKPIS} isRevealed={revealKPIs} onToggleReveal={() => setRevealKPIs(!revealKPIs)} /></div>
 
-          <DueInvoicesPanel invoices={reminderInvoices} onOpenInvoice={openInvoice} onViewAll={toOutstandingInvoices} />
+          <DueInvoicesPanel invoices={reminderInvoices} onOpenInvoice={openInvoice} onViewAll={toOutstandingInvoices} isAmountRevealed={revealKPIs} />
 
           {/* Room operations */}
           <div style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: 16, padding: "20px 22px", marginBottom: 28, boxShadow: shadow.sm }}>
@@ -440,46 +442,24 @@ export function ChuTroDashboardPage({ expiredListingCount = null }: ChuTroDashbo
             <p style={{ fontFamily: font, fontSize: 12, color: C.textSecondary, margin: "14px 0 0", fontStyle: "italic" }}>Đây chỉ là bản xem nhanh. Quản lý đầy đủ trong “Khu trọ &amp; Phòng”.</p>
           </div>
 
+          <div data-testid="dashboard-support" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 12, background: C.white, border: `1px solid ${C.border}`, borderRadius: 16, padding: "14px 20px", boxShadow: shadow.sm }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 12, minWidth: 0 }}>
+              <LifeBuoy size={18} color={C.primary} style={{ flexShrink: 0 }} />
+              <div style={{ minWidth: 0 }}>
+                <p style={{ fontFamily: font, fontSize: 14, fontWeight: 800, color: C.textPrimary, margin: 0 }}>Cần hỗ trợ?</p>
+                <p style={{ fontFamily: font, fontSize: 12.5, color: C.textSecondary, margin: "2px 0 0" }}>Gửi email cho đội ngũ Trọ Nhanh: {SUPPORT_EMAIL}</p>
+              </div>
+            </div>
+            <a href={SUPPORT_EMAIL_HREF} data-testid="dashboard-support-email" style={{ display: "inline-flex", alignItems: "center", gap: 6, fontFamily: font, fontSize: 13.5, fontWeight: 700, color: C.primary, textDecoration: "none" }}>
+              <Mail size={15} /> Gửi email hỗ trợ
+            </a>
+          </div>
+
           <Footer />
         </main>
 
-        {/* RIGHT COLUMN */}
-        {/* Máy tính bảng: cột phụ 300px làm hẹp cột chính — chỉ hiện từ desktop. */}
-        {!isTablet && <aside style={{ width: 300, flexShrink: 0, display: "flex", flexDirection: "column", gap: 14, paddingTop: 2 }}>
-          <span style={{ fontFamily: font, fontSize: 12.5, fontWeight: 800, color: C.textSecondary, textTransform: "uppercase", letterSpacing: "0.05em" }}>Công cụ quản lý</span>
-          <UtilityCard
-            title="Khu trọ & Phòng"
-            desc="Quản lý số phòng, danh sách khu trọ và trạng thái từng phòng."
-            cta="Quản lý"
-            onClick={toRooms}
-            color={C.available}
-            bgImage="/assets/card_house_icon.png"
-          />
-          <UtilityCard
-            title="Quản lý tin đăng"
-            desc="Theo dõi các tin cho thuê đang hiển thị cho người thuê."
-            cta="Chi tiết"
-            onClick={toListings}
-            color={C.secondary}
-            bgImage="/assets/card_listing_icon.png"
-          />
-          <UtilityCard
-            title="Thanh toán & Điện nước"
-            desc="Theo dõi hóa đơn kỳ này và số tiền đang chờ thu."
-            cta="Thu tiền"
-            onClick={toInvoices}
-            color={C.warning}
-            bgImage="/assets/card_payment_icon.png"
-          />
-          <UtilityCard
-            title="Hỗ trợ"
-            desc="Liên hệ đội ngũ Trọ Nhanh khi cần trợ giúp."
-            cta="Gửi ngay"
-            onClick={() => { window.location.href = SUPPORT_EMAIL_HREF; }}
-            color={C.available}
-            bgImage="/assets/card_support_icon.png"
-          />
-        </aside>}
+        {/* Cột "Công cụ quản lý" cũ lặp lại đúng các mục của sidebar (Khu trọ & Phòng,
+            Tin đăng, Hóa đơn) nên đã bỏ; lối liên hệ hỗ trợ chuyển xuống cuối cột chính. */}
       </div>
       {Modals}
     </LandlordShell>

@@ -23,7 +23,7 @@ export function PlanCard({ plan, isRenewal = false, isCurrent = false, isBuying 
     <div data-testid="saas-plan-card" style={{ background: C.white, border: `1.5px solid ${isCurrent ? C.primary : C.border}`, borderRadius: radius.xl, padding: 20, display: "flex", flexDirection: "column", gap: 12, boxShadow: shadow.sm, fontFamily: font }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
         <h2 style={{ margin: 0, fontSize: 17, fontWeight: 800, color: C.textPrimary }}>{plan.name}</h2>
-        {isCurrent && <span style={{ fontSize: 11, fontWeight: 800, color: C.primary, background: C.cream, borderRadius: radius.pill, padding: "3px 10px" }}>Gói hiện tại</span>}
+        {isCurrent && <span data-testid="saas-plan-current-badge" style={{ fontSize: 11, fontWeight: 800, color: C.primary, background: C.cream, borderRadius: radius.pill, padding: "3px 10px" }}>Gói hiện tại</span>}
       </div>
       <div>
         <div style={{ fontSize: 24, fontWeight: 900, color: C.primary }}>{formatVnd(price)}</div>
