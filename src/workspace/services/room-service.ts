@@ -90,6 +90,10 @@ export async function getRoomsByOwnerOrThrow(ownerId: string): Promise<RoomItem[
     `)
     .eq("owner_id", ownerId)
     .is("deleted_at", null)
+    // Lọc embed (không có `!inner`): chỉ bỏ hợp đồng/hóa đơn đã xóa mềm, không bỏ
+    // phòng. Thiếu lọc này thì "Việc cần làm" coi hóa đơn đã xóa là đã lập.
+    .is("contracts.deleted_at", null)
+    .is("invoices.deleted_at", null)
     .order("created_at", { ascending: false });
   if (error) {
     logError("room-service.getRoomsByOwnerOrThrow", error);

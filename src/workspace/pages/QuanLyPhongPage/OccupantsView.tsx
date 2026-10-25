@@ -20,6 +20,7 @@ import { AddOccupantModal } from "./AddOccupantModal";
 import { EndContractModal } from "./EndContractModal";
 import { OccupancyTable } from "./OccupancyTable";
 import { toLocalISODate, formatDate } from "../../../shared/utils/format";
+import { classifyContractEnd } from "../../services/contract-due";
 
 interface OccupantsViewProps {
   property: Property | null;
@@ -178,6 +179,11 @@ export function OccupantsView({ property, mobile, isReadOnly, onRefreshData }: O
     for (const c of item.contracts ?? []) contractById.set(c.id, c);
   }
 
+  // Hợp đồng `Active` đã quá ngày kết thúc — đếm theo hợp đồng, không theo người ở.
+  const today = new Date();
+  const expiredContractCount = Array.from(contractById.values())
+    .filter((c) => classifyContractEnd(c.end_date, c.status, today)?.state === "expired").length;
+
   const closeModals = () => {
     setErrorMsg("");
     setLinkTarget(null);
@@ -201,9 +207,15 @@ export function OccupantsView({ property, mobile, isReadOnly, onRefreshData }: O
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: mobile ? "stretch" : "center", flexDirection: mobile ? "column" : "row", gap: 12, marginBottom: 20 }}>
         <div>
           <h2 style={{ fontFamily: font, fontSize: 17, fontWeight: 800, color: C.textPrimary, margin: "0 0 4px" }}>Người ở &amp; hợp đồng thuê</h2>
-          <p style={{ fontFamily: font, fontSize: 13, color: C.textSecondary, margin: 0 }}>
-            Hợp đồng đang hiệu lực, thông tin người ở và liên kết tài khoản Trọ Nhanh của người ở.
-          </p>
+          {expiredContractCount > 0 ? (
+            <p data-testid="occupancy-expired-summary" style={{ fontFamily: font, fontSize: 13, fontWeight: 600, color: C.error, margin: 0 }}>
+              {expiredContractCount} hợp đồng đã quá ngày kết thúc — gia hạn hoặc kết thúc để phòng phản ánh đúng thực tế.
+            </p>
+          ) : (
+            <p style={{ fontFamily: font, fontSize: 13, color: C.textSecondary, margin: 0 }}>
+              Hợp đồng đang hiệu lực, thông tin người ở và liên kết tài khoản Trọ Nhanh của người ở.
+            </p>
+          )}
         </div>
         <Button variant="primary" requiresWrite icon={<Plus size={16} />} onClick={() => { setErrorMsg(""); setIsAddOpen(true); }} data-testid="add-occupant-btn">
           Thêm người ở
