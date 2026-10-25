@@ -3,7 +3,8 @@ import { useNavigate, Link, useSearchParams } from "react-router";
 import { supabase } from "../../shared/supabaseClient";
 import { C, font } from "../../shared/theme";
 import { Eye, EyeOff, Mail, Lock, User, Phone, ArrowLeft } from "lucide-react";
-import { GoogleSignInButton, AuthDivider } from "../../shared/components/common";
+import { GoogleSignInButton, AuthDivider, LegalConsentCheckbox } from "../../shared/components/common";
+import { LEGAL_VERSION } from "../../shared/constants/legal";
 import { logError, toUserMessage } from "../../shared/services/supabase-error";
 import { clearPostAuthRedirect, toSafeRedirect, withAuthRedirect } from "../../shared/utils/auth-redirect";
 import { registerWithCredentials, RegistrationInputError } from "../../shared/services/auth-registration";
@@ -23,9 +24,14 @@ export function RegisterPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
+  const [hasAcceptedTerms, setHasAcceptedTerms] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!hasAcceptedTerms) {
+      setErrorMessage("Vui lòng đồng ý với Điều khoản sử dụng và Chính sách bảo mật để tạo tài khoản.");
+      return;
+    }
 
     setIsLoading(true);
     setErrorMessage("");
@@ -41,6 +47,7 @@ export function RegisterPage() {
         email,
         phone: contactPhone,
         password,
+        acceptedTermsVersion: LEGAL_VERSION,
       });
 
       if (result.secondaryEmailError) {
@@ -381,13 +388,21 @@ export function RegisterPage() {
             </div>
           </div>
 
+          <LegalConsentCheckbox
+            variant="register"
+            checked={hasAcceptedTerms}
+            onChange={setHasAcceptedTerms}
+            disabled={isLoading || canContinueAfterPartialSignup}
+            data-testid="register-terms-checkbox"
+          />
+
           {/* Submit button */}
           <button
             type="submit"
             data-testid="register-submit"
-            disabled={isLoading || canContinueAfterPartialSignup}
+            disabled={isLoading || canContinueAfterPartialSignup || !hasAcceptedTerms}
             style={{
-              background: isLoading || canContinueAfterPartialSignup ? "#D8C9B2" : C.primary,
+              background: isLoading || canContinueAfterPartialSignup || !hasAcceptedTerms ? "#D8C9B2" : C.primary,
               color: C.white,
               border: "none",
               borderRadius: 10,
@@ -395,7 +410,7 @@ export function RegisterPage() {
               fontFamily: font,
               fontSize: 15,
               fontWeight: 600,
-              cursor: isLoading || canContinueAfterPartialSignup ? "not-allowed" : "pointer",
+              cursor: isLoading || canContinueAfterPartialSignup || !hasAcceptedTerms ? "not-allowed" : "pointer",
               transition: "background 0.2s",
               display: "flex",
               alignItems: "center",
@@ -415,7 +430,7 @@ export function RegisterPage() {
           "đăng nhập" là một lời gọi: Supabase tạo user mới nếu email chưa có, và
           gộp vào user cũ nếu email đã tồn tại + đã xác minh.
         */}
-        {!canContinueAfterPartialSignup && <GoogleSignInButton disabled={isLoading} onError={setErrorMessage} redirect={redirectUrl} />}
+        {!canContinueAfterPartialSignup && <GoogleSignInButton disabled={isLoading || !hasAcceptedTerms} onError={setErrorMessage} redirect={redirectUrl} />}
 
         <div style={{ marginTop: 24, textAlign: "center", fontSize: 13, color: C.textSecondary }}>
           Đã có tài khoản?{" "}

@@ -4,6 +4,7 @@ import { supabase } from "../../shared/supabaseClient";
 import { C, font } from "../../shared/theme";
 import { Eye, EyeOff, Mail, Phone, Lock, ArrowLeft } from "lucide-react";
 import { GoogleSignInButton, AuthDivider } from "../../shared/components/common";
+import { LEGAL_ROUTES } from "../../shared/constants/legal";
 import { clearPostAuthRedirect, toSafeRedirect, withAuthRedirect } from "../../shared/utils/auth-redirect";
 import { isEmailIdentifier, normalizeVietnamPhone } from "../../shared/utils/phone";
 import { logError, toUserMessage } from "../../shared/services/supabase-error";
@@ -287,6 +288,13 @@ export function LoginPage() {
         <AuthDivider />
 
         <GoogleSignInButton disabled={isLoading} onError={setErrorMessage} redirect={redirectUrl} />
+        {/* Google tạo tài khoản mới nếu email chưa có ⇒ phải báo trước điều khoản. */}
+        <p style={{ margin: "10px 0 0", textAlign: "center", fontSize: 12, color: C.textSecondary, lineHeight: 1.55 }}>
+          Tiếp tục với Google nghĩa là bạn đồng ý với{" "}
+          <Link to={LEGAL_ROUTES.terms} target="_blank" style={{ color: C.primary, fontWeight: 600 }}>Điều khoản sử dụng</Link>
+          {" "}và{" "}
+          <Link to={LEGAL_ROUTES.privacy} target="_blank" style={{ color: C.primary, fontWeight: 600 }}>Chính sách bảo mật</Link>.
+        </p>
 
         <div style={{ marginTop: 24, textAlign: "center", fontSize: 13, color: C.textSecondary }}>
           Chưa có tài khoản?{" "}

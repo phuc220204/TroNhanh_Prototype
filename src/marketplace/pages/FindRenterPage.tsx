@@ -307,11 +307,33 @@ export function FindRenterPage() {
           </div>
         ) : matchedItems.length === 0 ? (
           <div style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: radius.xl, padding: 48, textAlign: "center" }}>
-            <EmptyState
-              icon={Users}
-              title="Không tìm thấy tin nhu cầu phù hợp"
-              description="Thử điều chỉnh lại bộ lọc khu vực hoặc khoảng giá để mở rộng phạm vi tìm kiếm."
-            />
+            {/* Hai trường hợp khác nhau: chợ chưa có tin nhu cầu nào (gợi ý việc làm
+                tiếp) · có tin nhưng bộ lọc loại hết (gợi ý xóa lọc). */}
+            {demandPosts.length === 0 ? (
+              <EmptyState
+                data-testid="find-renter-empty-no-demand"
+                icon={Users}
+                title="Chưa có tin nhu cầu nào đang mở"
+                description="Khi người tìm phòng đăng nhu cầu, tin sẽ hiện ở đây kèm độ khớp với phòng trống của bạn. Trong lúc chờ, hãy đăng tin cho thuê để người tìm phòng thấy phòng của bạn."
+                action={
+                  <div style={{ display: "flex", gap: space[2], justifyContent: "center", flexWrap: "wrap" }}>
+                    <Button variant="primary" onClick={() => navigate("/dang-tin-cho-thue")} data-testid="find-renter-empty-post-btn">
+                      Đăng tin cho thuê
+                    </Button>
+                    <Button variant="outline" onClick={() => navigate("/tai-khoan/tin-cho-thue")} data-testid="find-renter-empty-listings-btn">
+                      Xem tin của tôi
+                    </Button>
+                  </div>
+                }
+              />
+            ) : (
+              <EmptyState
+                data-testid="find-renter-empty-filtered"
+                icon={Users}
+                title="Không tìm thấy tin nhu cầu phù hợp"
+                description="Thử điều chỉnh lại bộ lọc khu vực hoặc khoảng giá để mở rộng phạm vi tìm kiếm."
+              />
+            )}
           </div>
         ) : (
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))", gap: 20 }}>

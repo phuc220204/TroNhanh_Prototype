@@ -11,6 +11,8 @@ interface DueInvoicesPanelProps {
   invoices: ReminderInvoice[];
   onOpenInvoice: (invoiceId: string) => void;
   onViewAll: () => void;
+  /** Cùng công tắc "Hiện số liệu" với lưới KPI (BR-012): tắt thì che số tiền. */
+  isAmountRevealed: boolean;
 }
 
 const formatDueDate = (dueDate: string) => {
@@ -19,7 +21,7 @@ const formatDueDate = (dueDate: string) => {
 };
 
 /** "Hóa đơn cần nhắc": hóa đơn quá hạn + sắp đến hạn trong DUE_SOON_DAYS ngày, còn thiếu tiền. */
-export function DueInvoicesPanel({ invoices, onOpenInvoice, onViewAll }: DueInvoicesPanelProps) {
+export function DueInvoicesPanel({ invoices, onOpenInvoice, onViewAll, isAmountRevealed }: DueInvoicesPanelProps) {
   const visibleInvoices = invoices.slice(0, MAX_VISIBLE_REMINDERS);
 
   return (
@@ -62,15 +64,19 @@ export function DueInvoicesPanel({ invoices, onOpenInvoice, onViewAll }: DueInvo
                 key={invoice.id}
                 onClick={() => onOpenInvoice(invoice.id)}
                 data-testid="dashboard-due-reminder-item"
-                style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, width: "100%", textAlign: "left", background: C.bg, border: `1px solid ${C.border}`, borderRadius: radius.md, padding: "10px 14px", cursor: "pointer", fontFamily: font }}
+                // `flexWrap`: màn hẹp thì cụm số tiền + nhãn xuống dòng thay vì ép
+                // tên khu thành từng chữ một ("Khu trọ / Phan / Văn / Trị").
+                style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "6px 12px", width: "100%", textAlign: "left", background: C.bg, border: `1px solid ${C.border}`, borderRadius: radius.md, padding: "10px 14px", cursor: "pointer", fontFamily: font }}
               >
-                <div style={{ minWidth: 0 }}>
-                  <span style={{ fontSize: 14, fontWeight: 800, color: C.textPrimary }}>{invoice.roomCode || "Phòng"}</span>
-                  {invoice.propertyName && <span style={{ fontSize: 12.5, color: C.textSecondary, marginLeft: 6 }}>· {invoice.propertyName}</span>}
-                  <span style={{ fontSize: 12.5, color: C.textSecondary, marginLeft: 8 }}>Hạn {formatDueDate(invoice.dueDate)}</span>
+                <div style={{ flex: "1 1 180px", minWidth: 0 }}>
+                  <div style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    <span style={{ fontSize: 14, fontWeight: 800, color: C.textPrimary }}>{invoice.roomCode || "Phòng"}</span>
+                    {invoice.propertyName && <span style={{ fontSize: 12.5, color: C.textSecondary, marginLeft: 6 }}>· {invoice.propertyName}</span>}
+                  </div>
+                  <div style={{ fontSize: 12.5, color: C.textSecondary, marginTop: 2 }}>Hạn {formatDueDate(invoice.dueDate)}</div>
                 </div>
-                <div style={{ display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
-                  <span style={{ fontSize: 13, fontWeight: 700, color: C.textPrimary }}>{Math.round(invoice.remaining).toLocaleString("vi-VN")}đ</span>
+                <div style={{ display: "flex", alignItems: "center", gap: 10, flexShrink: 0, marginLeft: "auto" }}>
+                  <span data-testid="dashboard-due-reminder-amount" style={{ fontSize: 13, fontWeight: 700, color: C.textPrimary }}>{isAmountRevealed ? `${Math.round(invoice.remaining).toLocaleString("vi-VN")}đ` : "••••"}</span>
                   <span style={{ fontSize: 11.5, fontWeight: 700, color: tone.color, background: tone.bg, borderRadius: radius.pill, padding: "3px 9px", whiteSpace: "nowrap" }}>
                     {formatDueLabel(invoice.daysUntilDue)}
                   </span>

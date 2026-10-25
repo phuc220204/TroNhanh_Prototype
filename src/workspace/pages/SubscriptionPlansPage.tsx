@@ -9,7 +9,7 @@ import { useSubscriptionContext } from "../../shared/contexts/SubscriptionContex
 import { TRIAL_DAYS } from "../../shared/services/subscription-service";
 import { useBreakpoint } from "../../shared/components/useBreakpoint";
 import { qk } from "../../shared/query/keys";
-import { Button, EmptyState, Skeleton } from "../../shared/components/common";
+import { Button, EmptyState, LegalConsentCheckbox, Skeleton } from "../../shared/components/common";
 import { PlanCard } from "../../shared/components/PlanCard";
 import { toUserMessage } from "../../shared/services/supabase-error";
 import { formatDate, formatVnd } from "../../shared/utils/format";
@@ -102,6 +102,7 @@ export function SubscriptionPlansPage() {
   const [buyingPlanId, setBuyingPlanId] = useState<string | null>(null);
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
   const [isActivatingTrial, setIsActivatingTrial] = useState(false);
+  const [hasAcceptedTerms, setHasAcceptedTerms] = useState(false);
 
   const plansQuery = useQuery({ queryKey: qk.saasPlans.list, queryFn: getSubscriptionPlans, staleTime: 5 * 60 * 1000 });
   const paidQuery = useQuery({ queryKey: qk.saasPlans.paidPlanIds(user?.id), queryFn: getMyPaidPlanIds, enabled: Boolean(user?.id) });
@@ -118,8 +119,17 @@ export function SubscriptionPlansPage() {
   const paidPlanIds = paidQuery.data ?? [];
   // Gói giá 0 là gói dùng thử — kích hoạt bằng nút dùng thử, không bán qua payOS.
   const plans = (plansQuery.data ?? []).filter((p) => p.price > 0);
+  // Gói đã trả tiền (ACTIVE) hoặc đã hết hạn (READ_ONLY) mới đánh dấu thẻ "Gói hiện tại".
+  const hasPaidStatus = status === "ACTIVE" || status === "READ_ONLY";
+  const currentPlanCard = hasPaidStatus ? plans.find((p) => p.id === currentPlan?.id) ?? null : null;
+  // Gói kích hoạt thủ công / gói cũ đã ngừng bán thì `plan` có thể rỗng hoặc là
+  // gói dùng thử (giá 0) ⇒ vẫn ghi tên sản phẩm thay vì để trống.
+  const currentPlanName = status === "NONE"
+    ? null
+    : currentPlanCard?.name ?? (currentPlan?.price > 0 ? currentPlan?.name : null) ?? (hasPaidStatus ? "Gói Quản lý vận hành" : null);
 
   const handleBuy = async (planId: string) => {
+    if (!hasAcceptedTerms) return;
     setBuyingPlanId(planId);
     setCheckoutError(null);
     try {
@@ -162,11 +172,16 @@ export function SubscriptionPlansPage() {
                 {isSubscriptionLoading
                   ? <Skeleton variant="text" label="Đang tải gói hiện tại" style={{ width: 160 }} />
                   : isSubscriptionError ? "Chưa tải được gói hiện tại" : STATUS_LABEL[status] ?? status}
-                {currentPlan?.name && status !== "NONE" ? ` · ${currentPlan.name}` : ""}
+                {currentPlanName && <span data-testid="saas-current-plan-name">{` · ${currentPlanName}`}</span>}
               </div>
               {expireDate && status !== "NONE" && (
                 <div style={{ fontSize: 12.5, color: C.textSecondary }}>
                   {status === "READ_ONLY" ? "Hết hạn ngày" : "Hiệu lực đến"} {formatDate(expireDate)} · dữ liệu luôn được giữ nguyên
+                </div>
+              )}
+              {hasPaidStatus && !currentPlanCard && plans.length > 0 && (
+                <div data-testid="saas-current-plan-unlisted" style={{ fontSize: 12.5, color: C.textSecondary }}>
+                  Gói của bạn không còn trong danh sách bán — mua bất kỳ gói nào bên dưới khi còn hạn thì thời gian được cộng dồn.
                 </div>
               )}
             </div>
@@ -197,19 +212,24 @@ export function SubscriptionPlansPage() {
         ) : plans.length === 0 ? (
           <EmptyState title="Chưa có gói nào đang bán" description="Vui lòng quay lại sau hoặc liên hệ hỗ trợ." />
         ) : (
+          <>
+          <div style={{ marginBottom: 16 }}>
+            <LegalConsentCheckbox variant="payment" checked={hasAcceptedTerms} onChange={setHasAcceptedTerms} disabled={buyingPlanId !== null} data-testid="saas-terms-checkbox" />
+          </div>
           <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(auto-fill, minmax(300px, 1fr))", gap: 16 }}>
             {plans.map((plan) => (
               <PlanCard
                 key={plan.id}
                 plan={plan}
                 isRenewal={paidPlanIds.includes(plan.id)}
-                isCurrent={status !== "NONE" && currentPlan?.id === plan.id && status !== "TRIAL"}
+                isCurrent={currentPlanCard?.id === plan.id}
                 isBuying={buyingPlanId === plan.id}
-                disabled={buyingPlanId !== null || paidQuery.isPending}
+                disabled={buyingPlanId !== null || paidQuery.isPending || !hasAcceptedTerms}
                 onBuy={() => void handleBuy(plan.id)}
               />
             ))}
           </div>
+          </>
         )}
       </div>
     </LandlordShell>

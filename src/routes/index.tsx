@@ -22,6 +22,10 @@ export const router = createHashRouter([
       // Quên / đặt lại mật khẩu — công khai: trang đặt lại tự kiểm phiên khôi phục.
       { path: "quen-mat-khau", lazy: async () => ({ Component: (await import("../shared/pages/PasswordReset/ForgotPasswordPage")).ForgotPasswordPage }) },
       { path: "dat-lai-mat-khau", lazy: async () => ({ Component: (await import("../shared/pages/PasswordReset/ResetPasswordPage")).ResetPasswordPage }) },
+      // Chính sách — công khai, link từ footer, form đăng ký và hộp thanh toán.
+      { path: "dieu-khoan", lazy: async () => ({ Component: (await import("../shared/pages/LegalPage")).TermsPage }) },
+      { path: "chinh-sach-bao-mat", lazy: async () => ({ Component: (await import("../shared/pages/LegalPage")).PrivacyPage }) },
+      { path: "chinh-sach-hoan-tien", lazy: async () => ({ Component: (await import("../shared/pages/LegalPage")).RefundPolicyPage }) },
       { path: "bang-gia", lazy: async () => ({ Component: (await import("../shared/pages/PricingPage")).PricingPage }) },
       { path: "dang-nhap", lazy: async () => ({ Component: (await import("../marketplace/pages/LoginPage")).LoginPage }) },
       { path: "dang-ky", lazy: async () => ({ Component: (await import("../marketplace/pages/RegisterPage")).RegisterPage }) },
@@ -109,6 +113,7 @@ export const router = createHashRouter([
             children: [
               { path: "quan-tri", lazy: async () => ({ Component: (await import("../admin/pages/AdminDashboardPage")).AdminDashboardPage }) },
               { path: "quan-tri/kiem-duyet-tin", lazy: async () => ({ Component: (await import("../admin/pages/ListingModerationPage")).ListingModerationPage }) },
+              { path: "quan-tri/bao-cao", lazy: async () => ({ Component: (await import("../admin/pages/ReportModerationPage")).ReportModerationPage }) },
               { path: "quan-tri/danh-gia", lazy: async () => ({ Component: (await import("../admin/pages/ReviewModerationPage")).ReviewModerationPage }) },
               { path: "quan-tri/nguoi-dung", lazy: async () => ({ Component: (await import("../admin/pages/UserManagementPage")).UserManagementPage }) },
               { path: "quan-tri/cai-dat", lazy: async () => ({ Component: (await import("../admin/pages/PlatformSettingsPage")).PlatformSettingsPage }) },
