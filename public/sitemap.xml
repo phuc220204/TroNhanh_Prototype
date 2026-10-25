@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Chỉ có trang gốc: app dùng hash router (/#/...) nên các trang con KHÔNG phải
+  URL riêng với công cụ tìm kiếm. Khi chuyển sang browser router, bổ sung
+  /tim-phong, /tin-nhu-cau, /bang-gia và sinh URL từng tin — xem
+  docs/SEO_ROUTING_DECISION_VI.md.
+-->
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url>
+    <loc>https://tronhanh.vercel.app/</loc>
+    <changefreq>daily</changefreq>
+    <priority>1.0</priority>
+  </url>
+</urlset>
