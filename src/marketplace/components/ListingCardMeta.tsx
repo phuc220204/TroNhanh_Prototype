@@ -1,5 +1,6 @@
 import { Clock3, Sparkles } from "lucide-react";
 import { C, font, radius } from "../../shared/theme";
+import { Badge } from "../../shared/components/common";
 import { hasActiveVerifiedBoost, type ListingBadge } from "../services/listing-mappers";
 import { formatPostedAgo, formatPostedDateTime, getListingPostedAt } from "../utils/posted-time";
 
@@ -60,5 +61,23 @@ export function ListingHeaderMeta({ listing, size = 13 }: { listing: any; size?:
       {hasActiveVerifiedBoost(listing) && <ListingTag badge="featured" />}
       <ListingPostedTime postedAt={getListingPostedAt(listing ?? {})} size={size} />
     </>
+  );
+}
+
+/**
+ * Nhãn trạng thái ở đầu trang chi tiết, lấy từ `status` thật của tin.
+ * Tin `Active` ⇒ "Trống" (ROOM_STATUS_META, ngôn ngữ người thuê). Trạng thái khác
+ * (người bán xem tin Hết hạn / Đã cho thuê của chính mình) ⇒ nhãn LISTING_META,
+ * không bao giờ giả "Trống".
+ */
+export function ListingAvailabilityBadge({ listing }: { listing: any }) {
+  const isActive = listing?.status === "Active";
+  return (
+    <Badge
+      kind={isActive ? "room" : "listing"}
+      status={isActive ? "Available" : String(listing?.status ?? "")}
+      data-testid="listing-status-badge"
+      style={{ fontSize: 12, padding: "3px 12px" }}
+    />
   );
 }
