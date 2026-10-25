@@ -84,6 +84,51 @@ export type Database = {
           },
         ]
       }
+      content_reports: {
+        Row: {
+          created_at: string
+          details: string | null
+          id: string
+          reason: string
+          reporter_id: string
+          resolution_note: string | null
+          resolved_at: string | null
+          resolved_by: string | null
+          status: string
+          target_id: string
+          target_type: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          details?: string | null
+          id?: string
+          reason: string
+          reporter_id: string
+          resolution_note?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          status?: string
+          target_id: string
+          target_type: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          details?: string | null
+          id?: string
+          reason?: string
+          reporter_id?: string
+          resolution_note?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          status?: string
+          target_id?: string
+          target_type?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       contracts: {
         Row: {
           created_at: string
@@ -1794,9 +1839,14 @@ export type Database = {
           email: string
           full_name: string
           is_seller: boolean
+          locked_until: string
           roles: string[]
           user_id: string
         }[]
+      }
+      admin_set_user_lock: {
+        Args: { p_locked: boolean; p_reason?: string; p_user_id: string }
+        Returns: string
       }
       attach_boost_checkout_link: {
         Args: {
@@ -2039,6 +2089,20 @@ export type Database = {
         Args: { p_email: string; p_occupancy_id: string }
         Returns: undefined
       }
+      list_open_reports: {
+        Args: never
+        Returns: {
+          first_reported_at: string
+          last_reported_at: string
+          latest_details: string
+          reasons: string[]
+          report_count: number
+          target_id: string
+          target_owner_id: string
+          target_title: string
+          target_type: string
+        }[]
+      }
       listing_ttl_interval: { Args: never; Returns: string }
       mark_conversation_read: {
         Args: { p_conversation_id: string }
@@ -2076,6 +2140,24 @@ export type Database = {
       reply_to_review: {
         Args: { p_reply: string; p_review_id: string }
         Returns: undefined
+      }
+      report_content: {
+        Args: {
+          p_details?: string
+          p_reason: string
+          p_target_id: string
+          p_target_type: string
+        }
+        Returns: string
+      }
+      resolve_reports: {
+        Args: {
+          p_hide: boolean
+          p_note?: string
+          p_target_id: string
+          p_target_type: string
+        }
+        Returns: number
       }
       revoke_role: {
         Args: { p_role: string; p_user_id: string }

@@ -19,6 +19,8 @@ export interface AdminUserRow {
   is_seller: boolean;
   roles: string[];
   created_at: string;
+  /** Có giá trị ⇒ tài khoản đang bị khóa (auth.users.banned_until còn hạn). */
+  locked_until: string | null;
 }
 
 export async function listUsers(search = ""): Promise<AdminUserRow[]> {
@@ -50,6 +52,24 @@ export async function revokeRole(userId: string, role: GrantableRole): Promise<v
     if (error) throw error;
   } catch (err) {
     logError("admin-user-service.revokeRole", err);
+    throw err;
+  }
+}
+
+/**
+ * Khóa / mở khóa tài khoản (chỉ Admin). RPC `admin_set_user_lock` chặn đăng nhập
+ * ở tầng Supabase Auth và xóa phiên hiện có; `reason` bắt buộc khi khóa.
+ */
+export async function setUserLock(userId: string, locked: boolean, reason: string): Promise<void> {
+  try {
+    const { error } = await supabase.rpc("admin_set_user_lock", {
+      p_user_id: userId,
+      p_locked: locked,
+      ...(reason.trim() ? { p_reason: reason.trim() } : {}),
+    });
+    if (error) throw error;
+  } catch (err) {
+    logError("admin-user-service.setUserLock", err);
     throw err;
   }
 }

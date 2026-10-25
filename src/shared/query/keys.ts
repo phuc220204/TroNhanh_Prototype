@@ -168,6 +168,7 @@ export const qk = {
     /** Prefix của mọi kết quả tìm người dùng. */
     usersAll: ["admin", "users"] as const,
     reportedReviews: ["admin", "reportedReviews"] as const,
+    openReports: ["admin", "openReports"] as const,
     users: (search: string) => ["admin", "users", search] as const,
     /** Gói của từng tài khoản — cột "Gói" ở /quan-tri/nguoi-dung. */
     subscriptions: ["admin", "subscriptions"] as const,

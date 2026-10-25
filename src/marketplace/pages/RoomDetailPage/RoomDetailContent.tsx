@@ -13,6 +13,7 @@ import { listPropertyReviews } from "../../services/review-service";
 import type { ListingCardItem } from "../../services/listing-mappers";
 import { ImageWithFallback } from "../../../shared/components/common";
 import { ListingAvailabilityBadge, ListingHeaderMeta, ListingPostedTime, ListingTag } from "../../components/ListingCardMeta";
+import { ReportButton } from "../../components/ReportButton";
 import { SaveListingButton } from "../../components/SaveListingButton";
 import { parseMetadataFromDescription } from "../../utils/listingMetadata";
 import { getListingCosts } from "../../utils/listingCosts";
@@ -473,6 +474,7 @@ export function ReviewsSection({ listing }: { listing: any }) {
                     <p style={{ fontFamily: font, fontSize: 12.5, color: C.textPrimary, margin: 0, lineHeight: 1.5 }}>{r.seller_reply}</p>
                   </div>
                 )}
+                <ReportButton targetType="Review" targetId={r.id} ownerId={r.author_user_id} />
               </div>
             ))}
           </div>

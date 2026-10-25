@@ -106,6 +106,7 @@ export const router = createHashRouter([
             children: [
               { path: "quan-tri", lazy: async () => ({ Component: (await import("../admin/pages/AdminDashboardPage")).AdminDashboardPage }) },
               { path: "quan-tri/kiem-duyet-tin", lazy: async () => ({ Component: (await import("../admin/pages/ListingModerationPage")).ListingModerationPage }) },
+              { path: "quan-tri/bao-cao", lazy: async () => ({ Component: (await import("../admin/pages/ReportModerationPage")).ReportModerationPage }) },
               { path: "quan-tri/danh-gia", lazy: async () => ({ Component: (await import("../admin/pages/ReviewModerationPage")).ReviewModerationPage }) },
               { path: "quan-tri/nguoi-dung", lazy: async () => ({ Component: (await import("../admin/pages/UserManagementPage")).UserManagementPage }) },
               { path: "quan-tri/cai-dat", lazy: async () => ({ Component: (await import("../admin/pages/PlatformSettingsPage")).PlatformSettingsPage }) },
