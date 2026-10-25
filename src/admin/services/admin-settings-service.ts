@@ -16,6 +16,8 @@ export interface PlatformSettings {
   listingTtlDays: number;
   /** Cấu hình gói Boost được đọc bởi checkout phía server. */
   boostConfig: BoostConfig;
+  /** Giá đẩy tin nhu cầu (`demand_boost_config`) — checkout server đọc cùng dạng `{ days, price }`. */
+  demandBoostConfig: BoostConfig;
 }
 
 export interface BoostConfig {
@@ -28,6 +30,12 @@ const DEFAULT_BOOST_CONFIG: BoostConfig = {
   price: [20_000, 35_000, 60_000],
 };
 
+/** Chỉ dùng khi DB thiếu key; giá thật luôn đọc từ `platform_settings`. */
+const DEFAULT_DEMAND_BOOST_CONFIG: BoostConfig = {
+  days: [3, 7],
+  price: [1_000, 2_000],
+};
+
 const DEFAULTS = { autoApproveListings: true, listingTtlDays: 60 };
 
 export async function getSettings(): Promise<PlatformSettings> {
@@ -35,14 +43,15 @@ export async function getSettings(): Promise<PlatformSettings> {
     const { data, error } = await supabase
       .from("platform_settings")
       .select("key, value")
-      .in("key", ["auto_approve_listings", "listing_ttl_days", "boost_config"]);
+      .in("key", ["auto_approve_listings", "listing_ttl_days", "boost_config", "demand_boost_config"]);
     if (error) throw error;
 
     const map = new Map((data || []).map((row) => [row.key, row.value]));
     return {
       autoApproveListings: parseBoolean(map.get("auto_approve_listings"), DEFAULTS.autoApproveListings),
       listingTtlDays: parseNumber(map.get("listing_ttl_days"), DEFAULTS.listingTtlDays),
-      boostConfig: parseBoostConfig(map.get("boost_config")),
+      boostConfig: parseBoostConfig(map.get("boost_config"), DEFAULT_BOOST_CONFIG),
+      demandBoostConfig: parseBoostConfig(map.get("demand_boost_config"), DEFAULT_DEMAND_BOOST_CONFIG),
     };
   } catch (err) {
     logError("admin-settings-service.getSettings", err);
@@ -61,6 +70,21 @@ export async function setBoostConfig(config: BoostConfig): Promise<void> {
     if (error) throw error;
   } catch (err) {
     logError("admin-settings-service.setBoostConfig", err);
+    throw err;
+  }
+}
+
+export async function setDemandBoostConfig(config: BoostConfig): Promise<void> {
+  try {
+    if (!isValidBoostConfig(config)) throw new Error("Cấu hình giá đẩy tin nhu cầu không hợp lệ.");
+
+    const { error } = await supabase.rpc("set_platform_setting", {
+      p_key: "demand_boost_config",
+      p_value: { days: config.days, price: config.price } as Json,
+    });
+    if (error) throw error;
+  } catch (err) {
+    logError("admin-settings-service.setDemandBoostConfig", err);
     throw err;
   }
 }
@@ -90,9 +114,9 @@ function parseNumber(raw: unknown, fallback: number): number {
   return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
 }
 
-function parseBoostConfig(raw: unknown): BoostConfig {
+function parseBoostConfig(raw: unknown, fallback: BoostConfig): BoostConfig {
   if (isValidBoostConfig(raw)) return { days: [...raw.days], price: [...raw.price] };
-  return { days: [...DEFAULT_BOOST_CONFIG.days], price: [...DEFAULT_BOOST_CONFIG.price] };
+  return { days: [...fallback.days], price: [...fallback.price] };
 }
 
 function isValidBoostConfig(value: unknown): value is BoostConfig {

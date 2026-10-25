@@ -18,9 +18,15 @@ export type LandlordNavId =
   /** Trang mua/gia hạn gói — KHÔNG thuộc SAAS_NAV_IDS: người chưa có gói phải vào được để mua. */
   | "plans";
 
-/** Các trang thuộc module SaaS (bị khóa khi chưa có gói). Một chỗ duy nhất — LandlordShell dùng lại. */
+/**
+ * Các trang thuộc module SaaS (bị khóa khi chưa có gói). Một chỗ duy nhất — LandlordShell dùng lại.
+ *
+ * "find-renter" và "reviews" KHÔNG nằm ở đây: hai trang chạy trên dữ liệu
+ * marketplace (tin nhu cầu, đánh giá) vốn miễn phí — khóa chúng sau paywall là
+ * bắt người bán trả tiền để đọc/trả lời đánh giá về chính mình.
+ */
 export const SAAS_NAV_IDS: readonly LandlordNavId[] = [
-  "overview", "rooms", "occupants", "billing", "settings", "find-renter", "reviews",
+  "overview", "rooms", "occupants", "billing", "settings",
 ];
 
 /** Giá trị hợp lệ của `?tab=` trong /chu-tro/quan-ly-phong. */
@@ -51,12 +57,14 @@ function UnreadDot({ count }: { count: number }) {
 // `/tai-khoan/tin-cho-thue`: đăng tin là việc miễn phí ai cũng làm được, để nó
 // ở đây khiến người chỉ muốn đăng một tin phải đi vào khu vực SaaS và nhìn một
 // sidebar toàn mục bị khóa kèm lời mời mua gói.
-// Nhóm 1 KHÔNG còn là "tính năng miễn phí trong khu chủ trọ" nữa — nó là hai
-// LỐI TẮT ra ngoài khu vực này. Cả hai đều nằm ở `/tai-khoan/*` và `/tin-nhan`,
-// dùng được không cần gói.
+// Nhóm 1: mọi thứ dùng được KHÔNG cần gói — hai lối tắt ra khu tài khoản
+// (`/tai-khoan/*`, `/tin-nhan`) và hai trang chạy trên dữ liệu marketplace
+// (tìm người thuê, đánh giá khu trọ).
 const NAV_FREE: { id: LandlordNavId; icon: typeof LayoutGrid; label: string; to?: string }[] = [
   { id: "listings", icon: FileText, label: "Tin đăng của tôi", to: "/tai-khoan/tin-cho-thue" },
   { id: "messages", icon: MessageSquare, label: "Tin nhắn", to: "/tin-nhan" },
+  { id: "find-renter", icon: UserSearch, label: "Tìm người thuê", to: "/chu-tro/tim-nguoi-thue" },
+  { id: "reviews", icon: Star, label: "Đánh giá khu trọ", to: "/chu-tro/danh-gia" },
 ];
 
 // "Tổng quan" chuyển xuống đây: sau khi quản lý tin đăng dọn sang khu tài
@@ -69,14 +77,12 @@ const NAV_SAAS: { id: LandlordNavId; icon: typeof LayoutGrid; label: string; to?
   // Một màn hóa đơn duy nhất: /chu-tro/hoa-don (có nhật ký thu tiền, ghi nhận đã thu).
   { id: "billing", icon: Wallet, label: "Hóa đơn & Thanh toán", to: "/chu-tro/hoa-don" },
   { id: "settings", icon: Settings, label: "Cài đặt khu trọ", to: "/chu-tro/quan-ly-phong?tab=settings" },
-  { id: "find-renter", icon: UserSearch, label: "Tìm người thuê", to: "/chu-tro/tim-nguoi-thue" },
-  { id: "reviews", icon: Star, label: "Đánh giá khu trọ", to: "/chu-tro/danh-gia" },
 ];
 
 export function Sidebar({ active, onSaaSAccess }: { active: LandlordNavId; onSaaSAccess: () => void }) {
   const navigate = useNavigate();
   const { signOut, user, profile } = useAuth();
-  const { status: subStatus } = useSubscriptionContext();
+  const { status: subStatus, isError: isSubscriptionError } = useSubscriptionContext();
 
   const displayName = profile?.full_name || user?.email?.split("@")[0] || "Chủ trọ";
   const displaySub = profile?.contact_phone || user?.email || "";
@@ -104,8 +110,8 @@ export function Sidebar({ active, onSaaSAccess }: { active: LandlordNavId; onSaa
       </div>
 
       <nav style={{ flex: 1, padding: "14px 12px", display: "flex", flexDirection: "column", gap: 3, overflowY: "auto" }}>
-        {/* Nhóm 1: lối tắt ra khu vực tài khoản (miễn phí) */}
-        <p style={{ fontFamily: font, fontSize: 11, fontWeight: 700, color: C.textSecondary, textTransform: "uppercase", letterSpacing: "0.05em", margin: "6px 12px 6px" }}>Lối tắt (Miễn phí)</p>
+        {/* Nhóm 1: miễn phí */}
+        <p style={{ fontFamily: font, fontSize: 11, fontWeight: 700, color: C.textSecondary, textTransform: "uppercase", letterSpacing: "0.05em", margin: "6px 12px 6px" }}>Miễn phí</p>
         {NAV_FREE.map(({ id, icon: Icon, label, to }) => {
           const isActive = id === active;
           return (
@@ -124,7 +130,8 @@ export function Sidebar({ active, onSaaSAccess }: { active: LandlordNavId; onSaa
         <p style={{ fontFamily: font, fontSize: 11, fontWeight: 700, color: C.textSecondary, textTransform: "uppercase", letterSpacing: "0.05em", margin: "16px 12px 6px" }}>Quản lý vận hành (SaaS)</p>
         {NAV_SAAS.map(({ id, icon: Icon, label, to }) => {
           const isActive = id === active;
-          const isLocked = subStatus === "NONE";
+          // Lỗi tải gói ⇒ không khóa; LandlordShell sẽ hiện màn "Thử lại".
+          const isLocked = subStatus === "NONE" && !isSubscriptionError;
           return (
             <button key={id} 
               onClick={() => {
@@ -173,12 +180,12 @@ export function MobileHeader({ title, onBack }: { title: string; onBack?: () => 
 export function MobileTabBar({ active, onSaaSAccess }: { active: LandlordNavId; onSaaSAccess: () => void }) {
   const navigate = useNavigate();
   const { signOut } = useAuth();
-  const { status: subStatus } = useSubscriptionContext();
+  const { status: subStatus, isError: isSubscriptionError } = useSubscriptionContext();
   const [accountOpen, setAccountOpen] = useState(false);
   const [loggedOut, setLoggedOut] = useState(false);
 
   const openSaaS = (to: string) => () => {
-    if (subStatus === "NONE") onSaaSAccess();
+    if (subStatus === "NONE" && !isSubscriptionError) onSaaSAccess();
     else navigate(to);
   };
   // `on`: các trang làm tab sáng. "Tin nhắn"/"Tài khoản" là lối ra ngoài, không
@@ -233,6 +240,8 @@ function AccountSheet({ open, onClose, onNavigate, onLogout }: {
     { Icon: User, label: "Hồ sơ", action: () => onNavigate("/tai-khoan") },
     { Icon: Crown, label: "Gói dịch vụ", action: () => onNavigate("/chu-tro/goi-dich-vu") },
     { Icon: FileText, label: "Tin đăng của tôi", action: () => onNavigate("/tai-khoan/tin-cho-thue") },
+    { Icon: UserSearch, label: "Tìm người thuê", action: () => onNavigate("/chu-tro/tim-nguoi-thue") },
+    { Icon: Star, label: "Đánh giá khu trọ", action: () => onNavigate("/chu-tro/danh-gia") },
     { Icon: MessageSquare, label: "Tin nhắn", action: () => onNavigate("/tin-nhan", LANDLORD_INBOX_STATE) },
     { Icon: LayoutGrid, label: "Tổng quan chủ trọ", action: () => onNavigate("/chu-tro") },
     { Icon: Search, label: "Về trang tìm phòng", action: () => onNavigate("/") },

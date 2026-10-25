@@ -1,5 +1,9 @@
 import { test, expect } from "@playwright/test";
 import { ACCOUNTS, DEMO_PASSWORD, go, login, logout, url } from "./helpers";
+import { assertWritesAllowed } from "./e2e-env";
+
+// Spec này GHI dữ liệu thật — chặn nếu đang trỏ vào production (xem e2e-env.ts).
+test.beforeAll(assertWritesAllowed);
 
 /**
  * Đăng ký → tự đăng nhập → reload giữ session → đăng xuất, và `?redirect=`.

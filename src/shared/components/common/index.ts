@@ -15,3 +15,4 @@ export * from "./VietQRBlock";
 export * from "./GoogleSignInButton";
 export * from "./MoneyInput";
 export * from "./LegalConsentCheckbox";
+export * from "./ImageWithFallback";

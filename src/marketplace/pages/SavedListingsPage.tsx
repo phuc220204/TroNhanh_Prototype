@@ -5,7 +5,7 @@ import { C, font, radius } from "../../shared/theme";
 import { useBreakpoint } from "../../shared/components/useBreakpoint";
 // Thuộc khu vực TÀI KHOẢN nên dùng chung shell, giữ sidebar khi điều hướng.
 import { RenterShell } from "../../shared/components/RenterShell";
-import { EmptyState, Skeleton, Button } from "../../shared/components/common";
+import { EmptyState, Skeleton, Button, ImageWithFallback } from "../../shared/components/common";
 import { useAuth } from "../../shared/contexts/AuthContext";
 import { qk } from "../../shared/query/keys";
 import { getSavedListings } from "../services/saved-listings-service";
@@ -32,7 +32,7 @@ function SavedCard({ item, onOpen }: { item: ListingCardItem; onOpen: () => void
       }}
     >
       <div style={{ position: "relative", height: 168 }}>
-        <img src={item.img} alt={item.title} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+        <ImageWithFallback src={item.img} alt={item.title} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
         <SaveListingButton listingId={item.id} overlay size={16} />
         <ListingTag badge={item.badge} style={{ position: "absolute", bottom: 10, left: 10 }} />
       </div>

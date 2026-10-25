@@ -99,7 +99,9 @@ export function QuanLyPhongPage() {
   const goToTab = (tab: LandlordNavId) => navigate(`/chu-tro/quan-ly-phong?tab=${tab}`);
 
   const [properties, setProperties] = useState<Property[]>([]);
-  const [selectedId, setSelectedId] = useState<string>("");
+  // `?khu=<id>` từ dashboard ("Việc cần làm") mở thẳng đúng khu. Id lạ / đã xóa
+  // thì `loadDbData` tự rơi về khu đầu tiên.
+  const [selectedId, setSelectedId] = useState<string>(() => new URLSearchParams(location.search).get("khu") ?? "");
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<RoomFilter>("all");
   const [sort, setSort] = useState<RoomSort>("code");
