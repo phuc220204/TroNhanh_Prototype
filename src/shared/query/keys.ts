@@ -41,6 +41,8 @@ export const qk = {
     featured: (limit: number) => ["listings", "featured", limit] as const,
     detail: (id: string) => ["listings", "detail", id] as const,
     mine: (sellerId: string | undefined) => ["listings", "mine", sellerId] as const,
+    /** Số tin của người bán theo trạng thái — nằm dưới `mine` ⇒ invalidate `mine` là làm mới luôn. */
+    mineCount: (sellerId: string | undefined, status: string) => ["listings", "mine", sellerId, "count", status] as const,
     media: (listingId: string) => ["listings", "media", listingId] as const,
   },
 
@@ -87,6 +89,8 @@ export const qk = {
     mine: (ownerId: string | undefined) => ["rooms", "mine", ownerId] as const,
     detail: (id: string) => ["rooms", "detail", id] as const,
     vacant: (ownerId: string | undefined) => ["rooms", "vacant", ownerId] as const,
+    /** Giá trị điền sẵn form đăng tin từ một phòng trống ("Tạo tin đăng"). */
+    listingPrefill: (roomId: string) => ["rooms", "listingPrefill", roomId] as const,
   },
 
   occupancies: {
@@ -94,6 +98,8 @@ export const qk = {
     byRoom: (roomId: string) => ["occupancies", "room", roomId] as const,
     /** Occupancy của chính Renter — dùng ở /tai-khoan/phong-cua-toi */
     mine: (userId: string | undefined) => ["occupancies", "mine", userId] as const,
+    /** Tên chủ trọ của các lời mời liên kết đang chờ (đối chiếu trước khi xác nhận). */
+    pendingLinkDetails: (userId: string | undefined) => ["occupancies", "pendingLinkDetails", userId] as const,
   },
 
   contracts: {
@@ -163,6 +169,10 @@ export const qk = {
     usersAll: ["admin", "users"] as const,
     reportedReviews: ["admin", "reportedReviews"] as const,
     users: (search: string) => ["admin", "users", search] as const,
+    /** Gói của từng tài khoản — cột "Gói" ở /quan-tri/nguoi-dung. */
+    subscriptions: ["admin", "subscriptions"] as const,
+    /** Gói ACTIVE/TRIAL, doanh thu payOS tháng này, đơn cần đối soát. */
+    businessStats: ["admin", "businessStats"] as const,
     settings: ["admin", "settings"] as const,
   },
 } as const;

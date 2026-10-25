@@ -21,6 +21,7 @@ import { useBreakpoint } from "../../shared/components/useBreakpoint";
 import { C, font, radius, space } from "../../shared/theme";
 import { toUserMessage } from "../../shared/services/supabase-error";
 import { getDashboardStats } from "../services/admin-user-service";
+import { BusinessStatsSection } from "../components/BusinessStatsSection";
 
 type StatKey = "pending_listings" | "active_listings" | "reported_reviews" | "total_users";
 
@@ -209,6 +210,11 @@ export function AdminDashboardPage() {
             </div>
           )}
         </section>
+
+        <BusinessStatsSection
+          isMobile={isMobile}
+          columns={isMobile ? "minmax(0, 1fr)" : useTwoColumns ? "repeat(2, minmax(0, 1fr))" : "repeat(4, minmax(0, 1fr))"}
+        />
 
         <section aria-labelledby="admin-shortcuts-heading" style={{ display: "flex", flexDirection: "column", gap: space[4] }}>
           <div>

@@ -405,6 +405,26 @@ export async function getListingStatus(id: string): Promise<string | null> {
 }
 
 /**
+ * Đếm tin của CHÍNH người đăng theo trạng thái (vd. `Expired` — BR-026), chỉ lấy
+ * số đếm, không tải dòng. RLS của `rental_listings` cho người bán đọc tin của mình.
+ * NÉM lỗi để màn hình không báo nhầm "0 tin" khi thực ra tải thất bại.
+ */
+export async function countMyListingsByStatus(sellerId: string, status: string): Promise<number> {
+  try {
+    const { count, error } = await supabase
+      .from("rental_listings")
+      .select("id", { count: "exact", head: true })
+      .eq("seller_id", sellerId)
+      .eq("status", status);
+    if (error) throw error;
+    return count ?? 0;
+  } catch (err) {
+    logError("listing-queries.countMyListingsByStatus", err);
+    throw err;
+  }
+}
+
+/**
  * Fetch listing detail by ID with media, amenities, property details, and owner profile.
  */
 export async function getListingById(id: string) {
