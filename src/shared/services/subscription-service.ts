@@ -45,7 +45,11 @@ export function effectiveSubscriptionStatus(
 }
 
 /**
- * Fetch current user's SaaS subscription from database.
+ * Gói SaaS của người dùng hiện tại.
+ *
+ * KHÔNG có dòng ⇒ "NONE" (chưa từng có gói). Lỗi truy vấn ⇒ THROW — trước đây lỗi
+ * mạng cũng trả "NONE", nên chủ trọ đã trả tiền thấy màn mời dùng thử thay vì
+ * nút thử lại. React Query giữ `isError` để LandlordShell hiện đúng màn lỗi.
  */
 export async function getMySubscription(userId: string | undefined): Promise<SubscriptionData> {
   if (!userId) return DEFAULT_NONE_SUBSCRIPTION;
@@ -56,9 +60,8 @@ export async function getMySubscription(userId: string | undefined): Promise<Sub
     .eq("seller_id", userId)
     .maybeSingle();
 
-  if (error || !data) {
-    return DEFAULT_NONE_SUBSCRIPTION;
-  }
+  if (error) throw error;
+  if (!data) return DEFAULT_NONE_SUBSCRIPTION;
 
   const status = effectiveSubscriptionStatus(data.status, data.expire_date);
   let trialDaysLeft = 0;
