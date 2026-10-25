@@ -378,7 +378,7 @@ export function LandlordCTA({ mobile, onPost }: { mobile?: boolean; onPost?: () 
               Bạn có phòng cho thuê?
             </h2>
             <p style={{ fontFamily: font, fontSize: mobile ? 13.5 : 14.5, color: "rgba(255,255,255,0.7)", margin: 0, lineHeight: 1.6, maxWidth: 580 }}>
-              Tham gia cùng hàng ngàn chủ nhà khác để tiếp cận lượng khách hàng tiềm năng thông qua nền tảng này.
+              Đăng tin miễn phí để người đang tìm phòng ở khu vực của bạn thấy và nhắn tin trực tiếp cho bạn.
             </p>
           </div>
         </div>

@@ -160,8 +160,9 @@ export async function getPropertyPublicProfile(slug: string): Promise<PropertyPu
     if (error) throw error;
     return (data as PropertyPublicProfile) ?? null;
   } catch (err) {
+    // Throw để trang phân biệt "khu chưa bật trang công khai" với lỗi mạng.
     logError("review-service.getPropertyPublicProfile", err);
-    return null;
+    throw err;
   }
 }
 

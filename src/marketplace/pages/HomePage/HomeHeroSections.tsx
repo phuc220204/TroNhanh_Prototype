@@ -21,7 +21,7 @@ const GIA_THUE = [...PRICE_RANGES];
 
 
 const AMENITY_META: Record<string, { Icon: React.ElementType; label: string }> = {
-  wifi:      { Icon: Wifi,          label: "WiFi" },
+  wifi:      { Icon: Wifi,          label: "Wifi" },
   ac:        { Icon: Wind,          label: "Máy lạnh" },
   parking:   { Icon: Car,           label: "Để xe" },
   bath:      { Icon: Bath,          label: "WC riêng" },
@@ -409,8 +409,8 @@ export function QuickFilterChips({ onSearch, mobile }: { onSearch?: () => void; 
    FEATURED ROOMS SECTION
    ══════════════════════════════════════════ */
 export function FeaturedRoomsSection({
-  rooms, loading, onRoomClick, onSearch, onViewAll, onPost, cols,
-}: { rooms: any[]; loading: boolean; onRoomClick?: (id: string) => void; onSearch?: () => void; onViewAll?: () => void; onPost?: () => void; cols: number }) {
+  rooms, loading, hasError = false, onRetry, onRoomClick, onSearch, onViewAll, onPost, cols,
+}: { rooms: any[]; loading: boolean; hasError?: boolean; onRetry?: () => void; onRoomClick?: (id: string) => void; onSearch?: () => void; onViewAll?: () => void; onPost?: () => void; cols: number }) {
   const { isMobile } = useBreakpoint();
   // Mobile: 1 thẻ + mép thẻ sau để người dùng biết vuốt được.
   const perView = isMobile ? 1.15 : cols;
@@ -455,6 +455,15 @@ export function FeaturedRoomsSection({
         <div data-testid="home-listings-loading" style={{ display: "grid", gridTemplateColumns: `repeat(${isMobile ? 1 : cols}, minmax(0, 1fr))`, gap: 20 }}>
           {Array.from({ length: isMobile ? 1 : cols }).map((_, index) => <Skeleton key={index} variant="card" />)}
         </div>
+      ) : hasError ? (
+        // Lỗi tải ≠ chưa có tin: trước đây lỗi mạng cũng hiện "Chưa có tin đăng",
+        // khách tưởng sàn trống và rời đi.
+        <EmptyState
+          data-testid="home-listings-error"
+          title="Chưa tải được danh sách phòng"
+          description="Kết nối tới máy chủ đang gián đoạn. Vui lòng thử lại."
+          action={onRetry ? <Button variant="outline" onClick={onRetry}>Thử lại</Button> : undefined}
+        />
       ) : rooms.length === 0 ? (
         <EmptyState
           title="Chưa có tin đăng phòng trọ nào"
