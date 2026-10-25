@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useRef } from "react";
-import { useNavigate } from "react-router";
+import { useNavigate, useSearchParams } from "react-router";
 import { Plus, TriangleAlert } from "lucide-react";
 import { C, font, radius } from "../../../shared/theme";
 import { useBreakpoint } from "../../../shared/components/useBreakpoint";
@@ -34,6 +34,9 @@ function sortListings(rows: DbListing[], sort: string): DbListing[] {
   return arr;
 }
 
+/** BR-001 — giá trị hợp lệ cho `?trang-thai=`; giá trị lạ thì bỏ qua (hiện mọi tin). */
+const LISTING_STATUS_VALUES = ["Draft", "PendingApproval", "Active", "Rejected", "Hidden", "Expired", "Rented"];
+
 export function QuanLyPage() {
   const navigate = useNavigate();
   const { isMobile, width } = useBreakpoint();
@@ -47,7 +50,12 @@ export function QuanLyPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState<string>("all");
+  // `?trang-thai=Expired` từ dashboard chủ trọ ("Việc cần làm") mở sẵn đúng bộ lọc.
+  const [searchParams] = useSearchParams();
+  const [statusFilter, setStatusFilter] = useState<string>(() => {
+    const fromUrl = searchParams.get("trang-thai") ?? "";
+    return LISTING_STATUS_VALUES.includes(fromUrl) ? fromUrl : "all";
+  });
   const [sort, setSort] = useState("newest");
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [advanced, setAdvanced] = useState<AdvancedFilters>(EMPTY_ADVANCED_FILTERS);

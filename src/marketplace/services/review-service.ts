@@ -72,6 +72,27 @@ export async function getMyStays(): Promise<ReviewableStay[]> {
   }
 }
 
+export interface PendingLinkDetail {
+  occupancy_id: string;
+  landlord_name: string | null;
+}
+
+/**
+ * Tên chủ trọ của các lời mời liên kết ĐANG CHỜ của chính tôi.
+ * `profiles` chỉ cho đọc hồ sơ chính chủ ⇒ phải đi qua RPC (security definer,
+ * chỉ trả lời mời có `user_id = auth.uid()`).
+ */
+export async function getMyPendingLinkDetails(): Promise<PendingLinkDetail[]> {
+  try {
+    const { data, error } = await supabase.rpc("get_my_pending_link_details");
+    if (error) throw error;
+    return (data || []) as PendingLinkDetail[];
+  } catch (err) {
+    logError("review-service.getMyPendingLinkDetails", err);
+    throw err;
+  }
+}
+
 /** BR-029: renter tự xác nhận. Chủ trọ KHÔNG bao giờ set 'Confirmed' hộ. */
 export async function confirmOccupancyLink(occupancyId: string, accept: boolean): Promise<void> {
   try {

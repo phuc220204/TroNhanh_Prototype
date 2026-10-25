@@ -3,6 +3,8 @@
 > Đính file này kèm mọi task cần đăng nhập kiểm thử.
 > Cập nhật **2026-08-08**: thêm §1b (20 tài khoản demo) và sửa mô tả dữ liệu seed
 > ở §1 cho khớp `dbSeeder.ts` thật.
+> Cập nhật **2026-10-16**: §1 ghi lại dữ liệu THẬT đang có trên production (kiểm bằng
+> SQL chỉ đọc khi test UX); §2 đổi cách test cô lập vì `seller.b` hiện trống.
 
 ---
 
@@ -11,12 +13,15 @@
 Mật khẩu **giống nhau cho cả 4**: `TroNhanh@2026`
 Email confirmation đã **TẮT** → đăng ký/đăng nhập không cần xác nhận mail.
 
-| Email                    | Mật khẩu        | Vai trò            | Dữ liệu đã seed                                                |
+| Email                    | Tên hiển thị    | Vai trò            | Dữ liệu thực tế (16/10/2026)                                   |
 | ------------------------ | --------------- | ------------------ | -------------------------------------------------------------- |
-| `seller.a@tronhanh.demo` | `TroNhanh@2026` | Renter + Seller    | 3 khu · 12 phòng · hóa đơn · chỉ số điện nước · **4 tin, 2 tin đang boost** |
-| `seller.b@tronhanh.demo` | `TroNhanh@2026` | Renter + Seller    | y hệt `seller.a` — seeder chỉ có MỘT kịch bản                  |
-| `renter.a@tronhanh.demo` | `TroNhanh@2026` | Renter             | không có dữ liệu SaaS (đúng thiết kế)                          |
-| `admin@tronhanh.demo`    | `TroNhanh@2026` | **Admin** + Renter | không có dữ liệu SaaS                                          |
+| `seller.a@tronhanh.demo` | Nguyễn Thị A    | Renter + Seller    | Gói **ACTIVE** · 3 khu · 12 phòng · 22 hóa đơn · 4 tin cho thuê (đều **Hết hạn** sau BR-026) |
+| `seller.b@tronhanh.demo` | Trần Văn Bảy    | Renter + Seller    | **Trống**: 0 khu, 0 phòng, **chưa có gói** ⇒ thấy paywall dùng thử. Dùng để test chủ trọ mới |
+| `renter.a@tronhanh.demo` | Lê Minh Nhật    | Renter             | Có **lời mời liên kết P102** (khu Phan Văn Trị của seller.a) đang chờ xác nhận |
+| `admin@tronhanh.demo`    | Quản Trị Viên   | **Admin** + Renter | không có dữ liệu SaaS                                          |
+
+Mật khẩu xem dòng đầu mục này. **Agent không tự đăng nhập**: app localhost gửi mật
+khẩu tới Supabase production, nên người làm test tự đăng nhập trong ô trình duyệt.
 
 > ⚠️ **Đuôi `@tronhanh.demo` là bắt buộc, không đổi.** RPC `demo_link_me_to_seeded_occupancy()` chỉ tác động lên khu trọ mà chủ có email kết thúc `@tronhanh.demo` — đây là ràng buộc phạm vi cố ý để hàm demo không đụng dữ liệu thật.
 
@@ -65,12 +70,17 @@ là do dữ liệu.
 | Bạn đang test                                                                  | Đăng nhập bằng                      |
 | ------------------------------------------------------------------------------ | ----------------------------------- |
 | Đăng tin cho thuê · sửa tin · quản lý khu/phòng · điện nước · hóa đơn · VietQR | `seller.a`                          |
-| **Cô lập dữ liệu (BR-007)** — A không thấy gì của B và ngược lại               | `seller.b`                          |
+| **Cô lập dữ liệu (BR-007)** — xem cách test bên dưới                           | `seller.b`                          |
+| Chủ trọ mới chưa có gói (paywall, dùng thử)                                    | `seller.b`                          |
 | Đăng tin tìm phòng / ở ghép · nhắn tin · đánh giá khu trọ                      | `renter.a`                          |
 | Kiểm duyệt tin · quản lý user · bật/tắt chế độ kiểm duyệt                      | `admin`                             |
 | Marketplace công khai · che SĐT (BR-014)                                       | **cửa sổ ẩn danh**, không đăng nhập |
 
-**Cách test cô lập RLS:** làm gì đó bằng `seller.a`, rồi đăng nhập `seller.b` và xác nhận **không thấy gì** của A. Cả hai đều có 3 khu / 12 phòng nên phép thử này có ý nghĩa thật, không phải "pass vì bên kia rỗng".
+**Cách test cô lập RLS:** `seller.b` hiện trống, nên "không thấy gì trên giao
+diện" chưa chứng minh được gì. Đăng nhập `seller.b` trên localhost rồi truy vấn
+**thẳng** dữ liệu của seller.a qua `window.__sb` (chỉ có ở dev): khu trọ (kể cả
+`bank_account_number`), phòng, hóa đơn, hợp đồng, người ở, thanh toán. Mọi truy vấn phải
+trả **0 dòng**. Đã PASS ngày 16/10/2026.
 
 ---
 
@@ -168,6 +178,40 @@ Nếu cần tự động hoá:
 - Chỉ **đọc** (screenshot, `read_page`, đọc console) — không click các nút ghi
 - Cần test luồng ghi thì làm **thủ công**, hoặc dựng Playwright spec riêng theo `T29` với dữ liệu tự dựng rồi dọn sau
 - Chạm nhầm dữ liệu thì **nói ra**, đừng im lặng — seed lại theo §5 là xong
+
+### 6.1 Bộ Playwright E2E phải chạy trên Supabase project RIÊNG
+
+> Ngày **16/10/2026** trang `/tin-nhu-cau` production lộ ~30 tin rác (`nc-e2e-…`,
+> `og-e2e-…`, `self-e2e-…` của `renter.a`) do bộ E2E chạy thẳng lên production
+> (`ropzrnlasbkznoxqaqtp`) và không dọn. Phải xóa mềm bằng tay.
+
+Từ nay có 2 lớp chặn (code ở `tests/e2e/e2e-env.ts`, `tests/e2e/cleanup.ts`):
+
+1. **Guard production.** Mọi spec ghi dữ liệu gọi `assertWritesAllowed()` trong
+   `test.beforeAll`. Nếu `VITE_SUPABASE_URL` (đọc bằng `loadEnv` của Vite, đúng
+   env mà `pnpm dev` dùng) chứa project ref production thì spec **đỏ ngay**, trừ
+   khi đặt `E2E_ALLOW_PROD_WRITES=1`. Đừng đặt cờ này trừ khi chủ dự án yêu cầu.
+2. **Global teardown.** Sau mỗi lần chạy (kể cả khi spec đỏ), đăng nhập 3 tài
+   khoản demo bằng anon key và xóa mềm mọi tin nhu cầu, tin đăng, khu trọ có dấu
+   `-e2e-` — đi qua đúng đường của app (update `deleted_at` dưới RLS, RPC
+   `delete_listing`, `soft_delete_property`). Không dùng `service_role`. Bản ghi
+   không dọn được (khu còn phòng `Rented`, review, hội thoại, tài khoản `auth.spec`)
+   được in ra dòng `[e2e-cleanup] CÒN SÓT`.
+
+**Dựng project test cho E2E (làm một lần):**
+
+1. Tạo Supabase project mới (ví dụ `tronhanh-e2e`) — **không** dùng chung production.
+2. `pnpm exec supabase link --project-ref <ref-test>` rồi `pnpm db:push` để có đủ migration.
+3. Nạp seed demo (§5) và `supabase/tests/review_fixture.sql`; làm các bước cấu hình
+   ở `tests/e2e/README.md` §1.2 (tắt email confirmation, kiểm duyệt Tự động).
+4. Tạo `.env.development.local` (đã gitignore theo `*.local`) chứa URL + anon key
+   của project test. Vite ưu tiên file này hơn `.env`, nên `pnpm dev` và guard đều
+   trỏ vào project test mà không phải sửa `.env` production.
+5. Chạy `pnpm test:e2e`. Xong thì xóa/đổi tên `.env.development.local` để dev
+   server quay về `.env`, và `supabase link` lại project production nếu cần.
+
+Spec chỉ đọc (`oc1-regression`, `admin-dashboard`, `mobile-ui`,
+`auth-registration-mock`) không bị guard chặn.
 
 ---
 

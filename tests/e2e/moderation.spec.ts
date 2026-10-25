@@ -1,5 +1,9 @@
 import { test, expect, type Page } from "@playwright/test";
 import { ACCOUNTS, go, login, logout, pickArea, runTag, tinyPng } from "./helpers";
+import { assertWritesAllowed } from "./e2e-env";
+
+// Spec này GHI dữ liệu thật — chặn nếu đang trỏ vào production (xem e2e-env.ts).
+test.beforeAll(assertWritesAllowed);
 
 /**
  * Vòng đời kiểm duyệt: bật Thủ công → seller đăng tin → tin KHÔNG lên public →

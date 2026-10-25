@@ -8,7 +8,8 @@ import { nearbyCategoryMeta } from "../../../shared/constants/nearby";
 import { LeafletMap, isValidLatLng } from "../../../shared/components/common/LeafletMap";
 import { SaveListingButton } from "../../components/SaveListingButton";
 import { ListingPostedTime, ListingTag } from "../../components/ListingCardMeta";
-import { getListingImage, type ListingCardItem } from "../../services/listing-mappers";
+import type { ListingCardItem } from "../../services/listing-mappers";
+import { ImageWithFallback } from "../../../shared/components/common";
 import { parseMetadataFromDescription } from "../../utils/listingMetadata";
 import { getListingCosts } from "../../utils/listingCosts";
 
@@ -93,19 +94,22 @@ export function MobileImageCarousel({
   images, onBack, listingId, onOpen,
 }: { images: string[]; onBack: () => void; listingId: string; onOpen: (i: number) => void }) {
   const [idx, setIdx] = useState(0);
+  const hasImages = images.length > 0;
 
   return (
-    <div style={{ position: "relative", width: "100%", height: 280, backgroundColor: "#2a1a0e", flexShrink: 0 }}>
-      <img src={images[idx]} alt={`Ảnh ${idx + 1}`} onClick={() => onOpen(idx)}
+    <div style={{ position: "relative", width: "100%", height: hasImages ? 280 : 200, backgroundColor: hasImages ? "#2a1a0e" : C.cream, flexShrink: 0 }}>
+      <ImageWithFallback src={images[idx]} alt={`Ảnh ${idx + 1}`} onClick={hasImages ? () => onOpen(idx) : undefined}
         style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
       <button type="button" aria-label="Quay lại" onClick={onBack}
         style={{ position: "absolute", top: 14, left: 14, width: 38, height: 38, borderRadius: "50%", background: "rgba(255,255,255,0.88)", border: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", boxShadow: "0 2px 8px rgba(0,0,0,0.15)" }}>
         <ArrowLeft size={18} color={C.textPrimary} />
       </button>
       <SaveListingButton listingId={listingId} overlay size={17} />
-      <div style={{ position: "absolute", bottom: 14, right: 14, background: "rgba(0,0,0,0.5)", borderRadius: 999, padding: "4px 10px" }}>
-        <span style={{ fontFamily: font, fontSize: 12, fontWeight: 600, color: "white" }}>{idx + 1}/{images.length} ảnh</span>
-      </div>
+      {hasImages && (
+        <div style={{ position: "absolute", bottom: 14, right: 14, background: "rgba(0,0,0,0.5)", borderRadius: 999, padding: "4px 10px" }}>
+          <span style={{ fontFamily: font, fontSize: 12, fontWeight: 600, color: "white" }}>{idx + 1}/{images.length} ảnh</span>
+        </div>
+      )}
       {idx > 0 && (
         <button type="button" aria-label="Ảnh trước" onClick={() => setIdx(i => i - 1)} style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", width: 44, height: 44, borderRadius: "50%", background: "rgba(0,0,0,0.35)", border: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
           <ChevronLeft size={18} color="white" />
@@ -334,7 +338,7 @@ export function MobileSimilarRooms({ listings, onOpen }: { listings: ListingCard
           <div key={room.id} onClick={() => onOpen(room.id)} data-testid="similar-room-card"
             style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: 12, overflow: "hidden", display: "flex", cursor: "pointer" }}>
             <div style={{ position: "relative", width: 90, flexShrink: 0 }}>
-              <img src={room.img} alt={room.title} style={{ width: 90, height: "100%", minHeight: 90, objectFit: "cover", display: "block" }} />
+              <ImageWithFallback src={room.img} alt={room.title} iconSize={20} hideLabel style={{ width: 90, height: "100%", minHeight: 90, objectFit: "cover", display: "block" }} />
               <ListingTag badge={room.badge} style={{ position: "absolute", top: 6, left: 6, fontSize: 9.5, padding: "2px 6px" }} />
             </div>
             <div style={{ padding: "11px 13px", flex: 1, minWidth: 0 }}>

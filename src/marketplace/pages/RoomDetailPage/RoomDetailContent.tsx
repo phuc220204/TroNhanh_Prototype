@@ -10,8 +10,9 @@ import { amenityIcon, amenityLabel } from "../../../shared/constants/amenities";
 import { nearbyCategoryMeta } from "../../../shared/constants/nearby";
 import { LeafletMap, isValidLatLng } from "../../../shared/components/common/LeafletMap";
 import { listPropertyReviews } from "../../services/review-service";
-import { getListingImage, type ListingCardItem } from "../../services/listing-mappers";
-import { ListingHeaderMeta, ListingPostedTime, ListingTag } from "../../components/ListingCardMeta";
+import type { ListingCardItem } from "../../services/listing-mappers";
+import { ImageWithFallback } from "../../../shared/components/common";
+import { ListingAvailabilityBadge, ListingHeaderMeta, ListingPostedTime, ListingTag } from "../../components/ListingCardMeta";
 import { SaveListingButton } from "../../components/SaveListingButton";
 import { parseMetadataFromDescription } from "../../utils/listingMetadata";
 import { getListingCosts } from "../../utils/listingCosts";
@@ -148,7 +149,16 @@ export function ImageGallery({
 }: { images: string[]; listingId: string; onOpen: (idx: number) => void }) {
   const [mainIdx, setMainIdx] = useState(0);
 
-  // Số ảnh thay đổi theo tin (3 ảnh thật, hoặc 5 ảnh fallback) — luôn kẹp chỉ số
+  if (images.length === 0) {
+    return (
+      <div style={{ position: "relative", height: 320, borderRadius: 16, overflow: "hidden", marginBottom: 32 }}>
+        <ImageWithFallback src={null} alt="Ảnh phòng" iconSize={40} style={{ width: "100%", height: "100%" }} />
+        <SaveListingButton listingId={listingId} overlay size={18} />
+      </div>
+    );
+  }
+
+  // Số ảnh thay đổi theo tin — luôn kẹp chỉ số
   // vào khoảng hợp lệ, nếu không badge sẽ hiện kiểu "4/3 ảnh" và <img> nhận undefined.
   const safeMain = Math.min(Math.max(mainIdx, 0), images.length - 1);
   const thumbs = images.slice(1, 5);
@@ -223,9 +233,7 @@ export function TitleBlock({ listing }: { listing: any }) {
           <MapPin size={14} color={C.secondary} />
           <span style={{ fontFamily: font, fontSize: 14, color: C.textSecondary }}>Khu vực {listing.district}</span>
         </div>
-        <span style={{ background: "#E8F5E1", color: "#4A7A34", fontFamily: font, fontSize: 12, fontWeight: 700, borderRadius: 999, padding: "3px 12px" }}>
-          ● Trống
-        </span>
+        <ListingAvailabilityBadge listing={listing} />
         <ListingHeaderMeta listing={listing} />
       </div>
     </div>
@@ -506,7 +514,7 @@ export function SimilarRooms({ listings, district, onOpen }: { listings: Listing
             onMouseEnter={e => (e.currentTarget.style.boxShadow = "0 4px 16px rgba(92,70,50,0.12)")}
             onMouseLeave={e => (e.currentTarget.style.boxShadow = "none")}>
             <div style={{ position: "relative", height: 140 }}>
-              <img src={room.img} alt={room.title} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+              <ImageWithFallback src={room.img} alt={room.title} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
               <ListingTag badge={room.badge} style={{ position: "absolute", top: 8, left: 8 }} />
               <div style={{ position: "absolute", bottom: 8, right: 8, background: C.primaryDark, borderRadius: 999, padding: "3px 10px" }}>
                 <span style={{ fontFamily: font, fontSize: 12, fontWeight: 700, color: C.cream }}>{room.price}/tháng</span>
