@@ -4,6 +4,7 @@ import {
   ArrowRight, Building2, CreditCard, Headphones, Home, Mail, MessageSquare,
   Search, ShieldCheck, Users,
 } from "lucide-react";
+import { BrandLogo } from "../../../shared/components/brand/BrandLogo";
 import { C, font } from "../../../shared/theme";
 import { ModalShell } from "../../../shared/components/common/ModalShell";
 import { EmptyState, Skeleton } from "../../../shared/components/common";
@@ -412,8 +413,7 @@ export function SiteFooter({ mobile }: { mobile?: boolean }) {
           {/* Col 1: Brand */}
           <div>
             <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 14 }}>
-              <Home size={22} color={C.primary} />
-              <span style={{ fontFamily: font, fontSize: 22, fontWeight: 900, color: C.textPrimary, display: "block" }}>Trọ Nhanh</span>
+              <BrandLogo variant="full" size="md" />
             </div>
             <p style={{ fontFamily: font, fontSize: 13, color: C.textSecondary, lineHeight: 1.75, margin: "0 0 20px", maxWidth: 260 }}>
               Nền tảng tìm kiếm và quản lý phòng trọ tại Việt Nam. Mang lại giải pháp an toàn và hiệu quả cho sinh viên và người lao động.

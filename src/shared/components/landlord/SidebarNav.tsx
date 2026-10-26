@@ -164,13 +164,13 @@ export function Sidebar({ active, onSaaSAccess }: { active: LandlordNavId; onSaa
 
 export function MobileHeader({ title, onBack }: { title: string; onBack?: () => void }) {
   return (
-    <div style={{ background: C.primaryDark, height: 56, display: "flex", alignItems: "center", padding: "0 16px", gap: 12, position: "sticky", top: 0, zIndex: 100, boxShadow: shadow.sm, flexShrink: 0, "--tn-brand-logo-color": C.cream } as React.CSSProperties}>
+    <div style={{ background: C.primaryDark, height: 56, display: "flex", alignItems: "center", padding: "0 16px", gap: 12, position: "sticky", top: 0, zIndex: 100, boxShadow: shadow.sm, flexShrink: 0 }}>
       {onBack ? (
         <button type="button" onClick={onBack} aria-label="Quay lại tổng quan" data-testid="landlord-mobile-back" style={{ background: "none", border: "none", padding: 0, minWidth: 44, minHeight: 44, display: "flex", alignItems: "center", justifyContent: "flex-start", cursor: "pointer", color: C.cream }}>
           <ChevronLeft size={24} />
         </button>
       ) : (
-        <BrandLogo variant="full" size="sm" />
+        <BrandLogo variant="full" size="sm" tone="dark" />
       )}
       <span style={{ fontFamily: font, fontSize: 18, fontWeight: 800, color: C.cream, flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{title}</span>
     </div>
