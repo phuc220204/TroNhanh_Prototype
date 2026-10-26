@@ -14,7 +14,11 @@
     "test:payos": "node --test tests/unit/boost-access.test.mjs supabase/tests/payos-signature.test.mjs",
     "test:auth-dashboard": "node --experimental-strip-types --test tests/unit/phone-normalization.test.mjs tests/unit/auth-registration.test.mjs tests/unit/dashboard-metrics.test.mjs",
     "test:e2e": "playwright test",
-    "test:e2e:ui": "playwright test --ui"
+    "test:e2e:ui": "playwright test --ui",
+    "seed:demo-listings": "node --experimental-strip-types scripts/seedDemoListings.ts",
+    "seed:demo-listings:remove": "node --experimental-strip-types scripts/removeDemoListings.ts",
+    "typecheck:seed": "tsc -p tsconfig.seed.json --noEmit",
+    "test:seed": "node --experimental-strip-types --test tests/seed/demo-listings.test.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.117.1",
