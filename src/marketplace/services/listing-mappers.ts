@@ -32,9 +32,10 @@ export const mapTypeToKey = (type: string): string => {
 
 import { publicUrl } from "../../shared/services/media-service";
 import { getListingPostedAt, isNewlyPosted } from "../utils/posted-time";
+import { isIllustrativeListing, listingDisplayTitle } from "../utils/illustrative-listing";
 
 /** Nhãn trên card tin. Chuỗi hiển thị nằm ở `ListingCardMeta`, không ở đây. */
-export type ListingBadge = "featured" | "new";
+export type ListingBadge = "featured" | "new" | "illustrative";
 
 /** Tin đang Boost: đã thanh toán qua payOS và còn hạn (khớp `is_boost_active` ở DB). */
 export function hasActiveVerifiedBoost(row: any): boolean {
@@ -70,7 +71,7 @@ export interface ListingCardItem {
   loc: string;
   amenities: string[];
   type: string;
-  /** "featured" = đang Boost (đã thanh toán, còn hạn); "new" = đăng ≤ 72 giờ. */
+  /** "illustrative" = bộ tin minh họa; "featured" = Boost hợp lệ; "new" = đăng ≤ 72 giờ. */
   badge: ListingBadge | null;
   img: string;
   contact_phone: string;
@@ -110,7 +111,7 @@ export function toListingCard(row: any): ListingCardItem {
 
   const hasVerifiedBoost = hasActiveVerifiedBoost(row);
   const postedAt = getListingPostedAt(row ?? {});
-  const badge: ListingBadge | null = hasVerifiedBoost
+  const badge: ListingBadge | null = isIllustrativeListing(row) ? "illustrative" : hasVerifiedBoost
     ? "featured"
     : isNewlyPosted(postedAt, new Date()) ? "new" : null;
 
@@ -118,7 +119,7 @@ export function toListingCard(row: any): ListingCardItem {
 
   return {
     id: String(row.id),
-    title: row.title || "Phòng trọ",
+    title: listingDisplayTitle(row) || "Phòng trọ",
     price: formattedPrice,
     priceNum,
     area: Number(row.area || 0),

@@ -1,0 +1,706 @@
+[
+  {
+    "listingKey": "linh-xuan-gac-go",
+    "landlordEmail": "nguyen.van.a@tronhanh.demo",
+    "title": "[DEMO] Phòng gác sàn gỗ, góc bếp riêng tại Linh Xuân",
+    "description": "Tin minh họa cho buổi báo cáo môn học EXE201, không phải phòng cho thuê thật.\n\nGác bố trí chỗ ngủ, phía dưới đủ không gian đặt bàn học và kệ bếp. WC riêng, phù hợp 1–2 bạn đi học hoặc đi làm.\n\nẢnh phòng chỉ dùng để minh họa giao diện; địa điểm, giá và tiện ích là kịch bản demo. Không đặt cọc hoặc chuyển tiền theo tin này.",
+    "propertyType": "Phòng trọ",
+    "price": 2400000,
+    "area": 20,
+    "provinceCode": 79,
+    "wardCode": 26800,
+    "wardName": "Phường Linh Xuân",
+    "address": "Phường Linh Xuân, Thành phố Hồ Chí Minh",
+    "electricityPrice": 3500,
+    "waterPrice": 20000,
+    "waterUnit": "cubic",
+    "servicePrice": 100000,
+    "deposit": 2400000,
+    "accessPolicy": "Restricted",
+    "accessOpenTime": "05:00",
+    "accessCloseTime": "23:00",
+    "amenities": [
+      "Wifi",
+      "Gác lửng",
+      "WC riêng",
+      "Chỗ để xe"
+    ],
+    "sourcePageUrl": "https://lozido.com/thue-phong-tro-thanh-pho-thu-duc-thanh-pho-ho-chi-minh/3349.html",
+    "photos": [
+      {
+        "file": "seed/images/source-01/01.webp",
+        "sourceUrl": "https://cdn.lozido.com/image/common/69085458f2ba3-1762153560-014d9928d6995bc70288jpg.jpg",
+        "width": 960,
+        "height": 1280,
+        "sizeBytes": 60382,
+        "sha256": "484a4ee47edb9b3f177eca4c11b02495d5db987439231f4283cb45e741896029"
+      },
+      {
+        "file": "seed/images/source-01/02.webp",
+        "sourceUrl": "https://cdn.lozido.com/image/common/69085459197a0-1762153561-51a7aac0e571682f3160jpg.jpg",
+        "width": 960,
+        "height": 1280,
+        "sizeBytes": 85868,
+        "sha256": "e827af5f0eaf8a174a13c2e247f0447f0c27edce1fba0c2215d068c10e585d0c"
+      },
+      {
+        "file": "seed/images/source-01/03.webp",
+        "sourceUrl": "https://cdn.lozido.com/image/common/690854593278e-1762153561-188787e2c853450d1c42jpg.jpg",
+        "width": 960,
+        "height": 1280,
+        "sizeBytes": 41884,
+        "sha256": "aeb2643eae88bd85b5ae835e4696e09bde00b55ba9cee4378f9a8c3d91a88c00"
+      },
+      {
+        "file": "seed/images/source-01/04.webp",
+        "sourceUrl": "https://cdn.lozido.com/image/common/690854594a289-1762153561-0877051e4aafc7f19ebejpg.jpg",
+        "width": 960,
+        "height": 1280,
+        "sizeBytes": 76986,
+        "sha256": "24c6b763e5dd57d2c2a91355c5b7cfd18786195cac8f5d1b6d26efcdeb144867"
+      }
+    ]
+  },
+  {
+    "listingKey": "hiep-binh-phong-sang",
+    "landlordEmail": "nguyen.van.b@tronhanh.demo",
+    "title": "[DEMO] Phòng sáng thoáng, có gác và bếp tại Hiệp Bình",
+    "description": "Tin minh họa cho buổi báo cáo môn học EXE201, không phải phòng cho thuê thật.\n\nKhông gian sáng, tường màu trung tính dễ sắp xếp bàn học. Có gác ngủ, kệ bếp và khu vệ sinh riêng; phù hợp hai người chia sẻ chi phí.\n\nẢnh phòng chỉ dùng để minh họa giao diện; địa điểm, giá và tiện ích là kịch bản demo. Không đặt cọc hoặc chuyển tiền theo tin này.",
+    "propertyType": "Phòng trọ",
+    "price": 2800000,
+    "area": 22,
+    "provinceCode": 79,
+    "wardCode": 26809,
+    "wardName": "Phường Hiệp Bình",
+    "address": "Phường Hiệp Bình, Thành phố Hồ Chí Minh",
+    "electricityPrice": 3500,
+    "waterPrice": 20000,
+    "waterUnit": "cubic",
+    "servicePrice": 100000,
+    "deposit": 2800000,
+    "accessPolicy": "Free",
+    "accessOpenTime": null,
+    "accessCloseTime": null,
+    "amenities": [
+      "Wifi",
+      "Máy lạnh",
+      "Gác lửng",
+      "WC riêng",
+      "Giờ giấc tự do"
+    ],
+    "sourcePageUrl": "https://lozido.com/thue-phong-tro-quan-12-thanh-pho-ho-chi-minh/3737.html",
+    "photos": [
+      {
+        "file": "seed/images/source-02/03.webp",
+        "sourceUrl": "https://media.lozido.com/media/post/17115fdb-a1a2-4e2d-9070-ca91e95565c0.png",
+        "width": 1195,
+        "height": 896,
+        "sizeBytes": 54218,
+        "sha256": "2d3e23fe121f27025d96646512daab8ed314c19c97fc7dc7dc93400fca373a42"
+      },
+      {
+        "file": "seed/images/source-02/04.webp",
+        "sourceUrl": "https://media.lozido.com/media/post/9848f1ca-7329-4885-a6b0-1863c24c87e2.jpg",
+        "width": 1290,
+        "height": 957,
+        "sizeBytes": 60412,
+        "sha256": "8a6f2ba427ddff2edb3e1d40ba42daff937337f831b70a3c98ff1cf23142edec"
+      },
+      {
+        "file": "seed/images/source-02/05.webp",
+        "sourceUrl": "https://media.lozido.com/media/post/478be22a-849f-4fa7-900c-3ce9cc0cb0d4.png",
+        "width": 1195,
+        "height": 896,
+        "sizeBytes": 57448,
+        "sha256": "d14c46411afe83c28220ec8dafef7005c66a1f5489a0988ada0f909cd31feef7"
+      }
+    ]
+  },
+  {
+    "listingKey": "tam-binh-gac-rieng",
+    "landlordEmail": "nguyen.van.c@tronhanh.demo",
+    "title": "[DEMO] Phòng gác riêng gọn gàng tại Tam Bình",
+    "description": "Tin minh họa cho buổi báo cáo môn học EXE201, không phải phòng cho thuê thật.\n\nPhòng nhỏ dễ dọn dẹp, gác dùng làm chỗ ngủ để giữ tầng dưới thông thoáng. Có khu nấu ăn gọn, cửa sổ và chỗ để xe chung.\n\nẢnh phòng chỉ dùng để minh họa giao diện; địa điểm, giá và tiện ích là kịch bản demo. Không đặt cọc hoặc chuyển tiền theo tin này.",
+    "propertyType": "Phòng trọ",
+    "price": 2200000,
+    "area": 18,
+    "provinceCode": 79,
+    "wardCode": 26803,
+    "wardName": "Phường Tam Bình",
+    "address": "Phường Tam Bình, Thành phố Hồ Chí Minh",
+    "electricityPrice": 3500,
+    "waterPrice": 20000,
+    "waterUnit": "cubic",
+    "servicePrice": 100000,
+    "deposit": 2200000,
+    "accessPolicy": "Restricted",
+    "accessOpenTime": "05:00",
+    "accessCloseTime": "23:00",
+    "amenities": [
+      "Wifi",
+      "Gác lửng",
+      "WC riêng",
+      "Chỗ để xe"
+    ],
+    "sourcePageUrl": "https://lozido.com/thue-phong-tro-thanh-pho-thu-duc-ho-chi-minh/3638.html",
+    "photos": [
+      {
+        "file": "seed/images/source-06/02.webp",
+        "sourceUrl": "https://cdn.lozido.com/image/post/6a45122f62c4c-1782911535-001.jpg",
+        "width": 1200,
+        "height": 1600,
+        "sizeBytes": 125442,
+        "sha256": "344ad3be05b682c4c4889342615f4f679bbe794c51248e92f1ee06f2b7e97cde"
+      },
+      {
+        "file": "seed/images/source-06/03.webp",
+        "sourceUrl": "https://cdn.lozido.com/image/post/6a45122fddac1-1782911535-001.jpg",
+        "width": 1246,
+        "height": 1600,
+        "sizeBytes": 166472,
+        "sha256": "d0c74900f10fcfb505f5d65081f17766a80ec64a32c92b5d4e77c4000385ea12"
+      },
+      {
+        "file": "seed/images/source-06/04.webp",
+        "sourceUrl": "https://cdn.lozido.com/image/post/6a451230709e7-1782911536-001.jpg",
+        "width": 1200,
+        "height": 1600,
+        "sizeBytes": 111022,
+        "sha256": "e55b6c5fcfa82606fb9a5e4088315889c058d1385410c8ab2c46b910f50e42d9"
+      },
+      {
+        "file": "seed/images/source-06/05.webp",
+        "sourceUrl": "https://cdn.lozido.com/image/post/6a4512310062d-1782911537-001.jpg",
+        "width": 1200,
+        "height": 1600,
+        "sizeBytes": 93398,
+        "sha256": "0e168bb8fcc241cf64506e0775b51ff9e3977f21775cd7d8a8ac9733fde7236d"
+      },
+      {
+        "file": "seed/images/source-06/06.webp",
+        "sourceUrl": "https://cdn.lozido.com/image/post/6a45123187217-1782911537-001.jpg",
+        "width": 1598,
+        "height": 1600,
+        "sizeBytes": 162608,
+        "sha256": "54e8ef39d5a31f1855a1bb8b94df129376c6d6d144cccb4c22dc635ae3d6a569"
+      }
+    ]
+  },
+  {
+    "listingKey": "long-truong-phong-cua-so",
+    "landlordEmail": "nguyen.van.d@tronhanh.demo",
+    "title": "[DEMO] Phòng cửa sổ lớn, góc sinh hoạt tại Long Trường",
+    "description": "Tin minh họa cho buổi báo cáo môn học EXE201, không phải phòng cho thuê thật.\n\nBố trí được giường, tủ quần áo và bàn học gần cửa sổ. Phù hợp bạn thích không gian sinh hoạt riêng, sử dụng bếp điện và giữ yên tĩnh buổi tối.\n\nẢnh phòng chỉ dùng để minh họa giao diện; địa điểm, giá và tiện ích là kịch bản demo. Không đặt cọc hoặc chuyển tiền theo tin này.",
+    "propertyType": "Phòng trọ",
+    "price": 3200000,
+    "area": 25,
+    "provinceCode": 79,
+    "wardCode": 26860,
+    "wardName": "Phường Long Trường",
+    "address": "Phường Long Trường, Thành phố Hồ Chí Minh",
+    "electricityPrice": 3500,
+    "waterPrice": 20000,
+    "waterUnit": "cubic",
+    "servicePrice": 100000,
+    "deposit": 3200000,
+    "accessPolicy": "Free",
+    "accessOpenTime": null,
+    "accessCloseTime": null,
+    "amenities": [
+      "Wifi",
+      "Máy lạnh",
+      "WC riêng",
+      "Chỗ để xe",
+      "Giờ giấc tự do"
+    ],
+    "sourcePageUrl": "https://lozido.com/thue-phong-tro-quan-12-ho-chi-minh/3663.html",
+    "photos": [
+      {
+        "file": "seed/images/source-09/01.webp",
+        "sourceUrl": "https://cdn.lozido.com/image/post/6a5f5cf1e5efd-1784634609-001.jpg",
+        "width": 828,
+        "height": 1104,
+        "sizeBytes": 110628,
+        "sha256": "c57e9278d1a5ec9a735e0f9da3b98a7f0007e2c9441f82cc2f5b2ae313c50f92"
+      },
+      {
+        "file": "seed/images/source-09/02.webp",
+        "sourceUrl": "https://cdn.lozido.com/image/post/6a5f5cf21281e-1784634610-001.jpg",
+        "width": 828,
+        "height": 1104,
+        "sizeBytes": 68282,
+        "sha256": "01dc7d505a08d4c8d84e65d3f08647323573c2a058406d7851f761559beb8cf4"
+      },
+      {
+        "file": "seed/images/source-09/03.webp",
+        "sourceUrl": "https://cdn.lozido.com/image/post/6a5f5cf22afd9-1784634610-001.jpg",
+        "width": 828,
+        "height": 1104,
+        "sizeBytes": 42140,
+        "sha256": "75cb683f659c364023884f801cdfe8754266e738dd0b108c598819f23c83c879"
+      },
+      {
+        "file": "seed/images/source-09/04.webp",
+        "sourceUrl": "https://cdn.lozido.com/image/post/6a5f5cf2422a0-1784634610-001.jpg",
+        "width": 828,
+        "height": 1104,
+        "sizeBytes": 83830,
+        "sha256": "602af2a56592c23ee19030d5190f2deaf615a208acc45adc66b281c3b0aeebbb"
+      },
+      {
+        "file": "seed/images/source-09/05.webp",
+        "sourceUrl": "https://cdn.lozido.com/image/post/6a5f5cff5e0bd-1784634623-001.jpg",
+        "width": 828,
+        "height": 1104,
+        "sizeBytes": 124378,
+        "sha256": "de54e72254cbcd3c6e92f9960742a880739bfa54c7a54a4de4abfee9c3ab4274"
+      }
+    ]
+  },
+  {
+    "listingKey": "tang-nhon-phu-gac-thoang",
+    "landlordEmail": "nguyen.van.e@tronhanh.demo",
+    "title": "[DEMO] Phòng gác thoáng, bếp gọn tại Tăng Nhơn Phú",
+    "description": "Tin minh họa cho buổi báo cáo môn học EXE201, không phải phòng cho thuê thật.\n\nGác cao vừa đủ đặt nệm, tầng dưới bố trí tủ và bàn làm việc. Có bếp riêng, WC trong phòng; khu để xe dùng chung và không tổ chức tụ tập khuya.\n\nẢnh phòng chỉ dùng để minh họa giao diện; địa điểm, giá và tiện ích là kịch bản demo. Không đặt cọc hoặc chuyển tiền theo tin này.",
+    "propertyType": "Phòng trọ",
+    "price": 2600000,
+    "area": 23,
+    "provinceCode": 79,
+    "wardCode": 26842,
+    "wardName": "Phường Tăng Nhơn Phú",
+    "address": "Phường Tăng Nhơn Phú, Thành phố Hồ Chí Minh",
+    "electricityPrice": 3500,
+    "waterPrice": 20000,
+    "waterUnit": "cubic",
+    "servicePrice": 100000,
+    "deposit": 2600000,
+    "accessPolicy": "Restricted",
+    "accessOpenTime": "05:00",
+    "accessCloseTime": "23:00",
+    "amenities": [
+      "Wifi",
+      "Gác lửng",
+      "WC riêng",
+      "Chỗ để xe"
+    ],
+    "sourcePageUrl": "https://lozido.com/thue-phong-tro-quan-12-ho-chi-minh/3624.html",
+    "photos": [
+      {
+        "file": "seed/images/source-11/01.webp",
+        "sourceUrl": "https://cdn.lozido.com/image/post/6a2ce0ee74d99-1781326062-001.jpg",
+        "width": 1600,
+        "height": 1200,
+        "sizeBytes": 190300,
+        "sha256": "358d0f3252ddf0aa39fae98334c6ddd58c4005cb9aecc3836a0cb2e6f58fb00b"
+      },
+      {
+        "file": "seed/images/source-11/02.webp",
+        "sourceUrl": "https://cdn.lozido.com/image/post/6a2ce0ef25733-1781326063-001.jpg",
+        "width": 1600,
+        "height": 1200,
+        "sizeBytes": 148952,
+        "sha256": "d139bef0cef83dc6c1cf25b63fa95c5674c79670f807428ae388aa74b09e8194"
+      },
+      {
+        "file": "seed/images/source-11/03.webp",
+        "sourceUrl": "https://cdn.lozido.com/image/post/6a2ce0efb7e5a-1781326063-001.jpg",
+        "width": 1600,
+        "height": 1200,
+        "sizeBytes": 150242,
+        "sha256": "4974a2104ec13de1b08404d3f6dbdab49c2637320f94a354f3d73afbc432c632"
+      },
+      {
+        "file": "seed/images/source-11/04.webp",
+        "sourceUrl": "https://cdn.lozido.com/image/post/6a2ce0f056193-1781326064-001.jpg",
+        "width": 1600,
+        "height": 1200,
+        "sizeBytes": 136268,
+        "sha256": "3d59493eed4d2a402f0bc711c55eef9bf9f1b099ba60f3812f633c84883c4de4"
+      },
+      {
+        "file": "seed/images/source-11/05.webp",
+        "sourceUrl": "https://cdn.lozido.com/image/post/6a2ce0f0e832d-1781326064-001.jpg",
+        "width": 1600,
+        "height": 1200,
+        "sizeBytes": 230068,
+        "sha256": "681187d4273ce904cbf270e85277b1c2cba9ca3cbf30de4d95a2f7dfefc36dd7"
+      }
+    ]
+  },
+  {
+    "listingKey": "linh-xuan-mini-noi-that",
+    "landlordEmail": "nguyen.van.f@tronhanh.demo",
+    "title": "[DEMO] Căn hộ mini có gác, nội thất gọn tại Linh Xuân",
+    "description": "Tin minh họa cho buổi báo cáo môn học EXE201, không phải phòng cho thuê thật.\n\nMẫu căn hộ nhỏ có khu bếp, bàn ăn và chỗ ngủ tách trên gác. Trang bị cơ bản gồm máy lạnh, kệ bếp và tủ đồ, phù hợp cặp đôi hoặc hai bạn cùng ở.\n\nẢnh phòng chỉ dùng để minh họa giao diện; địa điểm, giá và tiện ích là kịch bản demo. Không đặt cọc hoặc chuyển tiền theo tin này.",
+    "propertyType": "Căn hộ mini",
+    "price": 4500000,
+    "area": 30,
+    "provinceCode": 79,
+    "wardCode": 26800,
+    "wardName": "Phường Linh Xuân",
+    "address": "Phường Linh Xuân, Thành phố Hồ Chí Minh",
+    "electricityPrice": 3500,
+    "waterPrice": 20000,
+    "waterUnit": "cubic",
+    "servicePrice": 100000,
+    "deposit": 4500000,
+    "accessPolicy": "Free",
+    "accessOpenTime": null,
+    "accessCloseTime": null,
+    "amenities": [
+      "Wifi",
+      "Máy lạnh",
+      "Gác lửng",
+      "WC riêng",
+      "Giờ giấc tự do"
+    ],
+    "sourcePageUrl": "https://lozido.com/thue-phong-tro-binh-tan-thanh-pho-ho-chi-minh/3732.html",
+    "photos": [
+      {
+        "file": "seed/images/source-03/01.webp",
+        "sourceUrl": "https://media.lozido.com/media/temps/d4dd4943-29bf-426a-8913-f873fa19cc76.jpg",
+        "width": 1320,
+        "height": 983,
+        "sizeBytes": 162560,
+        "sha256": "3622f211f9e5d1cfc9b275b8ddf75d4fb7fa34c34cece75478450008004a8ad5"
+      },
+      {
+        "file": "seed/images/source-03/02.webp",
+        "sourceUrl": "https://media.lozido.com/media/temps/eaec1bb4-8384-4ab8-8b77-1b79d14a8b9d.jpg",
+        "width": 1320,
+        "height": 984,
+        "sizeBytes": 79880,
+        "sha256": "66acb93c5738db8a5bb8835fb023cdb179c188e3ee344bba1e134ffba82bd98a"
+      },
+      {
+        "file": "seed/images/source-03/03.webp",
+        "sourceUrl": "https://media.lozido.com/media/temps/88d9e414-7429-4821-bbee-322401d33297.jpg",
+        "width": 1320,
+        "height": 985,
+        "sizeBytes": 51912,
+        "sha256": "652705805a4eb85e6c1b2de254e87e4fd6890b28ee6a1aa1717a5c969dbd8770"
+      },
+      {
+        "file": "seed/images/source-03/04.webp",
+        "sourceUrl": "https://media.lozido.com/media/temps/09a98d0f-dc31-4e7e-b65a-0676163b9f96.jpg",
+        "width": 1600,
+        "height": 1200,
+        "sizeBytes": 169828,
+        "sha256": "85d13a0abf214c3ae5a7d998b6761f03ea058bf397a6bb08a7ca8f2c02d8b61b"
+      },
+      {
+        "file": "seed/images/source-03/05.webp",
+        "sourceUrl": "https://media.lozido.com/media/temps/cf347b2d-043c-4b77-a349-23f57106a391.jpg",
+        "width": 1200,
+        "height": 1600,
+        "sizeBytes": 216526,
+        "sha256": "1ec090f7537fd41dcdbb8cbb6963f37e277524a5499d0a3ec54efcc3474cdc86"
+      }
+    ]
+  },
+  {
+    "listingKey": "long-binh-mini-sang",
+    "landlordEmail": "nguyen.van.g@tronhanh.demo",
+    "title": "[DEMO] Căn hộ mini sáng, gác ngủ và bếp tại Long Bình",
+    "description": "Tin minh họa cho buổi báo cáo môn học EXE201, không phải phòng cho thuê thật.\n\nTông màu sáng, gác ngủ riêng giúp phòng sinh hoạt phía dưới rộng hơn. Có cửa sổ, máy lạnh và khu bếp; tự giữ vệ sinh, phân loại rác và gửi xe đúng chỗ.\n\nẢnh phòng chỉ dùng để minh họa giao diện; địa điểm, giá và tiện ích là kịch bản demo. Không đặt cọc hoặc chuyển tiền theo tin này.",
+    "propertyType": "Căn hộ mini",
+    "price": 4100000,
+    "area": 28,
+    "provinceCode": 79,
+    "wardCode": 26833,
+    "wardName": "Phường Long Bình",
+    "address": "Phường Long Bình, Thành phố Hồ Chí Minh",
+    "electricityPrice": 3500,
+    "waterPrice": 20000,
+    "waterUnit": "cubic",
+    "servicePrice": 100000,
+    "deposit": 4100000,
+    "accessPolicy": "Free",
+    "accessOpenTime": null,
+    "accessCloseTime": null,
+    "amenities": [
+      "Wifi",
+      "Máy lạnh",
+      "Gác lửng",
+      "WC riêng",
+      "Chỗ để xe",
+      "Giờ giấc tự do"
+    ],
+    "sourcePageUrl": "https://lozido.com/thue-phong-tro-quan-12-ho-chi-minh/3636.html",
+    "photos": [
+      {
+        "file": "seed/images/source-10/01.webp",
+        "sourceUrl": "https://cdn.lozido.com/image/post/6a4471d62fd1a-1782870486-634.jpg",
+        "width": 1600,
+        "height": 1200,
+        "sizeBytes": 198034,
+        "sha256": "e20998a0890fdec581cee404d1031cc09980f6f4bfd4d59ece6e2fcc259335a3"
+      },
+      {
+        "file": "seed/images/source-10/02.webp",
+        "sourceUrl": "https://cdn.lozido.com/image/post/6a4471d66321a-1782870486-633.jpg",
+        "width": 1080,
+        "height": 810,
+        "sizeBytes": 91950,
+        "sha256": "824dbcd1f24ea302e56096bccf4ab4276c45d4bcf6a0a164c3508e8e0323675a"
+      },
+      {
+        "file": "seed/images/source-10/03.webp",
+        "sourceUrl": "https://cdn.lozido.com/image/post/6a4471d679a67-1782870486-636.jpg",
+        "width": 1600,
+        "height": 1200,
+        "sizeBytes": 174754,
+        "sha256": "3bd4cab58f4332e0bf05bb4ca8208f367339a7ec43b52d493f5ef06c79569c3e"
+      },
+      {
+        "file": "seed/images/source-10/04.webp",
+        "sourceUrl": "https://cdn.lozido.com/image/post/6a4471d6ae490-1782870486-638.jpg",
+        "width": 1600,
+        "height": 1200,
+        "sizeBytes": 249584,
+        "sha256": "c879033bde9b15966824b60ba1595c14df5d76e5440b8e28c39e7a0e52bad088"
+      },
+      {
+        "file": "seed/images/source-10/05.webp",
+        "sourceUrl": "https://cdn.lozido.com/image/post/6a4471d7083a7-1782870487-637.jpg",
+        "width": 1600,
+        "height": 1200,
+        "sizeBytes": 229038,
+        "sha256": "2ab088124f60ce90ce066d0c805e7b9dad941841247a52636947c648aa62ebbe"
+      }
+    ]
+  },
+  {
+    "listingKey": "hiep-binh-mini-am",
+    "landlordEmail": "nguyen.van.h@tronhanh.demo",
+    "title": "[DEMO] Căn hộ mini ấm cúng, có sẵn giường tại Hiệp Bình",
+    "description": "Tin minh họa cho buổi báo cáo môn học EXE201, không phải phòng cho thuê thật.\n\nKhông gian có sẵn giường và tủ, khu bếp nhỏ để chuẩn bị bữa ăn. WC riêng, phù hợp người muốn chuyển vào với ít đồ đạc; chi phí điện nước tách theo sử dụng.\n\nẢnh phòng chỉ dùng để minh họa giao diện; địa điểm, giá và tiện ích là kịch bản demo. Không đặt cọc hoặc chuyển tiền theo tin này.",
+    "propertyType": "Căn hộ mini",
+    "price": 3800000,
+    "area": 26,
+    "provinceCode": 79,
+    "wardCode": 26809,
+    "wardName": "Phường Hiệp Bình",
+    "address": "Phường Hiệp Bình, Thành phố Hồ Chí Minh",
+    "electricityPrice": 3500,
+    "waterPrice": 20000,
+    "waterUnit": "cubic",
+    "servicePrice": 100000,
+    "deposit": 3800000,
+    "accessPolicy": "Free",
+    "accessOpenTime": null,
+    "accessCloseTime": null,
+    "amenities": [
+      "Wifi",
+      "Máy lạnh",
+      "WC riêng",
+      "Chỗ để xe",
+      "Giờ giấc tự do"
+    ],
+    "sourcePageUrl": "https://lozido.com/thue-phong-tro-quan-12-ho-chi-minh/3623.html",
+    "photos": [
+      {
+        "file": "seed/images/source-12/01.webp",
+        "sourceUrl": "https://cdn.lozido.com/image/post/6a2cbb570552e-1781316439-001.jpg",
+        "width": 1600,
+        "height": 1200,
+        "sizeBytes": 154128,
+        "sha256": "7b8672686d57009a9da30a1b7d364e98b49c0368080cdbd9e4c1ac3f05c02538"
+      },
+      {
+        "file": "seed/images/source-12/02.webp",
+        "sourceUrl": "https://cdn.lozido.com/image/post/6a2cbb5904acb-1781316441-001.jpg",
+        "width": 1600,
+        "height": 1200,
+        "sizeBytes": 141928,
+        "sha256": "aef52cf82fb345fe975dd6dbeebb0ba8b264eb987d1282ee105907e36578be25"
+      },
+      {
+        "file": "seed/images/source-12/03.webp",
+        "sourceUrl": "https://cdn.lozido.com/image/post/6a2cbb5abf71d-1781316442-001.jpg",
+        "width": 1600,
+        "height": 1200,
+        "sizeBytes": 205838,
+        "sha256": "7a755667df20a3a174ec957720bf934ff217bcf3470a9c1323f2015514221102"
+      },
+      {
+        "file": "seed/images/source-12/04.webp",
+        "sourceUrl": "https://cdn.lozido.com/image/post/6a2cbb5c86717-1781316444-001.jpg",
+        "width": 1600,
+        "height": 1200,
+        "sizeBytes": 154018,
+        "sha256": "59488c7341c1cdc72f3f8b9cde78faf3d0533d231f31f8d346dcd751e2302c63"
+      },
+      {
+        "file": "seed/images/source-12/05.webp",
+        "sourceUrl": "https://cdn.lozido.com/image/post/6a2cbb5e7d798-1781316446-001.jpg",
+        "width": 1600,
+        "height": 1200,
+        "sizeBytes": 157712,
+        "sha256": "998d0dfbefa006d59a4e97f4c6f606580f60bff0fea365f97ac6d91eb730c3d5"
+      }
+    ]
+  },
+  {
+    "listingKey": "tang-nhon-phu-ktx-chia-se",
+    "landlordEmail": "nguyen.van.i@tronhanh.demo",
+    "title": "[DEMO] Chỗ ở ký túc xá chia sẻ tại Tăng Nhơn Phú",
+    "description": "Tin minh họa cho buổi báo cáo môn học EXE201, không phải phòng cho thuê thật.\n\nGiá mẫu tính theo một chỗ ở mỗi tháng; diện tích là phòng sinh hoạt chung. Giường tầng có khu để đồ, dùng chung bếp và WC, phù hợp sinh viên thích tiết kiệm; giữ yên lặng sau 22 giờ.\n\nẢnh phòng chỉ dùng để minh họa giao diện; địa điểm, giá và tiện ích là kịch bản demo. Không đặt cọc hoặc chuyển tiền theo tin này.",
+    "propertyType": "Ký túc xá",
+    "price": 1800000,
+    "area": 24,
+    "provinceCode": 79,
+    "wardCode": 26842,
+    "wardName": "Phường Tăng Nhơn Phú",
+    "address": "Phường Tăng Nhơn Phú, Thành phố Hồ Chí Minh",
+    "electricityPrice": 3500,
+    "waterPrice": 80000,
+    "waterUnit": "person",
+    "servicePrice": 50000,
+    "deposit": 1800000,
+    "accessPolicy": "Restricted",
+    "accessOpenTime": "05:00",
+    "accessCloseTime": "23:00",
+    "amenities": [
+      "Wifi",
+      "Máy lạnh",
+      "Chỗ để xe"
+    ],
+    "sourcePageUrl": "https://lozido.com/ktx-sleep-box-doom-thanh-pho-thu-duc-ho-chi-minh/3645.html",
+    "photos": [
+      {
+        "file": "seed/images/source-04/02.webp",
+        "sourceUrl": "https://cdn.lozido.com/image/post/6a4cc5bfde450-1783416255-001.jpg",
+        "width": 900,
+        "height": 1600,
+        "sizeBytes": 93426,
+        "sha256": "98413569678b46e4b0d788f54b43939a2d5d5e37776d2c843c72a5a0fb8379fc"
+      },
+      {
+        "file": "seed/images/source-04/03.webp",
+        "sourceUrl": "https://cdn.lozido.com/image/post/6a4cc5c03fa04-1783416256-001.jpg",
+        "width": 1055,
+        "height": 1600,
+        "sizeBytes": 53618,
+        "sha256": "ccfc74b3e281171b385e225fc07bda40e85bc75c436f751933b98a46d8058aae"
+      },
+      {
+        "file": "seed/images/source-04/04.webp",
+        "sourceUrl": "https://cdn.lozido.com/image/post/6a4cc5c077427-1783416256-001.jpg",
+        "width": 900,
+        "height": 1600,
+        "sizeBytes": 104228,
+        "sha256": "d95496ff7e564489160670443d4181c75e048d426ecb2abe946ac1e17832494e"
+      },
+      {
+        "file": "seed/images/source-04/06.webp",
+        "sourceUrl": "https://cdn.lozido.com/image/post/6a4cc5c1357e3-1783416257-001.jpg",
+        "width": 900,
+        "height": 1600,
+        "sizeBytes": 92008,
+        "sha256": "3bdbf36023303b070b48950c85422c8e31f2e17310097f9f49e6a4a0ea194b7d"
+      },
+      {
+        "file": "seed/images/source-04/05.webp",
+        "sourceUrl": "https://cdn.lozido.com/image/post/6a4cc5c0ce047-1783416256-001.jpg",
+        "width": 900,
+        "height": 1600,
+        "sizeBytes": 144876,
+        "sha256": "e8fc742cb051b672a41cae5a81e72caefd53444169467ee2b2680de6316d265a"
+      },
+      {
+        "file": "seed/images/source-04/01.webp",
+        "sourceUrl": "https://cdn.lozido.com/image/post/6a4cc5bf6a3f0-1783416255-001.jpg",
+        "width": 900,
+        "height": 1600,
+        "sizeBytes": 187440,
+        "sha256": "8ed398ea970a951207b24285389f5611144717ec7a050bdccb66262164afe20c"
+      }
+    ]
+  },
+  {
+    "listingKey": "long-binh-ktx-khoang-rieng",
+    "landlordEmail": "nguyen.van.j@tronhanh.demo",
+    "title": "[DEMO] Chỗ ở khoang riêng, bếp chung tại Long Bình",
+    "description": "Tin minh họa cho buổi báo cáo môn học EXE201, không phải phòng cho thuê thật.\n\nGiá mẫu tính theo một chỗ ở mỗi tháng; diện tích là phòng chung, không phải diện tích một khoang. Có khoang ngủ và hộc đồ riêng, bếp và máy giặt dùng chung; không hút thuốc trong phòng.\n\nẢnh phòng chỉ dùng để minh họa giao diện; địa điểm, giá và tiện ích là kịch bản demo. Không đặt cọc hoặc chuyển tiền theo tin này.",
+    "propertyType": "Ký túc xá",
+    "price": 1900000,
+    "area": 30,
+    "provinceCode": 79,
+    "wardCode": 26833,
+    "wardName": "Phường Long Bình",
+    "address": "Phường Long Bình, Thành phố Hồ Chí Minh",
+    "electricityPrice": 3500,
+    "waterPrice": 80000,
+    "waterUnit": "person",
+    "servicePrice": 50000,
+    "deposit": 1900000,
+    "accessPolicy": "Restricted",
+    "accessOpenTime": "05:00",
+    "accessCloseTime": "23:00",
+    "amenities": [
+      "Wifi",
+      "Máy lạnh",
+      "Chỗ để xe"
+    ],
+    "sourcePageUrl": "https://lozido.com/ktx-sleep-box-doom-thanh-pho-thu-duc-ho-chi-minh/3676.html",
+    "photos": [
+      {
+        "file": "seed/images/source-08/01.webp",
+        "sourceUrl": "https://media.lozido.com/media/temps/7b1f41cb-0f86-41f3-aa87-971cdfec72c4.jpg",
+        "width": 1280,
+        "height": 1600,
+        "sizeBytes": 166632,
+        "sha256": "baaca961abf0bf120bc79c0284d81f7b387366d4c56b27820558ece542820fa1"
+      },
+      {
+        "file": "seed/images/source-08/02.webp",
+        "sourceUrl": "https://media.lozido.com/media/temps/df872a8a-3543-4c5c-b849-fa866ceecc50.jpg",
+        "width": 1280,
+        "height": 1600,
+        "sizeBytes": 110670,
+        "sha256": "d37912dfa936287668baf2bd17844003bebf5b87685ba8633f6129a136c4e762"
+      },
+      {
+        "file": "seed/images/source-08/03.webp",
+        "sourceUrl": "https://media.lozido.com/media/temps/4c2a63ed-833f-4621-9e55-5afcc465bb85.jpg",
+        "width": 1280,
+        "height": 1600,
+        "sizeBytes": 158158,
+        "sha256": "5b67024c1f0fc78083c3a985cb2a38d9e06b01d4b5113b1de8a4a1d442f76acc"
+      },
+      {
+        "file": "seed/images/source-08/04.webp",
+        "sourceUrl": "https://media.lozido.com/media/temps/a2c4042c-97ad-4e1c-9637-d247e9839c1a.jpg",
+        "width": 1280,
+        "height": 1600,
+        "sizeBytes": 76254,
+        "sha256": "a722667b923b1bc3aa23949a922092d1353913ea6b28a7ce8269257d0953952c"
+      },
+      {
+        "file": "seed/images/source-08/05.webp",
+        "sourceUrl": "https://media.lozido.com/media/temps/0a170961-86dc-4f90-bcd8-4a318d281d2f.jpg",
+        "width": 1280,
+        "height": 1600,
+        "sizeBytes": 160518,
+        "sha256": "90c10f80fb25b58db1e8eb56326a81134a3e5a10f26fff2d820da9a6b1e6124b"
+      },
+      {
+        "file": "seed/images/source-08/06.webp",
+        "sourceUrl": "https://media.lozido.com/media/temps/48ce0f74-8228-49b5-8c0a-66fd120a7e5d.jpg",
+        "width": 1280,
+        "height": 1600,
+        "sizeBytes": 158086,
+        "sha256": "53f90d85382b79c308ab8162f659c3207e98eefd7d77b373771ae270cc9dbb10"
+      },
+      {
+        "file": "seed/images/source-08/07.webp",
+        "sourceUrl": "https://media.lozido.com/media/temps/57d30c0a-7adb-43f9-9df0-61250cc4fba6.jpg",
+        "width": 1280,
+        "height": 1600,
+        "sizeBytes": 256834,
+        "sha256": "1d16cdc3a020de3e3ed5d1f8556b409621dfedbc8e15fb22718952ecdff23a6b"
+      }
+    ]
+  }
+]

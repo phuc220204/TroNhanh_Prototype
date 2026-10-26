@@ -13,6 +13,7 @@ import { listPropertyReviews } from "../../services/review-service";
 import type { ListingCardItem } from "../../services/listing-mappers";
 import { ImageWithFallback } from "../../../shared/components/common";
 import { ListingAvailabilityBadge, ListingHeaderMeta, ListingPostedTime, ListingTag } from "../../components/ListingCardMeta";
+import { listingDisplayTitle, listingDisplayDescription } from "../../utils/illustrative-listing";
 import { ReportButton } from "../../components/ReportButton";
 import { SaveListingButton } from "../../components/SaveListingButton";
 import { parseMetadataFromDescription } from "../../utils/listingMetadata";
@@ -227,7 +228,7 @@ export function TitleBlock({ listing }: { listing: any }) {
         ))}
       </div>
       <h1 style={{ fontFamily: font, fontSize: 26, fontWeight: 800, color: C.textPrimary, margin: "0 0 10px", lineHeight: 1.3, letterSpacing: "-0.01em" }}>
-        {listing.title}
+        {listingDisplayTitle(listing)}
       </h1>
       <div style={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
@@ -242,7 +243,7 @@ export function TitleBlock({ listing }: { listing: any }) {
 }
 
 export function DescriptionSection({ listing }: { listing: any }) {
-  const { cleanDescription } = parseCurfewFromDescription(listing.description);
+  const { cleanDescription } = parseCurfewFromDescription(listingDisplayDescription(listing));
   return (
     <Section title="Thông tin mô tả">
       <div style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: 14, padding: "20px 22px" }}>
