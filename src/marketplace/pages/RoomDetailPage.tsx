@@ -12,6 +12,7 @@ import { useToast } from "../../shared/contexts/ToastContext";
 import { ListingAvailabilityBadge, ListingHeaderMeta } from "../components/ListingCardMeta";
 import { startConversation } from "../../shared/services/messaging-service";
 import { ReportButton } from "../components/ReportButton";
+import { listingDisplayTitle } from "../utils/illustrative-listing";
 import {
   AmenitiesGrid, CostTable, DescriptionSection, GalleryLightbox, ImageGallery,
   NearbySection, QuickStats, ReviewsSection, SimilarRooms, TitleBlock,
@@ -170,7 +171,7 @@ export function RoomDetailPage() {
                 </div>
               </div>
               <h1 style={{ fontFamily: font, fontSize: 20, fontWeight: 800, color: C.textPrimary, margin: "0 0 8px", lineHeight: 1.3 }}>
-                {listing.title}
+                {listingDisplayTitle(listing)}
               </h1>
               <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
                 <MapPin size={13} color={C.secondary} />

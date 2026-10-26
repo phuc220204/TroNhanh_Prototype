@@ -6,7 +6,8 @@
 - Giữ nguyên 46 tin đã tồn tại trước lần chạy (đối chiếu ID và updated_at). Không chạy remove trên production.
 - Đã đồng bộ metadata.curfew/costs theo form thật, giữ nguyên ID/ảnh.
 - Local riêng cổng 54421: kiểm thử tạo tiếp từ Draft có một ảnh, moderation RPC, filter mã phường/giá, rerun, dry-run và remove hai lần đều pass; các tin ngoài batch không thay đổi.
-- Unit tests 6/6, integration lifecycle 1/1, typecheck:seed và production build pass. Build dùng pnpm 10.28.0 tương thích cấu hình pnpm.overrides hiện có; không thay dependency/lockfile của chủ repo.
+- Unit tests 7/7, integration lifecycle 1/1, typecheck:seed và production build pass. Build dùng pnpm 10.28.0 tương thích cấu hình pnpm.overrides hiện có; không thay dependency/lockfile của chủ repo.
+- Bổ sung cách trình bày ngắn gọn: tiêu đề không có tiền tố, mô tả bỏ hai đoạn cảnh báo dài, giữ nhãn Tin minh họa ở card/chi tiết. Marker dữ liệu và script cleanup không thay đổi. Thay đổi giao diện có hiệu lực sau khi deploy nhánh chứa PR.
 
 ## Danh sách tin production
 

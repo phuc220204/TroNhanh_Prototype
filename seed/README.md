@@ -2,6 +2,10 @@
 
 10 tin minh họa, 10 chủ demo, **50 ảnh WebP**. Không phải phòng cho thuê thật. Không dùng để nhận cọc hoặc giao dịch.
 
+## Hiển thị trên app
+
+Các tin thuộc đúng `exe201-rental-demo-v1` hiển thị tiêu đề tự nhiên, không có tiền tố `[DEMO]`; phần mô tả bỏ hai đoạn cảnh báo dài và giữ nội dung phòng ngắn gọn. Nhãn **Tin minh họa** xuất hiện trên thẻ tin và cạnh tiêu đề chi tiết (desktop/mobile). Chỉ cách trình bày thay đổi: dữ liệu gốc vẫn giữ nguyên tiền tố, câu cảnh báo và metadata để seed/remove kiểm tra ownership, nên không cần đổi script hoặc sửa lại tin production. Tin ngoài batch không bị rút gọn nội dung hoặc đổi nhãn.
+
 ## Yêu cầu và cấu hình
 
 - Node.js **22.18+ hoặc 24+** (native TypeScript stripping), dependency hiện có của repo.

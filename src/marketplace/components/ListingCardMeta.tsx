@@ -3,10 +3,12 @@ import { C, font, radius } from "../../shared/theme";
 import { Badge } from "../../shared/components/common";
 import { hasActiveVerifiedBoost, type ListingBadge } from "../services/listing-mappers";
 import { formatPostedAgo, formatPostedDateTime, getListingPostedAt } from "../utils/posted-time";
+import { isIllustrativeListing } from "../utils/illustrative-listing";
 
 // "Nổi bật": nền nâu đậm, chữ trắng (tương phản ~7:1). "Mới đăng": nền kem viền
 // vàng — khác hẳn pill xanh "Còn trống" đặt cùng ảnh.
 const TAG_META: Record<ListingBadge, { label: string; background: string; color: string; border: string; testId: string }> = {
+  illustrative: { label: "Tin minh họa", background: C.cream, color: C.primaryDark, border: C.primary, testId: "listing-tag-illustrative" },
   featured: { label: "Nổi bật", background: C.primary, color: C.white, border: C.primary, testId: "listing-tag-featured" },
   new: { label: "Mới đăng", background: C.cream, color: C.primaryDark, border: C.secondary, testId: "listing-tag-new" },
 };
@@ -71,6 +73,7 @@ export function ListingHeaderMeta({ listing, size = 13 }: { listing: any; size?:
  * không bao giờ giả "Trống".
  */
 export function ListingAvailabilityBadge({ listing }: { listing: any }) {
+  if (isIllustrativeListing(listing)) return <ListingTag badge="illustrative" />;
   const isActive = listing?.status === "Active";
   return (
     <Badge

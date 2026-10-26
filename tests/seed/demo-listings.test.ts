@@ -4,6 +4,7 @@ import { loadDataset, validateDataset, photoPath, listingPayload, seedSet, DemoE
 import { assertOwnedRow, selectExisting } from "../../scripts/demo-listings-workflow.ts";
 import { acquireProjectLock, safeError } from "../../scripts/demo-listings-runtime.ts";
 import type { Database } from "../../src/shared/types/database.types.ts";
+import { isIllustrativeListing, listingDisplayTitle, listingDisplayDescription } from "../../src/marketplace/utils/illustrative-listing.ts";
 
 type ListingRow = Database["public"]["Tables"]["rental_listings"]["Row"];
 const items = await loadDataset();
@@ -72,4 +73,23 @@ test("seed and remove share a local project lock, released after completion", as
 test("unexpected provider errors cannot print secrets or token-bearing URLs", () => {
   assert.equal(safeError(new Error("secret-token https://host?key=private")), "UNEXPECTED_ERROR_CHECK_CONFIGURATION_OR_CONNECTIVITY");
   assert.equal(safeError(new DemoError("MISSING_ENV:SUPABASE_URL")), "MISSING_ENV:SUPABASE_URL");
+});
+
+test("public presentation shortens only the marked demo batch and leaves seed source and real listings intact", () => {
+  for (const item of items) {
+    const listing = { title: item.title, description: item.description, metadata: { demoSeedSet: seedSet } };
+    const before = structuredClone(listing);
+    assert.equal(isIllustrativeListing(listing), true);
+    assert.equal(listingDisplayTitle(listing), item.title.slice("[DEMO] ".length));
+    const description = listingDisplayDescription(listing);
+    assert.ok(description.length > 40);
+    assert.ok(!/Tin minh họa cho buổi|Ảnh phòng chỉ dùng|Giá mẫu|kịch bản demo/.test(description));
+    assert.deepEqual(listing, before);
+  }
+  const real = { title: "[DEMO] Chữ người dùng tự viết", description: "Mô tả thật do chủ nhà nhập", metadata: {} };
+  assert.equal(isIllustrativeListing(real), false);
+  assert.equal(listingDisplayTitle(real), real.title);
+  assert.equal(listingDisplayDescription(real), real.description);
+  assert.equal(isIllustrativeListing({ metadata: null }), false);
+  assert.equal(isIllustrativeListing({ metadata: { demoSeedSet: "other-batch" } }), false);
 });
