@@ -26,8 +26,8 @@ export function BrandLogo({
   const source = isIcon
     ? "/brand/tro-nhanh-logo-icon-transparent.png"
     : tone === "dark"
-      ? "/brand/tro-nhanh-logo-horizontal-mono.png"
-      : "/brand/tro-nhanh-logo-horizontal.png";
+      ? "/brand/logo-horizontal-white.png"
+      : "/brand/logo-horizontal.png";
   const height = isIcon ? dimensions.icon : dimensions.full;
 
   return (
@@ -43,7 +43,7 @@ export function BrandLogo({
           width={isIcon ? height : height * 4}
           height={height}
           onError={() => setFailedSource(source)}
-          style={{ display: "block", width: isIcon ? height : height * 4, height, objectFit: "contain", flexShrink: 0, filter: isIcon && tone === "dark" ? "brightness(0) invert(1)" : undefined }}
+          style={{ display: "block", width: isIcon ? height : "auto", height, objectFit: "contain", flexShrink: 0, filter: isIcon && tone === "dark" ? "brightness(0) invert(1)" : undefined }}
         />
       )}
     </span>
