@@ -2003,6 +2003,7 @@ export type Database = {
       }
       delete_listing: { Args: { p_listing_id: string }; Returns: undefined }
       expire_due_listings: { Args: never; Returns: number }
+      expire_stale_payment_orders: { Args: never; Returns: number }
       extend_contract: {
         Args: { p_contract_id: string; p_new_end_date: string }
         Returns: undefined

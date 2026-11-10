@@ -76,7 +76,7 @@ export const normalizeLinkStatus = (value: string | null | undefined): LinkStatu
 /* ── Đơn thanh toán payOS (saas_orders / boost_orders / demand_boost_orders) ── */
 
 /** Status đơn payOS — đúng giá trị check constraint của 3 bảng đơn. */
-export type OrderStatus = "PENDING" | "LINKED" | "PAID" | "PAID_PENDING_APPROVAL" | "NEEDS_REVIEW" | "CANCELLED";
+export type OrderStatus = "PENDING" | "LINKED" | "PAID" | "PAID_PENDING_APPROVAL" | "NEEDS_REVIEW" | "CANCELLED" | "EXPIRED";
 export const ORDER_STATUS_META: Record<OrderStatus, { label: string; color: string; bg: string }> = {
   PENDING:               { label: "Chờ thanh toán",         color: C.warning,       bg: C.warningBg },
   LINKED:                { label: "Đã tạo link thanh toán", color: C.warning,       bg: C.warningBg },
@@ -84,6 +84,7 @@ export const ORDER_STATUS_META: Record<OrderStatus, { label: string; color: stri
   PAID_PENDING_APPROVAL: { label: "Đã thanh toán · chờ duyệt tin", color: C.primary, bg: C.cream },
   NEEDS_REVIEW:          { label: "Cần đối soát",           color: C.error,         bg: C.errorBg },
   CANCELLED:             { label: "Đã hủy",                 color: C.textSecondary, bg: C.cream },
+  EXPIRED:               { label: "Hết hạn",                color: C.textSecondary, bg: C.cream },
 };
 export const isOrderStatus = (value: string | null | undefined): value is OrderStatus =>
   !!value && value in ORDER_STATUS_META;
