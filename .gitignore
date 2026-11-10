@@ -12,3 +12,6 @@ node_modules
 
 # Build output — Vercel tự build theo vercel.json
 /dist/
+
+# Danh sách tài khoản demo kèm mật khẩu — chỉ giữ trên máy, repo đang public.
+seed/*.local.md

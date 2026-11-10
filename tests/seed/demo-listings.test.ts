@@ -16,15 +16,16 @@ function row(changes: Partial<ListingRow> = {}): ListingRow {
     deleted_at: null, status: "Draft", ...changes } as ListingRow;
 }
 
-test("all ten fixtures have real checksummed WebP assets and the agreed distribution", () => {
+test("all ten fixtures have real checksummed WebP assets, one landlord each, no demo prefix", () => {
   assert.equal(items.length, 10);
   assert.equal(new Set(items.map(item => item.landlordEmail)).size, 10);
   assert.equal(items.reduce((total, item) => total + item.photos.length, 0), 50);
+  assert.ok(items.every(item => !item.title.startsWith("[DEMO]")));
 });
 
 test("reject invalid labels, geography, owners, type, address and duplicate keys before any network request", () => {
   for (const mutation of [
-    { title: "Phòng thật" }, { description: "Không có cảnh báo" }, { landlordEmail: "user@example.com" },
+    { title: "[DEMO] Phòng thật" }, { description: "Quá ngắn" }, { landlordEmail: "user@example.com" },
     { provinceCode: 1 }, { wardCode: 99999 }, { address: "123 đường A" },
     { propertyType: "Ở ghép" }, { price: 0 }, { area: 500 }, { photos: first.photos.slice(0, 2) },
     { amenities: ["Không thuộc catalog"] }, { accessPolicy: "Restricted", accessOpenTime: "25:00" },
@@ -41,7 +42,7 @@ test("reject invalid labels, geography, owners, type, address and duplicate keys
 test("never adopt another owner's, another batch's, renamed, or unmarked listing", () => {
   assert.equal(selectExisting([row()], first, sellerId)?.id, row().id);
   for (const changes of [ { seller_id: "someone-else" }, { metadata: { demoSeedSet: "other", listingKey: first.listingKey } },
-    { title: "[DEMO] Đã sửa ngoài script" }, { description: "Bị thay nội dung" } ]) {
+    { title: "Đã sửa ngoài script" } ]) {
     assert.throws(() => assertOwnedRow(row(changes), first, sellerId), /MISMATCH/);
   }
   assert.throws(() => selectExisting([row(), row({ id: "duplicate" })], first, sellerId), /DUPLICATE_SEED_KEY/);
@@ -58,7 +59,7 @@ test("storage names are deterministic, listing-scoped, and payload never supplie
   assert.equal(payload.room_id, null);
   assert.equal(payload.property_id, null);
   const metadata = payload.metadata as Record<string, unknown>;
-  assert.deepEqual(metadata.curfew, { type: "curfew", time: "23:00" });
+  assert.deepEqual(metadata.curfew, { type: "curfew", time: "22:00" });
   assert.throws(() => listingPayload(first, { full_name: "", contact_phone: null }), /CONTACT_MISSING/);
 });
 
@@ -75,17 +76,14 @@ test("unexpected provider errors cannot print secrets or token-bearing URLs", ()
   assert.equal(safeError(new DemoError("MISSING_ENV:SUPABASE_URL")), "MISSING_ENV:SUPABASE_URL");
 });
 
-test("public presentation shortens only the marked demo batch and leaves seed source and real listings intact", () => {
+test("the v2 batch shows as ordinary listings (no 'Tin minh họa' label) while the old v1 marker still does", () => {
   for (const item of items) {
     const listing = { title: item.title, description: item.description, metadata: { demoSeedSet: seedSet } };
-    const before = structuredClone(listing);
-    assert.equal(isIllustrativeListing(listing), true);
-    assert.equal(listingDisplayTitle(listing), item.title.slice("[DEMO] ".length));
-    const description = listingDisplayDescription(listing);
-    assert.ok(description.length > 40);
-    assert.ok(!/Tin minh họa cho buổi|Ảnh phòng chỉ dùng|Giá mẫu|kịch bản demo/.test(description));
-    assert.deepEqual(listing, before);
+    assert.equal(isIllustrativeListing(listing), false);
+    assert.equal(listingDisplayTitle(listing), item.title);
+    assert.equal(listingDisplayDescription(listing), item.description);
   }
+  assert.equal(isIllustrativeListing({ metadata: { demoSeedSet: "exe201-rental-demo-v1" } }), true);
   const real = { title: "[DEMO] Chữ người dùng tự viết", description: "Mô tả thật do chủ nhà nhập", metadata: {} };
   assert.equal(isIllustrativeListing(real), false);
   assert.equal(listingDisplayTitle(real), real.title);

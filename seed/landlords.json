@@ -1,0 +1,12 @@
+[
+  { "email": "doan.minh.nhat@tronhanh.demo", "fullName": "Đoàn Minh Nhật", "phone": "0915501492" },
+  { "email": "nguyen.huu.them@tronhanh.demo", "fullName": "Nguyễn Hữu Thêm", "phone": "0354578085" },
+  { "email": "le.hong.thanh@tronhanh.demo", "fullName": "Lê Hồng Thanh", "phone": "0838999988" },
+  { "email": "tran.thi.mai.anh@tronhanh.demo", "fullName": "Trần Thị Mai Anh", "phone": "0937214004" },
+  { "email": "pham.quoc.bao@tronhanh.demo", "fullName": "Phạm Quốc Bảo", "phone": "0909284389" },
+  { "email": "vo.thi.ngoc.han@tronhanh.demo", "fullName": "Võ Thị Ngọc Hân", "phone": "0972433588" },
+  { "email": "huynh.van.tai@tronhanh.demo", "fullName": "Huỳnh Văn Tài", "phone": "0915501492" },
+  { "email": "bui.thanh.tung@tronhanh.demo", "fullName": "Bùi Thanh Tùng", "phone": "0354578085" },
+  { "email": "dang.thi.kim.loan@tronhanh.demo", "fullName": "Đặng Thị Kim Loan", "phone": "0838999988" },
+  { "email": "ngo.gia.huy@tronhanh.demo", "fullName": "Ngô Gia Huy", "phone": "0937214004" }
+]
