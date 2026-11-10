@@ -174,6 +174,12 @@ export const qk = {
     subscriptions: ["admin", "subscriptions"] as const,
     /** Gói ACTIVE/TRIAL, doanh thu payOS tháng này, đơn cần đối soát. */
     businessStats: ["admin", "businessStats"] as const,
+    /** Prefix mọi truy vấn trang Doanh thu (/quan-tri/doanh-thu). */
+    revenueAll: ["admin", "revenue"] as const,
+    revenueSummary: (from: string, to: string, granularity: string) =>
+      ["admin", "revenue", "summary", from, to, granularity] as const,
+    revenueTransactions: (filters: object, page: number) =>
+      ["admin", "revenue", "transactions", filters, page] as const,
     settings: ["admin", "settings"] as const,
   },
 } as const;

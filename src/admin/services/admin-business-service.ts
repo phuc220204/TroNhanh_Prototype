@@ -17,7 +17,7 @@ export interface AdminBusinessStats {
   needs_review_orders: number;
 }
 
-/** Gói ACTIVE/TRIAL còn hạn, doanh thu payOS tháng này (PAID), đơn NEEDS_REVIEW. */
+/** Gói ACTIVE/TRIAL còn hạn, doanh thu payOS tháng này (mọi đơn đã nhận tiền), đơn NEEDS_REVIEW. */
 export async function getBusinessStats(): Promise<AdminBusinessStats | null> {
   try {
     const { data, error } = await supabase.rpc("admin_business_stats");

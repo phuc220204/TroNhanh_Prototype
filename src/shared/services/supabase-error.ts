@@ -25,6 +25,7 @@ const ERROR_MESSAGES: Record<string, string> = {
   AUTH_REQUIRED: "Bạn cần đăng nhập để thực hiện thao tác này.",
   FORBIDDEN: "Bạn không có quyền thực hiện thao tác này.",
   ROLE_NOT_GRANTABLE: "Không thể cấp vai trò này.",
+  INVALID_INPUT: "Dữ liệu chưa hợp lệ, vui lòng kiểm tra lại.",
 
   // Ownership
   ROOM_NOT_OWNED: "Phòng này không thuộc quyền quản lý của bạn.",

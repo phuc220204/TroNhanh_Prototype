@@ -6,6 +6,8 @@ import {
   INVOICE_STATUS_META,
   CONTRACT_STATUS_META,
   LINK_STATUS_META,
+  ORDER_STATUS_META,
+  isOrderStatus,
   normalizeRoomStatus,
   normalizeInvoiceStatus,
   normalizeContractStatus,
@@ -16,7 +18,7 @@ import { toListingStatus } from "../../types/status";
 export interface BadgeProps {
   status: string;
   /** Nhận cả giá trị DB ("Rented", "PartiallyPaid") lẫn khóa META ("rented"). */
-  kind?: "room" | "listing" | "invoice" | "contract" | "link";
+  kind?: "room" | "listing" | "invoice" | "contract" | "link" | "order";
   style?: React.CSSProperties;
   "data-testid"?: string;
 }
@@ -36,6 +38,7 @@ export function Badge({
     : kind === "listing" ? LISTING_META[toListingStatus(status)]
     : kind === "invoice" ? INVOICE_STATUS_META[normalizeInvoiceStatus(status) ?? ("" as never)]
     : kind === "contract" ? CONTRACT_STATUS_META[normalizeContractStatus(status) ?? ("" as never)]
+    : kind === "order" ? (isOrderStatus(status) ? ORDER_STATUS_META[status] : undefined)
     : LINK_STATUS_META[normalizeLinkStatus(status)];
   if (meta) {
     label = meta.label;

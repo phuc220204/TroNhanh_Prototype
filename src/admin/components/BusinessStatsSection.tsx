@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { Link } from "react-router";
 import { BadgeCheck, CircleDollarSign, Hourglass, ReceiptText, TriangleAlert } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { Card, Skeleton } from "../../shared/components/common";
@@ -77,7 +78,10 @@ export function BusinessStatsSection({ columns, isMobile }: BusinessStatsSection
           Kinh doanh
         </h2>
         <p style={{ fontFamily: font, fontSize: 12.5, color: C.textSecondary, margin: `${space[1]}px 0 0` }}>
-          Chỉ tính đơn payOS đã thanh toán (PAID) trong tháng này, theo giờ Việt Nam.
+          Tính mọi đơn payOS đã nhận tiền trong tháng này, theo giờ Việt Nam.{" "}
+          <Link to="/quan-tri/doanh-thu" data-testid="admin-business-revenue-link" style={{ color: C.primary, fontWeight: 700 }}>
+            Xem chi tiết giao dịch
+          </Link>
         </p>
       </div>
 

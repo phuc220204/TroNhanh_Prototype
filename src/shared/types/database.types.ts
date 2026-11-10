@@ -1823,6 +1823,30 @@ export type Database = {
           total_users: number
         }[]
       }
+      admin_list_revenue_transactions: {
+        Args: {
+          p_from: string
+          p_kind?: string
+          p_limit?: number
+          p_offset?: number
+          p_paid_only?: boolean
+          p_status?: string
+          p_to: string
+        }
+        Returns: {
+          amount: number
+          buyer_email: string
+          buyer_id: string
+          buyer_name: string
+          created_at: string
+          item_label: string
+          kind: string
+          order_code: number
+          paid_at: string
+          status: string
+          total_count: number
+        }[]
+      }
       admin_list_subscriptions: {
         Args: never
         Returns: {
@@ -1842,6 +1866,15 @@ export type Database = {
           locked_until: string
           roles: string[]
           user_id: string
+        }[]
+      }
+      admin_revenue_summary: {
+        Args: { p_from: string; p_granularity?: string; p_to: string }
+        Returns: {
+          amount: number
+          bucket: string
+          kind: string
+          order_count: number
         }[]
       }
       admin_set_user_lock: {

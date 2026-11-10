@@ -1,6 +1,6 @@
 import { createHashRouter, redirect } from "react-router";
 import { RequireAuth } from "../shared/components/RequireAuth";
-import { RequireAdminOrModerator } from "../shared/components/RequireRole";
+import { RequireAdmin, RequireAdminOrModerator } from "../shared/components/RequireRole";
 // Import tĩnh (không lazy): màn lỗi phải có sẵn ngay cả khi tải chunk thất bại.
 import { RouteErrorScreen } from "../shared/components/RouteErrorScreen";
 
@@ -122,6 +122,13 @@ export const router = createHashRouter([
               { path: "quan-tri/danh-gia", lazy: async () => ({ Component: (await import("../admin/pages/ReviewModerationPage")).ReviewModerationPage }) },
               { path: "quan-tri/nguoi-dung", lazy: async () => ({ Component: (await import("../admin/pages/UserManagementPage")).UserManagementPage }) },
               { path: "quan-tri/cai-dat", lazy: async () => ({ Component: (await import("../admin/pages/PlatformSettingsPage")).PlatformSettingsPage }) },
+              // Doanh thu là số liệu kinh doanh ⇒ chỉ Admin; Moderator vào URL thấy màn 403.
+              {
+                lazy: async () => ({ Component: RequireAdmin }),
+                children: [
+                  { path: "quan-tri/doanh-thu", lazy: async () => ({ Component: (await import("../admin/pages/RevenuePage")).RevenuePage }) },
+                ],
+              },
             ],
           },
         ],

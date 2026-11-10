@@ -7,6 +7,7 @@ import {
   MessageSquare,
   Users,
   Settings,
+  BarChart3,
   LogOut,
   ArrowUpRight,
 } from "lucide-react";
@@ -15,19 +16,29 @@ import { C, font, radius, space } from "../../shared/theme";
 import { useAuth } from "../../shared/contexts/AuthContext";
 import { useBreakpoint } from "../../shared/components/useBreakpoint";
 
-export type AdminNavId = "dashboard" | "moderation" | "reports" | "reviews" | "users" | "settings";
+export type AdminNavId = "dashboard" | "moderation" | "reports" | "reviews" | "users" | "revenue" | "settings";
 
 interface AdminShellProps {
   active?: AdminNavId;
   children: ReactNode;
 }
 
-const ADMIN_NAV_ITEMS: { id: AdminNavId; label: string; path: string; icon: LucideIcon }[] = [
+interface AdminNavItem {
+  id: AdminNavId;
+  label: string;
+  path: string;
+  icon: LucideIcon;
+  /** Chỉ Admin thấy mục này (route cũng bọc RequireAdmin). */
+  isAdminOnly?: boolean;
+}
+
+const ADMIN_NAV_ITEMS: AdminNavItem[] = [
   { id: "dashboard", label: "Tổng quan", path: "/quan-tri", icon: Shield },
   { id: "moderation", label: "Kiểm duyệt tin đăng", path: "/quan-tri/kiem-duyet-tin", icon: CheckSquare },
   { id: "reports", label: "Báo cáo vi phạm", path: "/quan-tri/bao-cao", icon: Flag },
   { id: "reviews", label: "Quản lý đánh giá", path: "/quan-tri/danh-gia", icon: MessageSquare },
   { id: "users", label: "Quản lý người dùng", path: "/quan-tri/nguoi-dung", icon: Users },
+  { id: "revenue", label: "Doanh thu", path: "/quan-tri/doanh-thu", icon: BarChart3, isAdminOnly: true },
   { id: "settings", label: "Cài đặt hệ thống", path: "/quan-tri/cai-dat", icon: Settings },
 ];
 
@@ -66,10 +77,12 @@ function AdminBrand({ compact = false }: { compact?: boolean }) {
 
 export function AdminShell({ active = "dashboard", children }: AdminShellProps) {
   const location = useLocation();
-  const { user, signOut } = useAuth();
+  const { user, signOut, hasRole } = useAuth();
   const { isMobile, isTablet } = useBreakpoint();
+  const isAdmin = hasRole("Admin");
+  const navItems = ADMIN_NAV_ITEMS.filter((item) => !item.isAdminOnly || isAdmin);
 
-  const navLink = (item: (typeof ADMIN_NAV_ITEMS)[number], compact = false) => {
+  const navLink = (item: AdminNavItem, compact = false) => {
     const Icon = item.icon;
     const isSelected = active === item.id || location.pathname === item.path;
     return (
@@ -163,7 +176,7 @@ export function AdminShell({ active = "dashboard", children }: AdminShellProps) 
             Không gian quản trị
           </div>
           <nav aria-label="Điều hướng quản trị" style={{ display: "flex", flexDirection: "column", gap: space[1], padding: `0 ${space[1]}px`, flex: 1 }}>
-            {ADMIN_NAV_ITEMS.map((item) => navLink(item))}
+            {navItems.map((item) => navLink(item))}
           </nav>
 
           <div style={{ borderTop: `1px solid ${C.textSecondary}`, marginTop: space[5], padding: `${space[4]}px ${space[2]}px 0`, display: "flex", alignItems: "center", gap: space[3] }}>
@@ -194,7 +207,7 @@ export function AdminShell({ active = "dashboard", children }: AdminShellProps) 
               </div>
             </header>
             <nav aria-label="Điều hướng quản trị" data-testid="admin-mobile-nav" style={{ display: "flex", gap: space[2], overflowX: "auto", background: C.textPrimary, padding: `0 ${space[3]}px ${space[3]}px`, scrollbarWidth: "thin" }}>
-              {ADMIN_NAV_ITEMS.map((item) => navLink(item))}
+              {navItems.map((item) => navLink(item))}
             </nav>
           </>
         ) : (
