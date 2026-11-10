@@ -67,6 +67,8 @@ function PaymentReturnNotice({ orderCode, result, onPaid, onDismiss }: {
   } else if (data?.status === "NEEDS_REVIEW") {
     tone = "error";
     message = `Đã nhận tiền nhưng đơn ${orderCode} cần đối soát. Vui lòng liên hệ hỗ trợ kèm mã đơn.`;
+  } else if (data?.status === "EXPIRED" || data?.status === "CANCELLED") {
+    message = `Đơn ${orderCode} đã hết hạn và chưa ghi nhận thanh toán. Nếu bạn đã chuyển khoản, hệ thống vẫn ghi nhận khi payOS xác nhận — kiểm tra lại sau ít phút trước khi mua lại.`;
   } else if (data) {
     message = result === "cancel"
       ? `Đơn ${orderCode} chưa được thanh toán. Nếu bạn đã chuyển khoản, hệ thống vẫn ghi nhận khi payOS xác nhận — đừng thanh toán lần hai.`

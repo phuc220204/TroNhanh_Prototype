@@ -24,7 +24,7 @@ export interface SaasCheckout {
   amount: number;
 }
 
-export type SaasOrderStatus = "PENDING" | "LINKED" | "PAID" | "NEEDS_REVIEW" | "CANCELLED";
+export type SaasOrderStatus = "PENDING" | "LINKED" | "PAID" | "NEEDS_REVIEW" | "CANCELLED" | "EXPIRED";
 
 const PENDING_ORDER_KEY = "tronhanh.pendingSaasOrder";
 

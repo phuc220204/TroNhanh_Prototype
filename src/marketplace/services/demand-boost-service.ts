@@ -13,7 +13,7 @@ import { getPlatformSettingValue } from "../../shared/services/platform-settings
 
 export type DemandBoostPackage = { days: number; amount: number };
 export type DemandBoostCheckout = { checkoutUrl: string; orderCode: number; amount: number };
-export type DemandBoostOrderStatus = "PENDING" | "LINKED" | "PAID" | "CANCELLED";
+export type DemandBoostOrderStatus = "PENDING" | "LINKED" | "PAID" | "CANCELLED" | "EXPIRED";
 
 const PENDING_ORDER_KEY = "tronhanh.pendingDemandBoostOrder";
 

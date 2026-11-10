@@ -68,7 +68,7 @@ export function DemandBoostReturnNotice({ onPaid }: { onPaid: () => void }) {
   let message = state.message ?? "";
   if (state.kind === "loading") message = "Đang kiểm tra trạng thái đơn với máy chủ…";
   if (state.kind === "PAID") message = `Đã nhận thanh toán đơn ${code}${amountText}. Tin nhu cầu của bạn đang được đẩy lên đầu.`;
-  if (state.kind === "CANCELLED") message = `Đơn ${code} đã hết hạn hoặc được thay bằng đơn mới và chưa ghi nhận thanh toán. Nếu đã chuyển tiền qua link cũ, hãy kiểm tra lại sau ít phút.`;
+  if (state.kind === "CANCELLED" || state.kind === "EXPIRED") message = `Đơn ${code} đã hết hạn hoặc được thay bằng đơn mới và chưa ghi nhận thanh toán. Nếu đã chuyển tiền qua link cũ, hãy kiểm tra lại sau ít phút.`;
   if (state.kind === "PENDING" || state.kind === "LINKED") {
     message = returnOrder.result === "cancel"
       ? `Đơn ${code} chưa được thanh toán. Nếu bạn đã chuyển tiền, hãy kiểm tra lại sau ít phút; đừng thanh toán lần hai.`
