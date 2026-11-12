@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams, useParams } from "react-router";
 import { PublicNavbar } from "../../../shared/components/PublicNavbar";
-import { Home, Users, ArrowLeft, Save, AlertCircle, X } from "lucide-react";
+import { Home, Users, ArrowLeft, Save, AlertCircle, X, Rocket } from "lucide-react";
 import { C, font } from "../../../shared/theme";
 import { PROPERTY_TYPES } from "../../../shared/constants/catalog";
 import { AreaSelect, MoneyInput } from "../../../shared/components/common";
@@ -10,6 +10,10 @@ import { createDemandPost, updateDemandPost, getDemandPostById } from "../../ser
 import { toUserMessage } from "../../../shared/services/supabase-error";
 import { RoomWantedForm } from "./RoomWantedForm";
 import { RoommateWantedForm } from "./RoommateWantedForm";
+import { DemandBoostPicker } from "./DemandBoostPicker";
+import { createDemandBoostCheckout, redirectToDemandBoostCheckout } from "../../services/demand-boost-service";
+
+const MY_DEMAND_POSTS_PATH = "/tai-khoan/tin-nhu-cau";
 
 export function PostDemandPage() {
   const navigate = useNavigate();
@@ -57,6 +61,14 @@ export function PostDemandPage() {
 
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
+
+  // Gói đẩy tin chọn ngay lúc đăng (chỉ khi đăng mới).
+  const [boostDays, setBoostDays] = useState<number | null>(null);
+  const [hasAcceptedBoostTerms, setHasAcceptedBoostTerms] = useState(false);
+  // Tin đã lưu nhưng chưa vào được payOS — khóa form để không bấm đăng lần 2 tạo tin trùng.
+  const [savedNotice, setSavedNotice] = useState<string | null>(null);
+  const [isRedirecting, setIsRedirecting] = useState(false);
+  const isBoostBlocked = boostDays !== null && !hasAcceptedBoostTerms;
 
   useEffect(() => {
     if (!editId) return;
@@ -165,11 +177,29 @@ export function PostDemandPage() {
 
       if (editId) {
         await updateDemandPost(editId, payload);
-      } else {
-        await createDemandPost(payload);
+        navigate("/tin-nhu-cau");
+        return;
       }
 
-      navigate("/tin-nhu-cau");
+      if (isBoostBlocked) return;
+      const created = await createDemandPost(payload);
+      if (boostDays === null) {
+        navigate("/tin-nhu-cau");
+        return;
+      }
+
+      // Server chỉ nhận đẩy tin cho tin Active (`begin_demand_boost_checkout`).
+      if (created.status !== "Active") {
+        setSavedNotice("Tin đã đăng và đang chờ duyệt. Sau khi tin được duyệt, bạn có thể mua gói nổi bật trong Tin nhu cầu của tôi.");
+        return;
+      }
+      try {
+        const checkout = await createDemandBoostCheckout(created.id, boostDays);
+        setIsRedirecting(true);
+        redirectToDemandBoostCheckout(checkout);
+      } catch (checkoutErr) {
+        setSavedNotice(`Tin đã đăng nhưng chưa mở được trang thanh toán: ${toUserMessage(checkoutErr)} Bạn có thể thanh toán lại trong Tin nhu cầu của tôi.`);
+      }
     } catch (err: any) {
       setErrorMsg(toUserMessage(err));
     } finally {
@@ -425,30 +455,64 @@ export function PostDemandPage() {
                 />
               </div>
 
-              <div style={{ display: "flex", justifyContent: "flex-end", gap: 12, marginTop: 12 }}>
-                <button type="button" onClick={() => navigate(-1)} style={{ padding: "12px 20px", background: "none", border: `1px solid ${C.border}`, borderRadius: 10, fontFamily: font, fontSize: 14, color: C.textSecondary, cursor: "pointer" }}>Hủy</button>
-                <button
-                  type="submit"
-                  disabled={loading}
-                  data-testid="demand-submit-btn"
-                  style={{
-                    display: "inline-flex",
-                    alignItems: "center",
-                    gap: 8,
-                    padding: "12px 24px",
-                    background: C.primary,
-                    color: "white",
-                    border: "none",
-                    borderRadius: 10,
-                    fontFamily: font,
-                    fontSize: 14,
-                    fontWeight: 700,
-                    cursor: loading ? "not-allowed" : "pointer",
-                  }}
-                >
-                  <Save size={16} /> {loading ? "Đang lưu..." : editId ? "Cập nhật tin" : "Đăng tin nhu cầu"}
-                </button>
-              </div>
+              {!editId && !savedNotice ? (
+                <DemandBoostPicker
+                  selectedDays={boostDays}
+                  onSelectDays={setBoostDays}
+                  hasAcceptedTerms={hasAcceptedBoostTerms}
+                  onAcceptTerms={setHasAcceptedBoostTerms}
+                  disabled={loading || isRedirecting}
+                />
+              ) : null}
+
+              {savedNotice ? (
+                <div data-testid="demand-saved-notice" style={{ display: "flex", flexDirection: "column", gap: 12, padding: 16, borderRadius: 12, background: C.warningBg, border: `1px solid ${C.warningBorder}` }}>
+                  <p style={{ fontFamily: font, fontSize: 13.5, color: C.textPrimary, margin: 0, lineHeight: 1.55 }}>{savedNotice}</p>
+                  <button
+                    type="button"
+                    data-testid="demand-go-my-posts"
+                    onClick={() => navigate(MY_DEMAND_POSTS_PATH)}
+                    style={{ alignSelf: "flex-end", padding: "10px 18px", background: C.primary, color: C.white, border: "none", borderRadius: 10, fontFamily: font, fontSize: 14, fontWeight: 700, cursor: "pointer" }}
+                  >
+                    Đến Tin nhu cầu của tôi
+                  </button>
+                </div>
+              ) : (
+                <div style={{ display: "flex", justifyContent: "flex-end", gap: 12, marginTop: 12 }}>
+                  <button type="button" onClick={() => navigate(-1)} style={{ padding: "12px 20px", background: "none", border: `1px solid ${C.border}`, borderRadius: 10, fontFamily: font, fontSize: 14, color: C.textSecondary, cursor: "pointer" }}>Hủy</button>
+                  <button
+                    type="submit"
+                    disabled={loading || isRedirecting || (!editId && isBoostBlocked)}
+                    data-testid="demand-submit-btn"
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: 8,
+                      padding: "12px 24px",
+                      background: C.primary,
+                      color: "white",
+                      border: "none",
+                      borderRadius: 10,
+                      fontFamily: font,
+                      fontSize: 14,
+                      fontWeight: 700,
+                      opacity: !editId && isBoostBlocked ? 0.5 : 1,
+                      cursor: loading || isRedirecting || (!editId && isBoostBlocked) ? "not-allowed" : "pointer",
+                    }}
+                  >
+                    {!editId && boostDays !== null ? <Rocket size={16} /> : <Save size={16} />}
+                    {isRedirecting
+                      ? "Đang chuyển sang payOS..."
+                      : loading
+                        ? "Đang lưu..."
+                        : editId
+                          ? "Cập nhật tin"
+                          : boostDays !== null
+                            ? "Đăng tin & thanh toán"
+                            : "Đăng tin nhu cầu"}
+                  </button>
+                </div>
+              )}
             </form>
           </div>
         )}

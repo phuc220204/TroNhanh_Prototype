@@ -162,7 +162,7 @@ export async function listMyDemandPosts(): Promise<DemandPostItem[]> {
 /**
  * Create a new demand post (RoomWanted or RoommateWanted).
  */
-export async function createDemandPost(payload: Partial<DemandPostItem>): Promise<string> {
+export async function createDemandPost(payload: Partial<DemandPostItem>): Promise<{ id: string; status: string }> {
   try {
     const { data: userData } = await supabase.auth.getUser();
     const user = userData.user;
@@ -200,11 +200,13 @@ export async function createDemandPost(payload: Partial<DemandPostItem>): Promis
               requirements: payload.requirements || [],
             }),
       } as any)
-      .select("id")
+      // `status` do trigger đặt (Active khi tự duyệt, PendingApproval khi kiểm duyệt thủ công)
+      // — trang đăng tin cần biết để quyết định có mở thanh toán đẩy tin ngay hay không.
+      .select("id, status")
       .single();
 
     if (error) throw error;
-    return data.id;
+    return { id: data.id, status: data.status };
   } catch (err) {
     logError("demand-post-service.createDemandPost", err);
     throw err;
