@@ -1,10 +1,16 @@
-# Tin cho thuê demo EXE201
+# Tin cho thuê giả lập EXE201 (bộ v2)
 
-10 tin minh họa, 10 chủ demo, **50 ảnh WebP**. Không phải phòng cho thuê thật. Không dùng để nhận cọc hoặc giao dịch.
+10 tin, 10 chủ trọ, **50 ảnh WebP**. Dự án môn học, không thương mại.
 
-## Hiển thị trên app
+## Bộ v2 (`exe201-rental-v2`, 10/11/2026)
 
-Các tin thuộc đúng `exe201-rental-demo-v1` hiển thị tiêu đề tự nhiên, không có tiền tố `[DEMO]`; phần mô tả bỏ hai đoạn cảnh báo dài và giữ nội dung phòng ngắn gọn. Nhãn **Tin minh họa** xuất hiện trên thẻ tin và cạnh tiêu đề chi tiết (desktop/mobile). Chỉ cách trình bày thay đổi: dữ liệu gốc vẫn giữ nguyên tiền tố, câu cảnh báo và metadata để seed/remove kiểm tra ownership, nên không cần đổi script hoặc sửa lại tin production. Tin ngoài batch không bị rút gọn nội dung hoặc đổi nhãn.
+- Giá, cọc, diện tích, điện/nước, giờ giấc, tiện ích lấy **đúng từ trang nguồn** (`sourcePageUrl`). Phường đổi sang tên phường mới sau sáp nhập 2025; địa chỉ dừng ở mức phường.
+- Tin nguồn đã cho thuê được thay bằng tin khác còn trống (3737 → 3741, ảnh ở `images/source-13`).
+- Tiêu đề không có `[DEMO]`, mô tả không có câu cảnh báo ⇒ app **không** gắn nhãn "Tin minh họa" (nhãn chỉ áp cho marker cũ `exe201-rental-demo-v1`).
+- Chủ trọ: `seed/landlords.json` (tên người Việt, email `@tronhanh.demo`, SĐT liên hệ của nhóm). Tạo bằng `npm run seed:demo-landlords -- --env-file <file> [--dry-run]`, mật khẩu chung lấy từ `DEMO_LANDLORD_PASSWORD`.
+- Danh sách tài khoản kèm mật khẩu: `seed/landlord-accounts.local.md` — **gitignore**, chỉ có trên máy chạy seed (repo public).
+
+Phần bên dưới mô tả cơ chế seed/remove; vẫn áp dụng cho v2 trừ các ràng buộc `[DEMO]`/câu cảnh báo đã bỏ.
 
 ## Yêu cầu và cấu hình
 

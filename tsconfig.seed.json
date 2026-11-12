@@ -10,5 +10,5 @@
     "noEmit": true,
     "skipLibCheck": true
   },
-  "include": ["scripts/*DemoListings.ts", "scripts/demo-listings-*.ts", "tests/seed/*.ts"]
+  "include": ["scripts/*DemoListings.ts", "scripts/createDemoLandlords.ts", "scripts/demo-listings-*.ts", "tests/seed/*.ts"]
 }

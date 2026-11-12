@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import type { Database, Json } from "../src/shared/types/database.types.ts";
-import { DemoError, disclaimer, listingPayload, loadDataset, photoPath, readPhoto, seedSet } from "./demo-listings-data.ts";
+import { DemoError, listingPayload, loadDataset, photoPath, readPhoto, seedSet } from "./demo-listings-data.ts";
 import type { DemoListing } from "./demo-listings-data.ts";
 import { acquireProjectLock, checkResult, findDemoUsers, loadConfig, newClient, report, safeError, signInDemo } from "./demo-listings-runtime.ts";
 import type { DemoClient, DemoConfig } from "./demo-listings-runtime.ts";
@@ -11,7 +11,7 @@ const bucket = "listing-images";
 export function assertOwnedRow(row: ListingRow, item: DemoListing, sellerId: string): void {
   const metadata = row.metadata as Record<string, Json> | null;
   if (!metadata || metadata.demoSeedSet !== seedSet || metadata.listingKey !== item.listingKey
-    || row.seller_id !== sellerId || row.title !== item.title || !row.description?.startsWith(disclaimer)) {
+    || row.seller_id !== sellerId || row.title !== item.title) {
     throw new DemoError("SEED_OWNERSHIP_OR_CONTENT_MISMATCH");
   }
 }
@@ -71,12 +71,13 @@ class DemoContext {
     return data;
   }
 
-  async readRows(): Promise<ListingRow[]> {
+  async readRows(titles: string[]): Promise<ListingRow[]> {
+    const titleList = titles.map(title => JSON.stringify(title)).join(",");
     const rows: ListingRow[] = [];
     // Include title collisions as well as seed markers; scope writes later by all markers + owner.
     for (let page = 0; ; page++) {
       const { data, error } = await this.admin.from("rental_listings").select("*")
-        .or(`metadata->>demoSeedSet.eq.${seedSet},title.like.[DEMO] %`).order("id").range(page * 500, page * 500 + 499);
+        .or(`metadata->>demoSeedSet.eq.${seedSet},title.in.(${titleList})`).order("id").range(page * 500, page * 500 + 499);
       checkResult(error, "READ_DEMO_LISTINGS");
       rows.push(...(data ?? []));
       if (!data || data.length < 500) return rows;
@@ -241,7 +242,7 @@ export async function runDemoListings(mode: "seed" | "remove"): Promise<void> {
     report("target", { project: new URL(config.url).host, mode, dryRun: config.dryRun, seedSet });
     const emails = items.map(item => context!.ownerEmail(item));
     context.users = await findDemoUsers(context.admin, [...new Set([...emails, config.moderatorEmail])]);
-    const rows = await context.readRows();
+    const rows = await context.readRows(items.map(item => item.title));
     const counts: Record<string, number> = {};
     for (const item of items) {
       try {

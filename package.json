@@ -17,6 +17,7 @@
     "test:e2e:ui": "playwright test --ui",
     "seed:demo-listings": "node --experimental-strip-types scripts/seedDemoListings.ts",
     "seed:demo-listings:remove": "node --experimental-strip-types scripts/removeDemoListings.ts",
+    "seed:demo-landlords": "node --experimental-strip-types scripts/createDemoLandlords.ts",
     "typecheck:seed": "tsc -p tsconfig.seed.json --noEmit",
     "test:seed": "node --experimental-strip-types --test tests/seed/demo-listings.test.ts"
   },

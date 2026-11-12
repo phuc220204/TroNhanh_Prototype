@@ -6,8 +6,9 @@ import { AMENITIES, PROPERTY_TYPES } from "../src/shared/constants/catalog.ts";
 import { VN_WARDS } from "../src/shared/constants/vn-wards.generated.ts";
 import type { Json } from "../src/shared/types/database.types.ts";
 
-export const seedSet = "exe201-rental-demo-v1";
-export const disclaimer = "Tin minh họa cho buổi báo cáo môn học EXE201, không phải phòng cho thuê thật.";
+// v2: tin dựng lại từ dữ liệu thật của trang nguồn, không còn tiền tố [DEMO] hay câu cảnh báo.
+// Marker metadata.demoSeedSet vẫn là căn cứ duy nhất để seed/remove nhận quyền sở hữu.
+export const seedSet = "exe201-rental-v2";
 export const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 
 export class DemoError extends Error {}
@@ -58,18 +59,17 @@ export function validateDataset(input: unknown): DemoListing[] {
   requireValue(Array.isArray(input) && input.length === 10, "DATASET_REQUIRES_TEN_LISTINGS");
   const keys = new Set<string>();
   const titles = new Set<string>();
-  const counts: Record<string, number> = {};
   for (const value of input) {
     requireValue(value && typeof value === "object", "INVALID_LISTING");
     const item = value as DemoListing;
     requireValue(typeof item.listingKey === "string" && /^[a-z0-9-]{3,60}$/.test(item.listingKey), "INVALID_LISTING_KEY");
     requireValue(!keys.has(item.listingKey), "DUPLICATE_LISTING_KEY");
     requireValue(typeof item.landlordEmail === "string" && isDemoEmail(item.landlordEmail), "NON_DEMO_OWNER");
-    requireValue(typeof item.title === "string" && item.title.startsWith("[DEMO] ") && item.title.length <= 120 && item.title.length >= 10 && !titles.has(item.title), "INVALID_DEMO_TITLE");
-    requireValue(typeof item.description === "string" && item.description.startsWith(disclaimer) && item.description.length > disclaimer.length, "MISSING_DISCLAIMER");
+    requireValue(typeof item.title === "string" && !item.title.startsWith("[DEMO]") && item.title.length <= 120 && item.title.length >= 10 && !titles.has(item.title), "INVALID_TITLE");
+    requireValue(typeof item.description === "string" && item.description.trim().length >= 80, "DESCRIPTION_TOO_SHORT");
     requireValue(PROPERTY_TYPES.some(type => type === item.propertyType), "INVALID_PROPERTY_TYPE");
-    requireValue(Number.isInteger(item.price) && item.price >= 1_800_000 && item.price <= 4_500_000, "INVALID_PRICE");
-    requireValue(Number.isFinite(item.area) && item.area >= 15 && item.area <= 30, "INVALID_AREA");
+    requireValue(Number.isInteger(item.price) && item.price >= 1_000_000 && item.price <= 15_000_000, "INVALID_PRICE");
+    requireValue(Number.isFinite(item.area) && item.area >= 10 && item.area <= 200, "INVALID_AREA");
     requireValue(item.provinceCode === 79 && VN_WARDS.some(ward => ward[0] === item.wardCode && ward[1] === item.wardName && ward[2] === 79), "INVALID_WARD");
     requireValue(item.address === `${item.wardName}, Thành phố Hồ Chí Minh`, "ADDRESS_MUST_STOP_AT_WARD");
     for (const cost of [item.electricityPrice, item.waterPrice, item.servicePrice, item.deposit]) {
@@ -93,11 +93,9 @@ export function validateDataset(input: unknown): DemoListing[] {
       requireValue(Number.isInteger(photo.sizeBytes) && photo.sizeBytes > 0 && photo.sizeBytes <= 5_242_880, "INVALID_PHOTO_SIZE");
       hashes.add(photo.sha256);
     }
-    counts[item.propertyType] = (counts[item.propertyType] ?? 0) + 1;
     keys.add(item.listingKey);
     titles.add(item.title);
   }
-  requireValue(counts["Phòng trọ"] === 5 && counts["Căn hộ mini"] === 3 && counts["Ký túc xá"] === 2, "INVALID_TYPE_DISTRIBUTION");
   return input as DemoListing[];
 }
 

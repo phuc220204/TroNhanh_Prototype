@@ -14,6 +14,7 @@ export interface DemoConfig {
   serviceKey: string;
   anonKey: string;
   password: string;
+  landlordPassword: string;
   moderatorEmail: string;
   ownerEmails: string[];
   singleOwner: string | null;
@@ -67,7 +68,9 @@ export async function loadConfig(): Promise<DemoConfig> {
   if (!isDemoEmail(moderatorEmail)) throw new DemoError("NON_DEMO_MODERATOR");
   return {
     url, serviceKey: required("SUPABASE_SERVICE_ROLE_KEY"), anonKey: required("SUPABASE_ANON_KEY"),
-    password: values["dry-run"] ? "" : required("DEMO_ACCOUNT_PASSWORD"), moderatorEmail,
+    password: values["dry-run"] ? "" : required("DEMO_ACCOUNT_PASSWORD"),
+    // Chủ trọ có thể dùng mật khẩu riêng; thiếu thì dùng chung mật khẩu admin demo như trước.
+    landlordPassword: values["dry-run"] ? "" : env.DEMO_LANDLORD_PASSWORD?.trim() || required("DEMO_ACCOUNT_PASSWORD"), moderatorEmail,
     ownerEmails, singleOwner, dryRun: values["dry-run"] ?? false,
   };
 }
@@ -116,7 +119,7 @@ export async function findDemoUsers(admin: DemoClient, emails: string[]): Promis
 export async function signInDemo(config: DemoConfig, email: string): Promise<DemoClient> {
   if (!isDemoEmail(email)) throw new DemoError("NON_DEMO_LOGIN_REFUSED");
   const client = newClient(config.url, config.anonKey);
-  const { data, error } = await client.auth.signInWithPassword({ email, password: config.password });
+  const { data, error } = await client.auth.signInWithPassword({ email, password: email === config.moderatorEmail ? config.password : config.landlordPassword });
   checkResult(error, "DEMO_LOGIN");
   if (!data.session || data.user?.email?.toLowerCase() !== email) throw new DemoError("DEMO_LOGIN_IDENTITY_MISMATCH");
   return client;
