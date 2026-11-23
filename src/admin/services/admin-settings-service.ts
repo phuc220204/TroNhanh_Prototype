@@ -25,16 +25,16 @@ export interface BoostConfig {
   price: number[];
 }
 
+/**
+ * Chỉ dùng khi DB thiếu key; giá thật luôn đọc từ `platform_settings`.
+ * Hai loại đẩy tin dùng chung một bảng giá (migration 20261124100000).
+ */
 const DEFAULT_BOOST_CONFIG: BoostConfig = {
-  days: [7, 15, 30],
-  price: [20_000, 35_000, 60_000],
+  days: [3, 7, 15, 30],
+  price: [8_000, 15_000, 28_000, 50_000],
 };
 
-/** Chỉ dùng khi DB thiếu key; giá thật luôn đọc từ `platform_settings`. */
-const DEFAULT_DEMAND_BOOST_CONFIG: BoostConfig = {
-  days: [3, 7],
-  price: [1_000, 2_000],
-};
+const DEFAULT_DEMAND_BOOST_CONFIG: BoostConfig = DEFAULT_BOOST_CONFIG;
 
 const DEFAULTS = { autoApproveListings: true, listingTtlDays: 60 };
 
