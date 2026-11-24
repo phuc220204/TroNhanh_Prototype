@@ -2,7 +2,7 @@ import { useEffect, useId, useRef } from "react";
 import { X } from "lucide-react";
 import { C, font, shadow } from "../../theme";
 
-const MODAL_MAX_WIDTH = { sm: 400, md: 460, lg: 720 } as const;
+const MODAL_MAX_WIDTH = { sm: 400, md: 460, lg: 720, xl: 1040 } as const;
 
 /* ══════════════════════════════════════════
    SHARED MODAL SHELL
@@ -14,7 +14,7 @@ export function ModalShell({ title, onClose, children, footer, size = "md" }: {
   onClose: () => void;
   children: React.ReactNode;
   footer: React.ReactNode;
-  /** sm 400 · md 460 (mặc định) · lg 720 — form dài/nhiều cột dùng lg. */
+  /** sm 400 · md 460 (mặc định) · lg 720 — form dài/nhiều cột dùng lg · xl 1040 — form + khung tạm tính 2 cột. */
   size?: keyof typeof MODAL_MAX_WIDTH;
 }) {
   const dialogRef = useRef<HTMLDivElement>(null);

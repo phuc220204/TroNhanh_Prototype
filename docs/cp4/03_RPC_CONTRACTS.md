@@ -173,7 +173,29 @@ Việc ghi vào `rental_listings` là điểm nối server-side hợp lệ (§2.
 
 ---
 
-## 5. `create_invoice_with_items`
+## 5b. `create_invoice_v2` (T41 — thay thế §5 ở frontend)
+
+```sql
+create_invoice_v2(
+  p_room_id uuid, p_period text, p_due_date date,
+  p_billing_from date, p_billing_to date,
+  p_services jsonb,     -- [{ service_id, quantity }]  (Meter: quantity bị bỏ qua)
+  p_adjustments jsonb,  -- [{ reason, amount }]        (amount ≠ 0, được âm)
+  p_note text
+) returns uuid
+```
+
+**Atomic:** insert `invoices` + dòng tiền phòng + dòng dịch vụ + dòng điều chỉnh, rồi cập nhật `total_amount`.
+
+**Derive server-side (client KHÔNG gửi):** hợp đồng Active của phòng; tiền phòng = `rent_price × (tháng đủ + ngày lẻ/30)` trên `[billing_from, billing_to]` tính cả hai đầu; đơn giá dịch vụ = `room_services.unit_price_override ?? property_services.unit_price`; dịch vụ `Meter` lấy số lượng + đơn giá từ `utility_readings` của kỳ; `fee_category` từ dịch vụ; `total_amount = Σ amount`.
+
+**Lỗi:** `ROOM_NOT_OWNED` · `INVALID_PERIOD` · `DUE_DATE_REQUIRED` · `INVALID_BILLING_RANGE` (≤ 92 ngày) · `INVOICE_NOTE_TOO_LONG` · `CONTRACT_NOT_ACTIVE` · `INVOICE_PERIOD_EXISTS` · `SERVICE_NOT_APPLIED` · `DUPLICATE_INVOICE_SERVICE` · `READING_MISSING` · `INVALID_INVOICE_QUANTITY` (0 < q ≤ 100) · `ADJUSTMENT_REASON_REQUIRED` · `INVALID_ADJUSTMENT_AMOUNT` · `INVOICE_ITEMS_REQUIRED` · `INVOICE_TOTAL_NEGATIVE`.
+
+Công thức tiền phòng có bản sao phía client ở `src/workspace/services/invoice-calc.ts` (chỉ để xem trước) — sửa một bên phải sửa bên kia; `tests/unit/invoice-calc.test.mjs` chốt con số khớp DB.
+
+---
+
+## 5. `create_invoice_with_items` (cũ — frontend không còn gọi từ T41; drop sau khi deploy)
 
 ```sql
 create_invoice_with_items(

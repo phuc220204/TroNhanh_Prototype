@@ -14,6 +14,7 @@ import { Button, EmptyState, Skeleton, AppSelect } from "../../../shared/compone
 import { RecordPaymentModal } from "../../components/RecordPaymentModal";
 import { formatPeriod, formatVnd } from "../../../shared/utils/format";
 import { STATUS_OPTIONS } from "./invoice-display";
+import { summarizeByCategory } from "../../services/invoice-calc";
 import { InvoiceList } from "./InvoiceList";
 import { InvoiceDetailModal } from "./InvoiceDetailModal";
 
@@ -110,6 +111,11 @@ export function LandlordBillingPage() {
     clearRoomFilter();
   };
   const totalOutstanding = visibleInvoices.reduce((sum, inv) => sum + getRemainingAmount(inv), 0);
+  // T41 — tách doanh thu của chủ trọ khỏi tiền thu hộ trên các hóa đơn đang lọc.
+  const categoryTotals = useMemo(
+    () => summarizeByCategory(visibleInvoices.flatMap((inv) => inv.invoice_items ?? [])),
+    [visibleInvoices],
+  );
 
   // Link từ dashboard ("Hóa đơn cần nhắc"): /chu-tro/hoa-don?hoa-don=<id> mở sẵn modal.
   const linkedInvoiceId = searchParams.get("hoa-don");
@@ -156,6 +162,8 @@ export function LandlordBillingPage() {
             {!isPending && !isError && invoices.length > 0 && (
               <p data-testid="invoice-outstanding-total" style={{ fontFamily: font, fontSize: 13, color: C.textSecondary, margin: "4px 0 0" }}>
                 Còn phải thu: <strong style={{ color: C.primary }}>{formatVnd(totalOutstanding)}</strong>
+                {" · "}Doanh thu: <strong data-testid="invoice-revenue-total" style={{ color: C.textPrimary }}>{formatVnd(categoryTotals.revenue)}</strong>
+                {" · "}Thu hộ: <strong data-testid="invoice-passthrough-total" style={{ color: C.textPrimary }}>{formatVnd(categoryTotals.PassThrough)}</strong>
               </p>
             )}
           </div>

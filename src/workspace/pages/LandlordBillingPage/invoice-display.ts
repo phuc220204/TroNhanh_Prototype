@@ -59,4 +59,3 @@ export const STATUS_OPTIONS = [
 ];
 
 // Một nguồn nhãn cho cả màn hóa đơn lẫn ảnh hóa đơn xuất ra.
-export { ITEM_TYPE_LABELS } from "../../services/invoice-image";

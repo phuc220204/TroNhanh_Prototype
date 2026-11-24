@@ -264,7 +264,7 @@ export async function linkListingToRoom(
     // Cast ở ĐÚNG một chỗ, không sửa dữ liệu cho khớp type. Ở T11c từng có lần
     // chọn `input.contractId || ""` để qua typecheck, và Postgres cast `""` sang
     // uuid rồi ném 22P02 — sửa lỗi type bằng cách tạo ra lỗi runtime.
-    // Cùng cách xử lý như `createInvoiceWithItems` trong billing-service.
+    // Cùng cách xử lý như `updateRoom` trong room-service (cast tham số nhận null).
     const args = {
       p_listing_id: listingId,
       p_room_id: roomId,
