@@ -17,10 +17,11 @@ import { Button, Skeleton } from "../../../shared/components/common";
 import { RoomsView } from "./RoomsView";
 import { OccupantsView } from "./OccupantsView";
 import { SettingsView } from "./SettingsView";
+import { ServicesView } from "./ServicesView";
 import { RoomDetailModal } from "./RoomDetailModal";
 import { getRoomDebt } from "./RoomDebtBadge";
 import { UtilityReadingForm } from "./UtilityReadingForm";
-import { InvoicePreview } from "./InvoicePreview";
+import { CreateInvoiceModal } from "./CreateInvoiceModal";
 import { AddOccupantModal } from "./AddOccupantModal";
 import type { RoomActionType } from "./RoomActions";
 import { AddRoomModal } from "../../components/AddRoomModal";
@@ -83,6 +84,7 @@ function pickDefaultProperty(properties: Property[]): Property | null {
 const ROOM_TABS: { id: LandlordNavId; label: string }[] = [
   { id: "rooms", label: "Phòng" },
   { id: "occupants", label: "Người ở" },
+  { id: "services", label: "Dịch vụ" },
   { id: "settings", label: "Cài đặt khu" },
 ];
 
@@ -372,6 +374,14 @@ export function QuanLyPhongPage() {
               />
             )}
 
+            {activeTab === "services" && (
+              <ServicesView
+                property={selectedProperty}
+                isReadOnly={isReadOnly}
+                onRefreshData={() => loadDbData(false)}
+              />
+            )}
+
             {activeTab === "settings" && (
               <SettingsView
                 // key theo khu: form khởi tạo từ `property` một lần — không có key thì
@@ -381,6 +391,7 @@ export function QuanLyPhongPage() {
                 mobile={isMobile}
                 isReadOnly={isReadOnly}
                 onRefreshData={() => loadDbData(false)}
+                onOpenServices={() => goToTab("services")}
                 // Khu vừa xóa không còn gì để cài đặt ⇒ về danh sách phòng của khu còn lại.
                 onDeleted={() => {
                   goToTab("rooms");
@@ -415,11 +426,6 @@ export function QuanLyPhongPage() {
       {editRoomId && (
         <EditRoomModal
           roomId={editRoomId}
-          propertyPrices={{
-            electricity: selectedProperty?.electricity_unit_price,
-            water: selectedProperty?.water_unit_price,
-            service: selectedProperty?.service_fee,
-          }}
           onClose={() => setEditRoomId(null)}
           onUpdated={() => void loadDbData(false)}
         />
@@ -451,7 +457,7 @@ export function QuanLyPhongPage() {
       )}
 
       {actionModal?.type === "invoice" && (
-        <InvoicePreview
+        <CreateInvoiceModal
           room={actionModal.room}
           property={selectedProperty}
           onClose={() => setActionModal(null)}

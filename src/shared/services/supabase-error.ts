@@ -62,6 +62,32 @@ const ERROR_MESSAGES: Record<string, string> = {
   INVALID_ROOM_STATUS: "Trạng thái phòng không hợp lệ.",
   INVALID_UNIT_PRICE: "Đơn giá không được là số âm.",
 
+  // T40 — danh mục phí dịch vụ
+  SERVICE_NOT_FOUND: "Không tìm thấy dịch vụ này. Có thể nó đã bị xóa ở tab khác.",
+  SERVICE_NAME_REQUIRED: "Vui lòng nhập tên dịch vụ (tối đa 80 ký tự).",
+  SERVICE_UNIT_REQUIRED: "Vui lòng nhập đơn vị tính (tối đa 20 ký tự).",
+  SERVICE_NAME_EXISTS: "Khu đã có dịch vụ trùng tên này.",
+  SERVICE_METER_EXISTS: "Khu đã có dịch vụ tính theo đồng hồ này (mỗi khu một đồng hồ điện, một đồng hồ nước).",
+  INVALID_FEE_CATEGORY: "Loại khoản thu không hợp lệ.",
+  INVALID_QUANTITY_BASIS: "Cách tính không hợp lệ.",
+  INVALID_METER_TYPE: "Vui lòng chọn đồng hồ điện hoặc nước.",
+  INVALID_ROOM_SERVICES: "Danh sách dịch vụ của phòng không hợp lệ.",
+
+  // T41 — hóa đơn v2
+  INVALID_PERIOD: "Kỳ hóa đơn không hợp lệ.",
+  DUE_DATE_REQUIRED: "Vui lòng chọn hạn thanh toán.",
+  INVALID_BILLING_RANGE: "Khoảng ngày tính tiền không hợp lệ (từ ngày ≤ đến ngày, tối đa 3 tháng).",
+  INVOICE_NOTE_TOO_LONG: "Ghi chú hóa đơn tối đa 255 ký tự.",
+  SERVICE_NOT_APPLIED: "Có dịch vụ không còn áp dụng cho phòng này. Tải lại rồi thử lại.",
+  DUPLICATE_INVOICE_SERVICE: "Một dịch vụ bị chọn hai lần.",
+  READING_MISSING: "Kỳ này chưa ghi chỉ số điện/nước. Ghi chỉ số trước hoặc bỏ chọn dịch vụ đó.",
+  INVALID_INVOICE_QUANTITY: "Số lượng dịch vụ phải lớn hơn 0 và không quá 100.",
+  INVALID_INVOICE_SERVICES: "Danh sách dịch vụ của hóa đơn không hợp lệ.",
+  INVALID_INVOICE_ADJUSTMENTS: "Danh sách cộng thêm / giảm trừ không hợp lệ.",
+  ADJUSTMENT_REASON_REQUIRED: "Mỗi khoản cộng thêm / giảm trừ cần ghi lý do (tối đa 120 ký tự).",
+  INVALID_ADJUSTMENT_AMOUNT: "Số tiền cộng thêm / giảm trừ phải khác 0.",
+  INVOICE_TOTAL_NEGATIVE: "Tổng hóa đơn không được âm. Giảm bớt khoản giảm trừ.",
+
   // Hợp đồng & phòng
   ROOM_HAS_ACTIVE_CONTRACT:
     "Phòng này đã có hợp đồng còn hiệu lực trong khoảng thời gian đó.",
@@ -71,7 +97,8 @@ const ERROR_MESSAGES: Record<string, string> = {
     "Không thể liên kết khách ở với hợp đồng. Vui lòng kiểm tra lại phòng và khách.",
   CONTRACT_NOT_OWNED: "Hợp đồng này không thuộc quyền quản lý của bạn.",
   CONTRACT_NOT_ACTIVE:
-    "Chỉ gia hạn được hợp đồng đang còn hiệu lực. Hợp đồng đã kết thúc thì cần lập hợp đồng mới.",
+    // Dùng chung: extend_contract (gia hạn) và create_invoice_v2 (lập hóa đơn).
+    "Phòng không có hợp đồng đang hiệu lực. Hợp đồng đã kết thúc thì cần lập hợp đồng mới.",
   EXTEND_DATE_NOT_LATER:
     "Ngày kết thúc mới phải muộn hơn ngày kết thúc hiện tại.",
   USER_NOT_FOUND_BY_EMAIL: "Không tìm thấy tài khoản người dùng với email này.",

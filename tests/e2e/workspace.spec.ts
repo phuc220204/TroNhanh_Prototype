@@ -40,7 +40,7 @@ async function selectProperty(page: Page): Promise<void> {
 }
 
 test.describe("Vận hành khu trọ", () => {
-  test("tạo khu trọ và một phòng có đơn giá điện riêng", async ({ page }) => {
+  test("tạo khu trọ và một phòng (tự nhận dịch vụ của khu)", async ({ page }) => {
     await login(page, ACCOUNTS.sellerA);
     await go(page, "/chu-tro/quan-ly-phong");
 
@@ -57,15 +57,15 @@ test.describe("Vận hành khu trọ", () => {
     await page.getByTestId("add-room-code").fill(roomCode);
     await page.getByTestId("add-room-area").fill("25");
     await page.getByTestId("add-room-price").fill("3000000");
-    await page.getByTestId("add-room-custom-price-toggle").check();
-    await page.getByTestId("add-room-elec-price").fill("3700");
+    // T40: không còn ô giá riêng khi tạo — phòng tự nhận dịch vụ của khu.
+    await expect(page.getByTestId("add-room-services-hint")).toBeVisible();
     await page.getByTestId("add-room-save-btn").click();
     await expect(page.getByTestId("add-room-save-btn")).toBeHidden();
 
     await expect(roomCard(page)).toHaveCount(1);
   });
 
-  test("sửa phòng: đổi giá thuê và bỏ đơn giá riêng", async ({ page }) => {
+  test("sửa phòng: đổi giá thuê và đặt giá điện riêng", async ({ page }) => {
     await login(page, ACCOUNTS.sellerA);
     await selectProperty(page);
 
@@ -75,20 +75,21 @@ test.describe("Vận hành khu trọ", () => {
     // Form phải nạp SẴN giá trị hiện có. Mở ra mà ô trống nghĩa là đang tạo mới
     // chứ không phải sửa — bấm lưu sẽ xóa dữ liệu.
     await expect(page.getByTestId("edit-room-code")).toHaveValue(roomCode);
-    await expect(page.getByTestId("edit-room-custom-price-toggle")).toBeChecked();
-    await expect(page.getByTestId("edit-room-elec-price")).toHaveValue("3700");
+
+    // T40: giá riêng theo dịch vụ, lưu bằng nút riêng (set_room_services).
+    await expect(page.getByTestId("room-service-toggle-Tiền điện")).toBeChecked();
+    await page.getByTestId("room-service-price-Tiền điện").fill("3700");
+    await page.getByTestId("room-services-save").click();
+    await expect(page.getByTestId("room-services-saved")).toBeVisible();
 
     await page.getByTestId("edit-room-price").fill("3300000");
-    // Tắt ô = XÓA giá riêng, phòng quay về giá khu. Đây là nhánh duy nhất làm
-    // được việc đó, nên nó phải có test riêng.
-    await page.getByTestId("edit-room-custom-price-toggle").uncheck();
     await page.getByTestId("edit-room-save-btn").click();
     await expect(page.getByTestId("edit-room-save-btn")).toBeHidden();
 
     await roomCard(page).click();
     await page.getByTestId("room-detail-edit-btn").click();
     await expect(page.getByTestId("edit-room-price")).toHaveValue("3300000");
-    await expect(page.getByTestId("edit-room-custom-price-toggle")).not.toBeChecked();
+    await expect(page.getByTestId("room-service-price-Tiền điện")).toHaveValue("3.700");
   });
 
   test("thêm người ở + hợp đồng", async ({ page }) => {
@@ -135,8 +136,18 @@ test.describe("Vận hành khu trọ", () => {
     await selectProperty(page);
 
     await roomCard(page).getByTestId("room-invoice-btn").click();
+    // T41: kỳ hiện tại chưa ghi chỉ số ⇒ bỏ chọn điện/nước, nếu không nút lập bị khóa.
+    await expect(page.getByTestId("invoice-summary")).toBeVisible();
+    await page.getByTestId("invoice-service-toggle-Tiền điện").uncheck();
+    await page.getByTestId("invoice-service-toggle-Tiền nước").uncheck();
+    // Giảm trừ có lý do ⇒ hiện riêng nhóm "Cộng thêm / Giảm trừ" trên hóa đơn.
+    await page.getByTestId("invoice-adjustment-add").click();
+    await page.getByTestId("invoice-adjustment-reason").fill("Giảm thử nghiệm");
+    await page.getByTestId("invoice-adjustment-amount").fill("10000");
     await page.getByTestId("create-invoice-btn").click();
-    await expect(page.getByTestId("create-invoice-btn")).toBeHidden();
+    await expect(page.getByTestId("invoice-created")).toBeVisible();
+    await expect(page.getByTestId("invoice-group-Adjustment")).toBeVisible();
+    await page.getByTestId("invoice-created-close-btn").click();
 
     await go(page, "/chu-tro/hoa-don");
     // Lọc theo mã phòng của spec: seller.a còn nhiều hóa đơn khác từ seed.

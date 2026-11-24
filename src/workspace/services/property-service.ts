@@ -136,9 +136,6 @@ export async function createProperty(input: CreatePropertyInput): Promise<string
 export interface PropertySettingsInput {
   name?: string;
   address?: string;
-  electricity_unit_price?: number;
-  water_unit_price?: number;
-  service_fee?: number;
   bank_name?: string;
   bank_account_number?: string;
   bank_account_name?: string;
@@ -147,9 +144,8 @@ export interface PropertySettingsInput {
 const EDITABLE_SETTING_KEYS = [
   "name",
   "address",
-  "electricity_unit_price",
-  "water_unit_price",
-  "service_fee",
+  // Đơn giá điện/nước/dịch vụ: KHÔNG ghi ở đây nữa — cột cũ là bản sao do
+  // danh mục `property_services` đồng bộ (T40); server đã revoke quyền UPDATE.
   "bank_name",
   "bank_account_number",
   "bank_account_name",

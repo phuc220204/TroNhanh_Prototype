@@ -93,6 +93,12 @@ export const qk = {
     listingPrefill: (roomId: string) => ["rooms", "listingPrefill", roomId] as const,
   },
 
+  /** Danh mục phí dịch vụ của khu (T40) — kèm bộ phòng áp dụng. */
+  propertyServices: {
+    all: ["propertyServices"] as const,
+    byProperty: (propertyId: string) => ["propertyServices", "property", propertyId] as const,
+  },
+
   occupancies: {
     all: ["occupancies"] as const,
     byRoom: (roomId: string) => ["occupancies", "room", roomId] as const,
@@ -120,6 +126,8 @@ export const qk = {
     invoiceDetail: (id: string) => ["billing", "invoice", id] as const,
     /** Nháp hóa đơn (tiền phòng + điện nước + dịch vụ) của một phòng theo kỳ. */
     invoiceDraft: (roomId: string, period: string) => ["billing", "invoiceDraft", roomId, period] as const,
+    /** Người ở chính của hợp đồng — in trên bản hóa đơn (T41). */
+    invoiceOccupant: (contractId: string) => ["billing", "invoiceOccupant", contractId] as const,
     /** Nhật ký thu tiền của một hóa đơn (lý do chưa thu được + ngày hẹn). */
     collectionNotes: (invoiceId: string) => ["billing", "collectionNotes", invoiceId] as const,
   },

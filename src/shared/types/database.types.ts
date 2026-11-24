@@ -439,10 +439,14 @@ export type Database = {
           amount: number
           created_at: string
           description: string | null
+          fee_category: string
           id: string
           invoice_id: string
+          meta: Json | null
           quantity: number
+          service_id: string | null
           type: string
+          unit: string | null
           unit_price: number
           updated_at: string
         }
@@ -450,10 +454,14 @@ export type Database = {
           amount: number
           created_at?: string
           description?: string | null
+          fee_category: string
           id?: string
           invoice_id: string
+          meta?: Json | null
           quantity?: number
+          service_id?: string | null
           type: string
+          unit?: string | null
           unit_price: number
           updated_at?: string
         }
@@ -461,10 +469,14 @@ export type Database = {
           amount?: number
           created_at?: string
           description?: string | null
+          fee_category?: string
           id?: string
           invoice_id?: string
+          meta?: Json | null
           quantity?: number
+          service_id?: string | null
           type?: string
+          unit?: string | null
           unit_price?: number
           updated_at?: string
         }
@@ -476,15 +488,25 @@ export type Database = {
             referencedRelation: "invoices"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "invoice_items_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "property_services"
+            referencedColumns: ["id"]
+          },
         ]
       }
       invoices: {
         Row: {
+          billing_from: string | null
+          billing_to: string | null
           contract_id: string | null
           created_at: string
           deleted_at: string | null
           due_date: string
           id: string
+          note: string | null
           owner_id: string
           period: string
           room_id: string
@@ -493,11 +515,14 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          billing_from?: string | null
+          billing_to?: string | null
           contract_id?: string | null
           created_at?: string
           deleted_at?: string | null
           due_date: string
           id?: string
+          note?: string | null
           owner_id: string
           period: string
           room_id: string
@@ -506,11 +531,14 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          billing_from?: string | null
+          billing_to?: string | null
           contract_id?: string | null
           created_at?: string
           deleted_at?: string | null
           due_date?: string
           id?: string
+          note?: string | null
           owner_id?: string
           period?: string
           room_id?: string
@@ -1044,6 +1072,75 @@ export type Database = {
         }
         Relationships: []
       }
+      property_services: {
+        Row: {
+          apply_to_new_rooms: boolean
+          created_at: string
+          deleted_at: string | null
+          fee_category: string
+          id: string
+          is_active: boolean
+          meter_type: string | null
+          name: string
+          owner_id: string
+          property_id: string
+          quantity_basis: string
+          sort_order: number
+          unit: string
+          unit_price: number
+          updated_at: string
+        }
+        Insert: {
+          apply_to_new_rooms?: boolean
+          created_at?: string
+          deleted_at?: string | null
+          fee_category: string
+          id?: string
+          is_active?: boolean
+          meter_type?: string | null
+          name: string
+          owner_id: string
+          property_id: string
+          quantity_basis: string
+          sort_order?: number
+          unit: string
+          unit_price?: number
+          updated_at?: string
+        }
+        Update: {
+          apply_to_new_rooms?: boolean
+          created_at?: string
+          deleted_at?: string | null
+          fee_category?: string
+          id?: string
+          is_active?: boolean
+          meter_type?: string | null
+          name?: string
+          owner_id?: string
+          property_id?: string
+          quantity_basis?: string
+          sort_order?: number
+          unit?: string
+          unit_price?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "property_services_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "properties"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "property_services_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "property_public_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       rental_listings: {
         Row: {
           access_close_time: string | null
@@ -1261,6 +1358,51 @@ export type Database = {
             columns: ["property_id"]
             isOneToOne: false
             referencedRelation: "property_public_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      room_services: {
+        Row: {
+          created_at: string
+          id: string
+          owner_id: string
+          room_id: string
+          service_id: string
+          unit_price_override: number | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          owner_id: string
+          room_id: string
+          service_id: string
+          unit_price_override?: number | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          owner_id?: string
+          room_id?: string
+          service_id?: string
+          unit_price_override?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "room_services_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "rooms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "room_services_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "property_services"
             referencedColumns: ["id"]
           },
         ]
@@ -1978,6 +2120,19 @@ export type Database = {
         Returns: undefined
       }
       count_rented_rooms: { Args: { p_property_id: string }; Returns: number }
+      create_invoice_v2: {
+        Args: {
+          p_adjustments: Json
+          p_billing_from: string
+          p_billing_to: string
+          p_due_date: string
+          p_note: string
+          p_period: string
+          p_room_id: string
+          p_services: Json
+        }
+        Returns: string
+      }
       create_invoice_with_items: {
         Args: {
           p_contract_id: string
@@ -2002,7 +2157,9 @@ export type Database = {
         Returns: Json
       }
       delete_listing: { Args: { p_listing_id: string }; Returns: undefined }
+      delete_property_service: { Args: { p_id: string }; Returns: undefined }
       expire_due_listings: { Args: never; Returns: number }
+      expire_stale_payment_orders: { Args: never; Returns: number }
       extend_contract: {
         Args: { p_contract_id: string; p_new_end_date: string }
         Returns: undefined
@@ -2196,6 +2353,10 @@ export type Database = {
         Args: { p_role: string; p_user_id: string }
         Returns: undefined
       }
+      seed_default_property_services: {
+        Args: { p_property_id: string }
+        Returns: undefined
+      }
       set_listing_visibility: {
         Args: { p_listing_id: string; p_visible: boolean }
         Returns: string
@@ -2208,6 +2369,10 @@ export type Database = {
         Args: { p_enabled: boolean; p_property_id: string }
         Returns: string
       }
+      set_room_services: {
+        Args: { p_items: Json; p_room_id: string }
+        Returns: undefined
+      }
       show_limit: { Args: never; Returns: number }
       show_trgm: { Args: { "": string }; Returns: string[] }
       soft_delete_property: {
@@ -2219,6 +2384,10 @@ export type Database = {
         Returns: string
       }
       submit_draft_listing: { Args: { p_listing_id: string }; Returns: string }
+      sync_legacy_service_prices: {
+        Args: { p_property_id: string }
+        Returns: undefined
+      }
       terminate_contract: {
         Args: { p_contract_id: string; p_end_date?: string }
         Returns: undefined
@@ -2246,6 +2415,21 @@ export type Database = {
           p_water_price: number
         }
         Returns: undefined
+      }
+      upsert_property_service: {
+        Args: {
+          p_apply_to_new_rooms: boolean
+          p_fee_category: string
+          p_id: string
+          p_meter_type: string
+          p_name: string
+          p_property_id: string
+          p_quantity_basis: string
+          p_room_ids: string[]
+          p_unit: string
+          p_unit_price: number
+        }
+        Returns: string
       }
     }
     Enums: {

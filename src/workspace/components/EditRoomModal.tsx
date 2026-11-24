@@ -6,6 +6,7 @@ import { Field } from "../../shared/components/common/FormField";
 import { toUserMessage } from "../../shared/services/supabase-error";
 import { useCanWrite, useWriteBlockReason } from "../../shared/contexts/SubscriptionContext";
 import { getRoomById, updateRoom, type RoomStatusDb } from "../services/room-service";
+import { RoomServicesSection } from "./RoomServicesSection";
 
 /** BR-002 — đúng 4 trạng thái. Không có "Repairing", không có "Inactive". */
 const STATUS_OPTIONS: Array<{ value: RoomStatusDb; label: string }> = [
@@ -15,29 +16,11 @@ const STATUS_OPTIONS: Array<{ value: RoomStatusDb; label: string }> = [
   { value: "Hidden", label: "Đã ẩn" },
 ];
 
-/** Đơn giá của KHU — chỉ để hiển thị "bỏ trống thì phòng dùng số này". */
-interface PropertyPrices {
-  electricity?: number;
-  water?: number;
-  service?: number;
-}
-
 interface EditRoomModalProps {
   roomId: string;
-  propertyPrices?: PropertyPrices;
   onClose: () => void;
   onUpdated: () => void;
 }
-
-/** "" ⇒ `null` (theo giá khu) · "0" ⇒ `0` (miễn phí). HAI Ý KHÁC NHAU. */
-function parseOptionalPrice(raw: string): number | null {
-  const digits = raw.replace(/\D/g, "");
-  if (digits === "") return null;
-  const num = Number(digits);
-  return Number.isFinite(num) ? num : null;
-}
-
-const priceToInput = (v: number | null): string => (v === null ? "" : String(v));
 
 /**
  * Sửa một phòng đã tạo.
@@ -52,7 +35,7 @@ const priceToInput = (v: number | null): string => (v === null ? "" : String(v))
  * đã format để hiển thị (`"3.200.000đ"`), parse ngược là cách chắc chắn có ngày
  * sai.
  */
-export function EditRoomModal({ roomId, propertyPrices, onClose, onUpdated }: EditRoomModalProps) {
+export function EditRoomModal({ roomId, onClose, onUpdated }: EditRoomModalProps) {
   const canWrite = useCanWrite();
   const blockReason = useWriteBlockReason();
 
@@ -71,10 +54,7 @@ export function EditRoomModal({ roomId, propertyPrices, onClose, onUpdated }: Ed
   const [submitting, setSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
 
-  const [customPrice, setCustomPrice] = useState(false);
-  const [elecPrice, setElecPrice] = useState("");
-  const [waterPrice, setWaterPrice] = useState("");
-  const [serviceFee, setServiceFee] = useState("");
+  const [propertyId, setPropertyId] = useState("");
 
   useEffect(() => {
     let cancelled = false;
@@ -106,14 +86,7 @@ export function EditRoomModal({ roomId, propertyPrices, onClose, onUpdated }: Ed
       setPrice(String(room.price));
       setStatus(room.status);
       setNotes(room.description);
-      setElecPrice(priceToInput(room.electricityPrice));
-      setWaterPrice(priceToInput(room.waterPrice));
-      setServiceFee(priceToInput(room.serviceFee));
-      // Bật sẵn ô "giá riêng" khi phòng ĐANG có ít nhất một giá riêng — nếu không,
-      // mở form ra sẽ thấy phần giá bị gập lại và tưởng phòng đang theo giá khu.
-      setCustomPrice(
-        room.electricityPrice !== null || room.waterPrice !== null || room.serviceFee !== null,
-      );
+      setPropertyId(room.propertyId);
       setLoading(false);
     };
 
@@ -150,11 +123,6 @@ export function EditRoomModal({ roomId, propertyPrices, onClose, onUpdated }: Ed
         floor: Number(floor) || 1,
         status,
         description: notes,
-        // Tắt ô "giá riêng" ⇒ gửi `null` cả ba ⇒ XÓA giá riêng, phòng quay về giá
-        // khu. Đây là cách duy nhất để bỏ giá riêng, nên không được bỏ qua nhánh này.
-        electricityPrice: customPrice ? parseOptionalPrice(elecPrice) : null,
-        waterPrice: customPrice ? parseOptionalPrice(waterPrice) : null,
-        serviceFee: customPrice ? parseOptionalPrice(serviceFee) : null,
       });
       onUpdated();
       onClose();
@@ -164,9 +132,6 @@ export function EditRoomModal({ roomId, propertyPrices, onClose, onUpdated }: Ed
       setSubmitting(false);
     }
   };
-
-  const inheritedHint = (value: number | undefined, unit: string): string =>
-    value === undefined ? "Để trống = theo khu" : `Để trống = theo khu (${value.toLocaleString("vi-VN")}${unit})`;
 
   const bannerStyle = {
     background: C.errorBg,
@@ -247,35 +212,9 @@ export function EditRoomModal({ roomId, propertyPrices, onClose, onUpdated }: Ed
             )}
           </label>
 
-          <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: 12 }}>
-            <label style={{ display: "flex", alignItems: "flex-start", gap: 9, cursor: "pointer" }}>
-              <input
-                type="checkbox"
-                checked={customPrice}
-                onChange={(e) => setCustomPrice(e.target.checked)}
-                data-testid="edit-room-custom-price-toggle"
-                style={{ marginTop: 3, width: 16, height: 16, accentColor: C.primary, cursor: "pointer" }}
-              />
-              <span>
-                <span style={{ display: "block", fontFamily: font, fontSize: 13.5, fontWeight: 700, color: C.textPrimary }}>
-                  Phòng này có đơn giá riêng
-                </span>
-                <span style={{ display: "block", fontFamily: font, fontSize: 12, color: C.textSecondary, lineHeight: 1.45 }}>
-                  Tắt ô này để bỏ giá riêng và cho phòng dùng lại đơn giá của khu.
-                  Hóa đơn các kỳ đã lập giữ nguyên giá cũ — chỉ số điện nước đã
-                  lưu sẵn đơn giá tại thời điểm ghi.
-                </span>
-              </span>
-            </label>
-
-            {customPrice && (
-              <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 12 }}>
-                <Field label="Đơn giá điện (VND/kWh)" data-testid="edit-room-elec-price" value={elecPrice} onChange={setElecPrice} placeholder={inheritedHint(propertyPrices?.electricity, "đ/kWh")} />
-                <Field label="Đơn giá nước" value={waterPrice} onChange={setWaterPrice} placeholder={inheritedHint(propertyPrices?.water, "đ")} />
-                <Field label="Phí dịch vụ (VND/tháng)" value={serviceFee} onChange={setServiceFee} placeholder={inheritedHint(propertyPrices?.service, "đ/tháng")} />
-              </div>
-            )}
-          </div>
+          {propertyId && (
+            <RoomServicesSection roomId={roomId} propertyId={propertyId} onSaved={onUpdated} />
+          )}
 
           <Field label="Ghi chú nội bộ" value={notes} onChange={setNotes} placeholder="Ghi chú về phòng này" textarea rows={3} />
         </div>
