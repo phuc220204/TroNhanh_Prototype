@@ -129,15 +129,81 @@ export type Database = {
         }
         Relationships: []
       }
+      contract_services: {
+        Row: {
+          contract_id: string
+          created_at: string
+          fee_category: string
+          id: string
+          meter_type: string | null
+          name: string
+          owner_id: string
+          quantity_basis: string
+          service_id: string | null
+          sort_order: number
+          unit: string
+          unit_price: number
+          updated_at: string
+        }
+        Insert: {
+          contract_id: string
+          created_at?: string
+          fee_category: string
+          id?: string
+          meter_type?: string | null
+          name: string
+          owner_id: string
+          quantity_basis: string
+          service_id?: string | null
+          sort_order?: number
+          unit: string
+          unit_price: number
+          updated_at?: string
+        }
+        Update: {
+          contract_id?: string
+          created_at?: string
+          fee_category?: string
+          id?: string
+          meter_type?: string | null
+          name?: string
+          owner_id?: string
+          quantity_basis?: string
+          service_id?: string | null
+          sort_order?: number
+          unit?: string
+          unit_price?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contract_services_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: false
+            referencedRelation: "contracts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contract_services_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "property_services"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       contracts: {
         Row: {
+          billing_cycle_months: number
           created_at: string
           deleted_at: string | null
           deposit: number
           end_date: string
+          extra_terms: string | null
           id: string
           occupancy_id: string
           owner_id: string
+          payment_day: number | null
           rent_price: number
           room_id: string
           start_date: string
@@ -145,13 +211,16 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          billing_cycle_months?: number
           created_at?: string
           deleted_at?: string | null
           deposit: number
           end_date: string
+          extra_terms?: string | null
           id?: string
           occupancy_id: string
           owner_id: string
+          payment_day?: number | null
           rent_price: number
           room_id: string
           start_date: string
@@ -159,13 +228,16 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          billing_cycle_months?: number
           created_at?: string
           deleted_at?: string | null
           deposit?: number
           end_date?: string
+          extra_terms?: string | null
           id?: string
           occupancy_id?: string
           owner_id?: string
+          payment_day?: number | null
           rent_price?: number
           room_id?: string
           start_date?: string
@@ -2530,6 +2602,10 @@ export type Database = {
       }
       show_limit: { Args: never; Returns: number }
       show_trgm: { Args: { "": string }; Returns: string[] }
+      snapshot_contract_services: {
+        Args: { p_contract_id: string }
+        Returns: undefined
+      }
       soft_delete_property: {
         Args: { p_property_id: string }
         Returns: undefined
@@ -2545,6 +2621,15 @@ export type Database = {
       }
       terminate_contract: {
         Args: { p_contract_id: string; p_end_date?: string }
+        Returns: undefined
+      }
+      update_contract_terms: {
+        Args: {
+          p_billing_cycle_months: number
+          p_contract_id: string
+          p_extra_terms: string
+          p_payment_day: number
+        }
         Returns: undefined
       }
       update_listing_with_details: {

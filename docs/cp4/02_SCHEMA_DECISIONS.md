@@ -641,3 +641,8 @@ trả `setof` (bảo mật tương đương, phải sửa mọi chỗ gọi ở 
 - **Người ở đã liên kết chỉ đọc hồ sơ/xe của chính mình** (`is_linked_occupant`); người ở ghép không đọc được của nhau.
 - `landlord_legal_profiles` — một bản Bên A cho mọi khu của chủ trọ.
 - `property_services.quantity_basis` thêm `PerVehicle`.
+
+## 18. Điều khoản hợp đồng (T43, `20261125120000_contract_terms.sql`)
+
+- **`contract_services` là bản chụp lúc ký**, tạo bằng trigger `snapshot_contract_services` sau INSERT `contracts`. Chỉ dùng để in hợp đồng; hóa đơn vẫn tính theo giá đang áp của phòng. Muốn hóa đơn bám giá trong hợp đồng là quyết định nghiệp vụ riêng.
+- `create_occupancy_with_contract` được tạo lại với cùng chữ ký, thêm 3 trường điều khoản; mọi kiểm tra BR-006/BR-027/BR-029 giữ nguyên.

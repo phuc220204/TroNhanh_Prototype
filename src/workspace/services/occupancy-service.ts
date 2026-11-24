@@ -16,6 +16,9 @@ export interface ContractInput {
   end_date: string;
   rent_price: number;
   deposit?: number;
+  /** T43 — ngày thu tiền hàng tháng (1–31), chu kỳ thu (tháng). */
+  payment_day?: number | null;
+  billing_cycle_months?: number;
 }
 
 export interface OccupancyItem {
