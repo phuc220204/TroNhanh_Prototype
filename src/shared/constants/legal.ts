@@ -10,12 +10,15 @@ export const LEGAL_OPERATOR_NAME = "Trọ Nhanh";
 export const SUPPORT_EMAIL = "tronhanh2026@gmail.com";
 
 /** Ngày hiệu lực của bộ chính sách hiện hành (ISO). Lưu kèm khi người dùng đồng ý. */
-export const LEGAL_VERSION = "2026-10-16";
+export const LEGAL_VERSION = "2026-11-24";
 
 export const LEGAL_ROUTES = {
   terms: "/dieu-khoan",
   privacy: "/chinh-sach-bao-mat",
   refund: "/chinh-sach-hoan-tien",
 } as const;
+
+/** Trang hướng dẫn sử dụng / câu hỏi thường gặp — công khai. */
+export const HELP_ROUTE = "/huong-dan";
 
 export type LegalDocKind = keyof typeof LEGAL_ROUTES;

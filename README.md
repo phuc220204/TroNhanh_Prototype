@@ -25,7 +25,7 @@ pnpm install
 Tạo `.env` ở thư mục gốc từ `.env.example`, điền hai biến của project Supabase
 (Settings → API):
 
-```
+```dotenv
 VITE_SUPABASE_URL=https://<project-ref>.supabase.co
 VITE_SUPABASE_ANON_KEY=<anon key>
 ```
@@ -54,7 +54,7 @@ Chạy dev server:
 pnpm dev
 ```
 
-Mở http://localhost:5173
+Mở <http://localhost:5173>
 
 > ⚠️ **Đừng đổi port khỏi 5173.** Google Cloud Console khai redirect URI cố định
 > theo port đó; đổi là luồng đăng nhập Google chết mà không có thông báo lỗi nào.
@@ -90,7 +90,7 @@ Cả bốn dùng chung mật khẩu **`TroNhanh@2026`**.
 Chi tiết dữ liệu từng tài khoản: [`docs/cp4/DEMO_ACCOUNTS.md`](docs/cp4/DEMO_ACCOUNTS.md).
 
 | Email | Vai trò | Dùng để test |
-|---|---|---|
+| --- | --- | --- |
 | `seller.a@tronhanh.demo` | Renter + Seller | đăng tin · quản lý khu/phòng · điện nước · hóa đơn · VietQR |
 | `seller.b@tronhanh.demo` | Renter + Seller | **cô lập dữ liệu (BR-007)** — B không được thấy gì của A |
 | `renter.a@tronhanh.demo` | Renter | tin nhu cầu · nhắn tin · đánh giá khu trọ |
@@ -105,7 +105,7 @@ Editor, không qua giao diện người dùng.
 ## 3. Lệnh
 
 | Lệnh | Việc |
-|---|---|
+| --- | --- |
 | `pnpm dev` | dev server ở cổng 5173 |
 | `pnpm build` | typecheck cả hai nấc rồi mới build — **type error là chặn deploy** |
 | `pnpm typecheck` | Nấc A + B (`noImplicitAny`) trên toàn `src` và `tests` |
@@ -136,7 +136,7 @@ việc này đã xảy ra ba lần trong dự án.
 
 ## 4. Cấu trúc thư mục
 
-```
+```text
 src/shared/        hạ tầng chung: supabase client, types, services hạ tầng, contexts, UI primitives
 src/marketplace/   public/renter/seller-tin-đăng: landing, tìm kiếm, chi tiết, đăng tin, tin nhu cầu, review
 src/workspace/     SaaS chủ trọ (/chu-tro/*): dashboard, khu/phòng, người ở, hợp đồng, điện nước, hóa đơn
@@ -156,7 +156,7 @@ nối được phép: `CLAUDE.md` §2.
 ## 5. Còn phải làm tay (không tự động hoá được)
 
 | Việc | Ở đâu |
-|---|---|
+| --- | --- |
 | Chạy bộ test RLS | dán nguyên `supabase/tests/rls.sql` vào SQL Editor; cột `passed` phải TRUE ở mọi dòng. **Phải có dữ liệu của `seller.a` trước** — trên DB trống thì "B không đọc được gì của A" pass vì A vốn không có gì, tức pass mà vô nghĩa |
 | Test storage cross-folder | console trình duyệt khi đã đăng nhập — upload vào thư mục của UUID người khác phải bị chặn |
 | Quét VietQR bằng app ngân hàng thật | 28 mã BIN chưa đối chiếu NAPAS; BIN sai thì QR vẫn quét ra, chỉ là ra sai ngân hàng |
@@ -168,6 +168,6 @@ nối được phép: `CLAUDE.md` §2.
 ## 6. Nguồn gốc thiết kế
 
 Bản thiết kế gốc trên Figma:
-https://www.figma.com/design/GVlt6ekA4QWOxDsefB8wuI/Design-System-for-Tr%E1%BB%8D-Nhanh
+<https://www.figma.com/design/GVlt6ekA4QWOxDsefB8wuI/Design-System-for-Tr%E1%BB%8D-Nhanh>
 
 Ghi công thư viện và tài nguyên: [`ATTRIBUTIONS.md`](ATTRIBUTIONS.md).

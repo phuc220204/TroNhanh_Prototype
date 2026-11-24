@@ -19,6 +19,9 @@ import { AddCoOccupantModal } from "./AddCoOccupantModal";
 import { AddOccupantModal } from "./AddOccupantModal";
 import { EndContractModal } from "./EndContractModal";
 import { OccupancyTable } from "./OccupancyTable";
+import { OccupantProfileModal } from "./OccupantProfileModal";
+import { ContractPrintModal } from "./ContractPrintModal";
+import { Ct01PrintModal } from "./Ct01PrintModal";
 import { toLocalISODate, formatDate } from "../../../shared/utils/format";
 import { classifyContractEnd } from "../../services/contract-due";
 
@@ -40,6 +43,9 @@ export function OccupantsView({ property, mobile, isReadOnly, onRefreshData }: O
   const [coOccupantTarget, setCoOccupantTarget] = useState<{ contractId: string; roomLabel: string; primaryName: string } | null>(null);
   const [extendTarget, setExtendTarget] = useState<(ContractTarget & { currentEndDate: string }) | null>(null);
   const [endTarget, setEndTarget] = useState<(ContractTarget & { startDate: string | null }) | null>(null);
+  const [profileTarget, setProfileTarget] = useState<OccupancyItem | null>(null);
+  const [printContractId, setPrintContractId] = useState<string | null>(null);
+  const [ct01OccupancyId, setCt01OccupancyId] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
   const { showToast: showGlobalToast } = useToast();
@@ -248,6 +254,9 @@ export function OccupantsView({ property, mobile, isReadOnly, onRefreshData }: O
           onAddCoOccupant={(target) => { setErrorMsg(""); setCoOccupantTarget(target); }}
           onEndContract={(contractId) => { setErrorMsg(""); setEndTarget(describeContract(contractId)); }}
           onExtendContract={(contractId, currentEndDate) => { setErrorMsg(""); setExtendTarget({ ...describeContract(contractId), currentEndDate }); }}
+          onOpenProfile={(occ) => setProfileTarget(occ)}
+          onPrintContract={(contractId) => setPrintContractId(contractId)}
+          onPrintCt01={(occ) => setCt01OccupancyId(occ.id)}
         />
         </>
       )}
@@ -329,6 +338,20 @@ export function OccupantsView({ property, mobile, isReadOnly, onRefreshData }: O
           errorMessage={errorMsg || null}
           onCancel={closeModals}
           onSubmit={handleAddCoOccupant}
+        />
+      )}
+      {ct01OccupancyId && <Ct01PrintModal occupancyId={ct01OccupancyId} onClose={() => setCt01OccupancyId(null)} />}
+      {printContractId && (
+        <ContractPrintModal contractId={printContractId} isReadOnly={Boolean(isReadOnly)} onClose={() => setPrintContractId(null)} />
+      )}
+      {profileTarget && (
+        <OccupantProfileModal
+          occupancyId={profileTarget.id}
+          fullName={profileTarget.full_name}
+          isPrimary={profileTarget.is_primary !== false}
+          isReadOnly={Boolean(isReadOnly)}
+          onClose={() => setProfileTarget(null)}
+          onOpenCt01={() => { setCt01OccupancyId(profileTarget.id); setProfileTarget(null); }}
         />
       )}
     </div>

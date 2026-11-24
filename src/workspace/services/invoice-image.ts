@@ -3,6 +3,11 @@ import { C, font } from "../../shared/theme";
 import { buildVietQrPayload, toAsciiPurpose } from "../../shared/utils/vietqr";
 import { findBankByCode } from "../../shared/utils/vietqr-banks";
 import { formatDate, formatPeriod, formatVnd } from "../../shared/utils/format";
+import { FEE_CATEGORY_META } from "../../shared/utils/statusMaps";
+import {
+  categoryOfItem, groupItemsByCategory, invoiceItemDetail, invoiceItemLabel,
+  type DescribableInvoiceItem, type InvoiceFeeCategory,
+} from "./invoice-calc";
 
 /**
  * Ảnh hóa đơn để chủ trọ gửi cho người ở qua Zalo/Messenger.
@@ -12,19 +17,13 @@ import { formatDate, formatPeriod, formatVnd } from "../../shared/utils/format";
  * `qrcode`) nên không dính CORS. Số tài khoản không đi qua máy chủ nào.
  */
 
-export const ITEM_TYPE_LABELS: Record<string, string> = {
-  Rent: "Tiền phòng",
-  Electricity: "Tiền điện",
-  Water: "Tiền nước",
-  Service: "Phí dịch vụ",
-  Other: "Khác",
-};
-
 export interface InvoiceImageLine {
   label: string;
-  /** Dòng phụ: mô tả, hoặc "120 × 3.500 đ" cho điện nước. */
+  /** Dòng phụ: "Chỉ số 120 → 155 = 35 kWh × 3.500đ", "1 tháng 1 ngày × …". */
   detail: string | null;
   amount: number;
+  /** T41 — nhóm khoản thu: tiền phòng / phí dịch vụ / thu hộ / điều chỉnh. */
+  category: InvoiceFeeCategory;
 }
 
 export interface InvoiceImageData {
@@ -37,6 +36,10 @@ export interface InvoiceImageData {
   /** Ngày lập hóa đơn (`created_at`). */
   issuedAt: string;
   lines: InvoiceImageLine[];
+  /** Khoảng ngày tính tiền (`YYYY-MM-DD`) — hóa đơn trước T41 không có. */
+  billingFrom?: string | null;
+  billingTo?: string | null;
+  note?: string | null;
   totalAmount: number;
   paidAmount: number;
   bankCode: string | null | undefined;
@@ -44,20 +47,16 @@ export interface InvoiceImageData {
   accountName: string | null | undefined;
 }
 
-/** Khoản thu thô (từ `invoice_items` hoặc từ nháp vừa tạo) → dòng hiển thị trên ảnh. */
+/** Khoản thu thô (`invoice_items`) → dòng hiển thị trên ảnh, giữ nhóm khoản thu. */
 export function toInvoiceImageLines(
-  items: { type: string; description?: string | null; quantity?: number | null; unit_price?: number | null; amount: number }[],
+  items: (DescribableInvoiceItem & { amount: number | string })[],
 ): InvoiceImageLine[] {
-  return items.map((item) => {
-    const quantity = Number(item.quantity || 0);
-    const unitPrice = Number(item.unit_price || 0);
-    const hasBreakdown = quantity > 0 && unitPrice > 0 && quantity !== 1;
-    return {
-      label: ITEM_TYPE_LABELS[item.type] || item.type,
-      detail: hasBreakdown ? `${item.description ?? ""} · ${quantity} × ${formatVnd(unitPrice)}`.replace(/^ · /, "") : item.description || null,
-      amount: Number(item.amount || 0),
-    };
-  });
+  return items.map((item) => ({
+    label: invoiceItemLabel(item),
+    detail: invoiceItemDetail(item),
+    amount: Number(item.amount || 0),
+    category: categoryOfItem(item),
+  }));
 }
 
 /**
@@ -183,6 +182,9 @@ export async function renderInvoiceImage(data: InvoiceImageData): Promise<Blob> 
     ["Hạn thanh toán", data.dueDate ? formatDate(data.dueDate) : "—"],
     ["Ngày lập", formatDate(data.issuedAt)],
   ];
+  if (data.billingFrom && data.billingTo) {
+    infoCells.push(["Tính tiền từ", `${formatDate(data.billingFrom)} – ${formatDate(data.billingTo)}`]);
+  }
   infoCells.forEach(([label, value], index) => {
     const x = PAD + (index % 2) * columnWidth;
     const rowY = y + Math.floor(index / 2) * 104;
@@ -193,7 +195,7 @@ export async function renderInvoiceImage(data: InvoiceImageData): Promise<Blob> 
     setFont(ctx, 34, 700);
     ctx.fillText(value, x, rowY + 36);
   });
-  y += 208 + 8;
+  y += Math.ceil(infoCells.length / 2) * 104 + 8;
   drawDivider(ctx, y);
   y += 36;
 
@@ -203,27 +205,41 @@ export async function renderInvoiceImage(data: InvoiceImageData): Promise<Blob> 
   ctx.fillText("Chi tiết khoản thu", PAD, y);
   y += 56;
 
-  for (const line of data.lines) {
-    setFont(ctx, 30, 700);
-    ctx.fillStyle = C.textPrimary;
+  for (const group of groupItemsByCategory(data.lines.map((line) => ({ ...line, fee_category: line.category })))) {
+    const meta = FEE_CATEGORY_META[group.category];
+    const subtotal = group.items.reduce((sum, line) => sum + line.amount, 0);
+    // Đầu nhóm: nền nhạt + tên nhóm + tổng con.
+    ctx.fillStyle = meta.bg;
+    roundRect(ctx, PAD, y - 10, CONTENT_WIDTH, 56, 12);
+    ctx.fill();
+    ctx.fillStyle = meta.color;
+    setFont(ctx, 26, 800);
     ctx.textAlign = "left";
-    ctx.fillText(line.label, PAD, y);
+    ctx.fillText(group.category === "PassThrough" ? `${meta.label} (không tính doanh thu)` : meta.label, PAD + 20, y + 4);
     ctx.textAlign = "right";
-    ctx.fillText(formatVnd(line.amount), WIDTH - PAD, y);
+    ctx.fillText(formatVnd(subtotal), WIDTH - PAD - 20, y + 4);
     ctx.textAlign = "left";
-    y += 42;
-    if (line.detail) {
-      setFont(ctx, 24);
-      ctx.fillStyle = C.textSecondary;
-      for (const detailLine of wrapText(ctx, line.detail, CONTENT_WIDTH - 260)) {
-        ctx.fillText(detailLine, PAD, y);
-        y += 34;
+    y += 66;
+
+    for (const line of group.items) {
+      setFont(ctx, 28, 600);
+      ctx.fillStyle = C.textPrimary;
+      ctx.fillText(line.label, PAD + 20, y);
+      ctx.textAlign = "right";
+      ctx.fillText(formatVnd(line.amount), WIDTH - PAD - 20, y);
+      ctx.textAlign = "left";
+      y += 40;
+      if (line.detail) {
+        setFont(ctx, 23);
+        ctx.fillStyle = C.textSecondary;
+        for (const detailLine of wrapText(ctx, line.detail, CONTENT_WIDTH - 280)) {
+          ctx.fillText(detailLine, PAD + 20, y);
+          y += 32;
+        }
       }
+      y += 14;
     }
-    y += 18;
-    ctx.fillStyle = C.border;
-    ctx.fillRect(PAD, y, CONTENT_WIDTH, 1);
-    y += 24;
+    y += 16;
   }
 
   // ── Tổng ──
@@ -303,6 +319,21 @@ export async function renderInvoiceImage(data: InvoiceImageData): Promise<Blob> 
     setFont(ctx, 32, 800);
     ctx.fillText("Đã thanh toán đủ — cảm ơn bạn!", WIDTH / 2, y);
     y += 64;
+  }
+
+  if (data.note) {
+    ctx.textAlign = "left";
+    ctx.fillStyle = C.textPrimary;
+    setFont(ctx, 24, 700);
+    ctx.fillText("Ghi chú:", PAD, y);
+    y += 36;
+    setFont(ctx, 24);
+    ctx.fillStyle = C.textSecondary;
+    for (const noteLine of wrapText(ctx, data.note, CONTENT_WIDTH)) {
+      ctx.fillText(noteLine, PAD, y);
+      y += 34;
+    }
+    y += 20;
   }
 
   // ── Chân trang ──

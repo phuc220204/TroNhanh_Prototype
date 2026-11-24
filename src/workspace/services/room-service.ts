@@ -134,19 +134,6 @@ export interface CreateRoomInput {
   floor?: number;
   status?: RoomStatusDb;
   description?: string;
-  /**
-   * Đơn giá RIÊNG của phòng. `null`/`undefined` = dùng giá của khu.
-   *
-   * Giá điện nước không cố định một mức cho cả khu: chủ trọ có thể thu 3.500đ/kWh
-   * với hợp đồng cũ và 3.700đ/kWh với phòng ký mới. Để `null` thì phòng thừa hưởng
-   * giá khu, nên chỉ phải nhập cho những phòng thực sự khác.
-   *
-   * ⚠️ `0` KHÁC `null`: `0` nghĩa là miễn phí (khu không thu phí dịch vụ), `null`
-   * nghĩa là chưa khai và lấy theo khu.
-   */
-  electricityPrice?: number | null;
-  waterPrice?: number | null;
-  serviceFee?: number | null;
 }
 
 /**
@@ -173,11 +160,8 @@ export async function createRoom(input: CreateRoomInput): Promise<string> {
         floor: input.floor ?? 1,
         status: input.status ?? "Available",
         description: input.description?.trim() || null,
-        // `?? null` chứ không `|| null`: `0` là mức giá hợp lệ (miễn phí) và phải
-        // được ghi đúng, chứ không bị coi là "chưa khai" rồi rơi về giá khu.
-        electricity_price: input.electricityPrice ?? null,
-        water_price: input.waterPrice ?? null,
-        service_fee: input.serviceFee ?? null,
+        // Đơn giá: KHÔNG gửi. Trigger `apply_services_to_new_room` gắn dịch vụ
+        // của khu và đồng bộ cột giá cũ (T40).
       })
       .select("id")
       .single();
@@ -200,10 +184,6 @@ export interface RoomEditable {
   price: number;
   status: RoomStatusDb;
   description: string;
-  /** `null` = theo giá khu. `0` = miễn phí. Hai ý khác nhau — xem `CreateRoomInput`. */
-  electricityPrice: number | null;
-  waterPrice: number | null;
-  serviceFee: number | null;
 }
 
 /**
@@ -225,7 +205,7 @@ export async function getRoomById(roomId: string): Promise<RoomEditable | null> 
   try {
     const { data, error } = await supabase
       .from("rooms")
-      .select("id, property_id, room_code, floor, area, price, status, description, electricity_price, water_price, service_fee")
+      .select("id, property_id, room_code, floor, area, price, status, description")
       .eq("id", roomId)
       .is("deleted_at", null)
       .maybeSingle();
@@ -242,10 +222,6 @@ export async function getRoomById(roomId: string): Promise<RoomEditable | null> 
       price: Number(data.price),
       status: data.status as RoomStatusDb,
       description: data.description ?? "",
-      // `?? null` giữ nguyên `0`: khu không thu phí dịch vụ là mức giá hợp lệ.
-      electricityPrice: data.electricity_price ?? null,
-      waterPrice: data.water_price ?? null,
-      serviceFee: data.service_fee ?? null,
     };
   } catch (err) {
     // Ném lỗi chứ không trả `null`: `null` nghĩa là "phòng không tồn tại / đã
@@ -263,14 +239,6 @@ export interface UpdateRoomInput {
   floor?: number;
   status: RoomStatusDb;
   description?: string;
-  /**
-   * BẮT BUỘC truyền, kể cả khi là `null` — khác `CreateRoomInput` nơi chúng
-   * optional. Ở luồng sửa, `null` là một ý định thật ("bỏ giá riêng, quay về giá
-   * khu"); nếu để optional thì quên truyền và cố ý xóa giá trông giống hệt nhau.
-   */
-  electricityPrice: number | null;
-  waterPrice: number | null;
-  serviceFee: number | null;
 }
 
 /**
@@ -285,12 +253,11 @@ export interface UpdateRoomInput {
  * đồng và tin đăng đang trỏ tới — đó là nghiệp vụ riêng, không phải "sửa phòng".
  *
  * Domain error: `ROOM_NOT_FOUND` · `ROOM_NOT_OWNED` · `ROOM_CODE_REQUIRED` ·
- * `INVALID_ROOM_AREA` · `INVALID_ROOM_PRICE` · `INVALID_ROOM_STATUS` ·
- * `INVALID_UNIT_PRICE`. Trùng mã phòng trong khu → 23505.
+ * `INVALID_ROOM_AREA` · `INVALID_ROOM_PRICE` · `INVALID_ROOM_STATUS`. Trùng mã phòng trong khu → 23505.
  */
 export async function updateRoom(input: UpdateRoomInput): Promise<void> {
   try {
-    // Ba đơn giá + `p_floor` + `p_description` nhận `null` hợp lệ, nhưng generated
+    // `p_floor` + `p_description` nhận `null` hợp lệ, nhưng generated
     // types khai chúng non-nullable (Supabase chỉ sinh optional cho param có
     // DEFAULT trong SQL). Cast ở ĐÚNG một chỗ — cùng cách với `linkListingToRoom`
     // — thay vì bẻ dữ liệu cho vừa type.
@@ -302,9 +269,10 @@ export async function updateRoom(input: UpdateRoomInput): Promise<void> {
       p_floor: input.floor ?? null,
       p_status: input.status,
       p_description: input.description?.trim() || null,
-      p_electricity_price: input.electricityPrice,
-      p_water_price: input.waterPrice,
-      p_service_fee: input.serviceFee,
+      // T40: RPC bỏ qua 3 tham số giá (giá đi theo `room_services`); giữ chữ ký cũ.
+      p_electricity_price: null,
+      p_water_price: null,
+      p_service_fee: null,
     } as unknown as Parameters<typeof supabase.rpc<"update_room">>[1];
 
     const { error } = await supabase.rpc("update_room", args);

@@ -1,4 +1,6 @@
-import { TriangleAlert } from "lucide-react";
+import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { Printer, TriangleAlert } from "lucide-react";
 import { C, font, radius } from "../../../shared/theme";
 import { Badge, Button, ModalShell, VietQRBlock } from "../../../shared/components/common";
 import { formatDate, formatPeriod, formatVnd } from "../../../shared/utils/format";
@@ -6,9 +8,14 @@ import { getPaidAmount, getRemainingAmount, type InvoiceItem } from "../../servi
 import { CollectionLogSection } from "../../components/CollectionLogSection";
 import { ExportInvoiceImageButton } from "../../components/ExportInvoiceImageButton";
 import { getInvoiceTransferPurpose, toInvoiceImageLines, type InvoiceImageData } from "../../services/invoice-image";
-import { ITEM_TYPE_LABELS, toDisplayStatusKey } from "./invoice-display";
+import { toDisplayStatusKey } from "./invoice-display";
+import { InvoiceItemsTable } from "../../components/InvoiceItemsTable";
+import { InvoicePrintModal } from "../../components/InvoicePrintModal";
+import { getInvoiceOccupant } from "../../services/invoice-create-service";
+import { qk } from "../../../shared/query/keys";
 
 export interface InvoiceProperty {
+  address?: string | null;
   bank_name?: string | null;
   bank_account_number?: string | null;
   bank_account_name?: string | null;
@@ -26,6 +33,14 @@ interface InvoiceDetailModalProps {
 const fieldLabel: React.CSSProperties = { fontSize: 12, color: C.textSecondary };
 
 export function InvoiceDetailModal({ invoice, property, isPropertiesError, actionMessage, onClose, onRecordPayment }: InvoiceDetailModalProps) {
+  const [isPrintOpen, setIsPrintOpen] = useState(false);
+  const contractId = invoice.contract_id ?? "";
+  // Chỉ tải khi mở bản in: tên + SĐT người ở in trên hóa đơn.
+  const occupantQuery = useQuery({
+    queryKey: qk.billing.invoiceOccupant(contractId),
+    queryFn: () => getInvoiceOccupant(contractId),
+    enabled: isPrintOpen && contractId !== "",
+  });
   const paidAmount = getPaidAmount(invoice);
   const remainingAmount = getRemainingAmount(invoice);
   // Ảnh hóa đơn gửi người ở — QR trên ảnh theo số CÒN THIẾU, như khối VietQR bên dưới.
@@ -36,12 +51,43 @@ export function InvoiceDetailModal({ invoice, property, isPropertiesError, actio
     dueDate: invoice.due_date ?? null,
     issuedAt: invoice.created_at,
     lines: toInvoiceImageLines(invoice.invoice_items ?? []),
+    billingFrom: invoice.billing_from,
+    billingTo: invoice.billing_to,
+    note: invoice.note,
     totalAmount: Number(invoice.total_amount || 0),
     paidAmount,
     bankCode: property?.bank_name,
     accountNumber: property?.bank_account_number,
     accountName: property?.bank_account_name,
   };
+
+  if (isPrintOpen) {
+    return (
+      <InvoicePrintModal
+        closeLabel="Quay lại chi tiết"
+        onClose={() => setIsPrintOpen(false)}
+        extraActions={<ExportInvoiceImageButton data={imageData} variant="outline" />}
+        data={{
+          propertyName: imageData.propertyName,
+          propertyAddress: property?.address,
+          roomCode: imageData.roomCode,
+          period: invoice.period,
+          billingFrom: invoice.billing_from,
+          billingTo: invoice.billing_to,
+          dueDate: invoice.due_date ?? null,
+          issuedAt: invoice.created_at,
+          occupant: occupantQuery.data ?? null,
+          items: invoice.invoice_items ?? [],
+          totalAmount: Number(invoice.total_amount || 0),
+          paidAmount,
+          note: invoice.note,
+          bankCode: property?.bank_name,
+          accountNumber: property?.bank_account_number,
+          accountName: property?.bank_account_name,
+        }}
+      />
+    );
+  }
 
   return (
     <ModalShell
@@ -91,6 +137,9 @@ export function InvoiceDetailModal({ invoice, property, isPropertiesError, actio
           <div>
             <div style={fieldLabel}>Kỳ thanh toán</div>
             <div style={{ fontSize: 14, fontWeight: 700, color: C.textPrimary }}>{formatPeriod(invoice.period)}</div>
+            {invoice.billing_from && invoice.billing_to && (
+              <div style={{ fontSize: 11.5, color: C.textSecondary }}>{formatDate(invoice.billing_from)} – {formatDate(invoice.billing_to)}</div>
+            )}
           </div>
           <div>
             <div style={fieldLabel}>Tổng tiền</div>
@@ -119,9 +168,14 @@ export function InvoiceDetailModal({ invoice, property, isPropertiesError, actio
         {/* Footer đã chật (trạng thái + Đóng + Ghi nhận) ⇒ lối gửi hóa đơn đặt ngay dưới phần tóm tắt. */}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, flexWrap: "wrap", border: `1px solid ${C.border}`, borderRadius: radius.md, padding: "10px 12px" }}>
           <span style={{ fontSize: 13, color: C.textSecondary, lineHeight: 1.45, flex: "1 1 180px" }}>
-            Gửi hóa đơn kèm mã VietQR cho người ở qua Zalo, Messenger.
+            In / lưu PDF, hoặc gửi ảnh hóa đơn kèm mã VietQR cho người ở qua Zalo, Messenger.
           </span>
-          <ExportInvoiceImageButton data={imageData} />
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            <Button variant="outline" icon={<Printer size={15} />} onClick={() => setIsPrintOpen(true)} data-testid="invoice-detail-print-btn">
+              Xem bản in
+            </Button>
+            <ExportInvoiceImageButton data={imageData} />
+          </div>
         </div>
 
         <CollectionLogSection invoiceId={invoice.id} isSettled={remainingAmount <= 0} />
@@ -154,25 +208,11 @@ export function InvoiceDetailModal({ invoice, property, isPropertiesError, actio
           <h4 style={{ fontSize: 14, fontWeight: 700, margin: "0 0 10px", color: C.textPrimary }}>
             Chi tiết khoản thu ({invoice.invoice_items?.length || 0})
           </h4>
-          {!invoice.invoice_items || invoice.invoice_items.length === 0 ? (
-            <p style={{ fontSize: 13, color: C.textSecondary, margin: 0 }}>Hóa đơn chưa có khoản thu chi tiết.</p>
-          ) : (
-            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-              {invoice.invoice_items.map((item: any, idx: number) => (
-                <div key={item.id || idx} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 12px", background: C.bg, borderRadius: radius.sm, fontSize: 13 }}>
-                  <div>
-                    <span style={{ fontWeight: 700, color: C.textPrimary }}>{ITEM_TYPE_LABELS[item.type] || item.type}: </span>
-                    <span style={{ color: C.textSecondary }}>{item.description || "—"}</span>
-                    {item.quantity && item.unit_price ? (
-                      <span style={{ fontSize: 11.5, color: C.textSecondary, marginLeft: 6 }}>
-                        ({item.quantity} × {formatVnd(item.unit_price)})
-                      </span>
-                    ) : null}
-                  </div>
-                  <div style={{ fontWeight: 700, color: C.textPrimary, flexShrink: 0, marginLeft: 8 }}>{formatVnd(item.amount)}</div>
-                </div>
-              ))}
-            </div>
+          <InvoiceItemsTable items={invoice.invoice_items ?? []} totalAmount={invoice.total_amount} />
+          {invoice.note && (
+            <p data-testid="invoice-detail-note" style={{ margin: "10px 0 0", fontSize: 13, color: C.textSecondary }}>
+              <strong style={{ color: C.textPrimary }}>Ghi chú:</strong> {invoice.note}
+            </p>
           )}
         </div>
       </div>

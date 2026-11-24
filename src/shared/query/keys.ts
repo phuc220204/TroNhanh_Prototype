@@ -93,11 +93,21 @@ export const qk = {
     listingPrefill: (roomId: string) => ["rooms", "listingPrefill", roomId] as const,
   },
 
+  /** Danh mục phí dịch vụ của khu (T40) — kèm bộ phòng áp dụng. */
+  propertyServices: {
+    all: ["propertyServices"] as const,
+    byProperty: (propertyId: string) => ["propertyServices", "property", propertyId] as const,
+  },
+
   occupancies: {
     all: ["occupancies"] as const,
     byRoom: (roomId: string) => ["occupancies", "room", roomId] as const,
     /** Occupancy của chính Renter — dùng ở /tai-khoan/phong-cua-toi */
     mine: (userId: string | undefined) => ["occupancies", "mine", userId] as const,
+    /** T42 — giấy tờ, tạm trú, xe của một người ở (dữ liệu nhạy cảm, chỉ màn hồ sơ). */
+    profile: (occupancyId: string) => ["occupancies", "profile", occupancyId] as const,
+    /** T44 — dữ liệu điền sẵn tờ khai CT01 (người kê khai + người ở cùng hợp đồng). */
+    ct01: (occupancyId: string) => ["occupancies", "ct01", occupancyId] as const,
     /** Tên chủ trọ của các lời mời liên kết đang chờ (đối chiếu trước khi xác nhận). */
     pendingLinkDetails: (userId: string | undefined) => ["occupancies", "pendingLinkDetails", userId] as const,
   },
@@ -120,6 +130,8 @@ export const qk = {
     invoiceDetail: (id: string) => ["billing", "invoice", id] as const,
     /** Nháp hóa đơn (tiền phòng + điện nước + dịch vụ) của một phòng theo kỳ. */
     invoiceDraft: (roomId: string, period: string) => ["billing", "invoiceDraft", roomId, period] as const,
+    /** Người ở chính của hợp đồng — in trên bản hóa đơn (T41). */
+    invoiceOccupant: (contractId: string) => ["billing", "invoiceOccupant", contractId] as const,
     /** Nhật ký thu tiền của một hóa đơn (lý do chưa thu được + ngày hẹn). */
     collectionNotes: (invoiceId: string) => ["billing", "collectionNotes", invoiceId] as const,
   },
@@ -155,6 +167,8 @@ export const qk = {
   },
 
   profile: (userId: string | undefined) => ["profile", userId] as const,
+  /** T42 — thông tin chủ trọ in làm Bên A trên hợp đồng / CT01. */
+  landlordLegalProfile: (ownerId: string | undefined) => ["landlordLegalProfile", ownerId] as const,
   roles: (userId: string | undefined) => ["roles", userId] as const,
 
   platformSettings: ["platformSettings"] as const,

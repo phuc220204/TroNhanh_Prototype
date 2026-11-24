@@ -128,8 +128,7 @@ export function VietQRBlock({
             </p>
           )}
           <p style={{ fontFamily: font, fontSize: 11.5, color: C.textSecondary, margin: 0, lineHeight: 1.45, maxWidth: 260 }}>
-            Quét bằng app ngân hàng để chuyển khoản. Tiền vào thẳng tài khoản chủ trọ —
-            Trọ Nhanh không giữ tiền thuê.
+            Quét bằng app ngân hàng để chuyển khoản.
           </p>
         </div>
       )}

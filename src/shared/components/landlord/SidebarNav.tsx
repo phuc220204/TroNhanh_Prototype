@@ -2,21 +2,24 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router";
 import {
   LayoutGrid, Building2, FileText, Users, Wallet, Settings, LogOut,
-  Home, MessageSquare, User, Search, Lock, X, ChevronLeft, Star, UserSearch, Crown
+  Home, MessageSquare, User, Search, Lock, X, ChevronLeft, Star, UserSearch, Crown, Receipt, CircleHelp
 } from "lucide-react";
 import { C, font, shadow } from "../../theme";
 import { BrandLogo } from "../brand/BrandLogo";
 import { useAuth } from "../../contexts/AuthContext";
 import { useSubscriptionContext } from "../../contexts/SubscriptionContext";
 import { useUnreadMessageCount } from "../../hooks/useUnreadMessageCount";
+import { HELP_ROUTE } from "../../constants/legal";
 
 export type LandlordNavId =
-  | "overview" | "rooms" | "listings" | "occupants" | "billing" | "settings"
+  | "overview" | "rooms" | "listings" | "occupants" | "services" | "billing" | "settings"
   | "find-renter" | "reviews"
   /** Hộp thư `/tin-nhan` khi mở từ khu chủ trọ — miễn phí, không thuộc SAAS_NAV_IDS. */
   | "messages"
   /** Trang mua/gia hạn gói — KHÔNG thuộc SAAS_NAV_IDS: người chưa có gói phải vào được để mua. */
-  | "plans";
+  | "plans"
+  /** Trang công khai `/huong-dan` — chỉ là lối tắt, không render trong LandlordShell. */
+  | "help";
 
 /**
  * Các trang thuộc module SaaS (bị khóa khi chưa có gói). Một chỗ duy nhất — LandlordShell dùng lại.
@@ -26,11 +29,11 @@ export type LandlordNavId =
  * bắt người bán trả tiền để đọc/trả lời đánh giá về chính mình.
  */
 export const SAAS_NAV_IDS: readonly LandlordNavId[] = [
-  "overview", "rooms", "occupants", "billing", "settings",
+  "overview", "rooms", "occupants", "services", "billing", "settings",
 ];
 
 /** Giá trị hợp lệ của `?tab=` trong /chu-tro/quan-ly-phong. */
-export const ROOM_PAGE_TABS: readonly LandlordNavId[] = ["rooms", "occupants", "settings"];
+export const ROOM_PAGE_TABS: readonly LandlordNavId[] = ["rooms", "occupants", "services", "settings"];
 
 /**
  * Router state gửi kèm khi mở `/tin-nhan` từ khu chủ trọ. Hộp thư thấy cờ này
@@ -65,6 +68,7 @@ const NAV_FREE: { id: LandlordNavId; icon: typeof LayoutGrid; label: string; to?
   { id: "messages", icon: MessageSquare, label: "Tin nhắn", to: "/tin-nhan" },
   { id: "find-renter", icon: UserSearch, label: "Tìm người thuê", to: "/chu-tro/tim-nguoi-thue" },
   { id: "reviews", icon: Star, label: "Đánh giá khu trọ", to: "/chu-tro/danh-gia" },
+  { id: "help", icon: CircleHelp, label: "Hướng dẫn sử dụng", to: HELP_ROUTE },
 ];
 
 // "Tổng quan" chuyển xuống đây: sau khi quản lý tin đăng dọn sang khu tài
@@ -74,6 +78,8 @@ const NAV_SAAS: { id: LandlordNavId; icon: typeof LayoutGrid; label: string; to?
   { id: "overview", icon: LayoutGrid, label: "Tổng quan", to: "/chu-tro" },
   { id: "rooms", icon: Building2, label: "Khu trọ & Phòng", to: "/chu-tro/quan-ly-phong?tab=rooms" },
   { id: "occupants", icon: Users, label: "Người ở & Hợp đồng", to: "/chu-tro/quan-ly-phong?tab=occupants" },
+  // T40 — danh mục phí: doanh thu (phí dịch vụ) tách khỏi thu hộ.
+  { id: "services", icon: Receipt, label: "Dịch vụ & phí", to: "/chu-tro/quan-ly-phong?tab=services" },
   // Một màn hóa đơn duy nhất: /chu-tro/hoa-don (có nhật ký thu tiền, ghi nhận đã thu).
   { id: "billing", icon: Wallet, label: "Hóa đơn & Thanh toán", to: "/chu-tro/hoa-don" },
   { id: "settings", icon: Settings, label: "Cài đặt khu trọ", to: "/chu-tro/quan-ly-phong?tab=settings" },

@@ -616,3 +616,33 @@ nên phải tự lặp lại điều kiện của policy). Khi sửa một trong
 
 Hướng thay thế nếu bắt buộc dashboard sạch: chuyển thành hàm `security definer`
 trả `setof` (bảo mật tương đương, phải sửa mọi chỗ gọi ở frontend). Chưa làm.
+
+---
+
+## 15. Danh mục phí dịch vụ (T40, `20261124120000_property_services.sql`)
+
+- **`fee_category` tách doanh thu với thu hộ.** `Service` = phí dịch vụ, là doanh thu của chủ trọ; `PassThrough` = chủ trọ thu hộ bên thứ 3 (rác, giữ xe bãi ngoài, điện/nước thu đúng giá gốc), không phải doanh thu. Dòng hóa đơn (T41) thêm `Rent` và `Adjustment`.
+- **"Thu hộ" KHÔNG mâu thuẫn AS-002.** AS-002 cấm *nền tảng* giữ/thu tiền thuê. "Thu hộ" ở đây là *chủ trọ* thu giúp bên thứ 3; tiền vẫn chuyển thẳng vào tài khoản chủ trọ qua VietQR.
+- **Cột giá cũ là bản sao chỉ-đọc.** `properties.electricity_unit_price / water_unit_price / service_fee` và `rooms.electricity_price / water_price / service_fee` được trigger `sync_legacy_service_prices` tính lại từ danh mục. Không xóa để `record_utility_reading`, gợi ý đăng tin, form hóa đơn cũ không vỡ. Client đã mất quyền UPDATE 3 cột của `properties` (tạm mở lại ở `20261124150000` cho bản frontend cũ — revoke lại sau deploy, xem T41); `update_room` bỏ qua 3 tham số giá. **Đừng ghi lại vào các cột này** — sẽ bị ghi đè ở lần đổi danh mục kế tiếp.
+- **Seed điện/nước là `Service` (doanh thu)**, không phải `PassThrough`: chủ trọ thường thu cao hơn giá gốc; mặc định tính là doanh thu là phía an toàn khi kê khai. Ứng dụng không tư vấn thuế — chủ trọ tự đổi loại.
+- **Mỗi khu ≤ 1 dịch vụ đồng hồ điện + 1 đồng hồ nước** (`uq_property_services_meter`): `utility_readings` gắn theo (phòng, Electricity|Water), không theo dịch vụ.
+- **Xóa dịch vụ là xóa mềm** để hóa đơn/hợp đồng sau này (T41/T43) còn tham chiếu được.
+
+## 16. Hóa đơn v2 (T41, `20261124140000_invoice_v2.sql`)
+
+- **`invoice_items.fee_category`** (`Rent` · `Service` · `PassThrough` · `Adjustment`), `service_id`, `unit`, `meta` (chỉ số cũ/mới, số tháng/ngày). Hóa đơn cũ backfill theo `type` (`Other` → `Adjustment`, còn lại → `Service`). Trigger `fill_invoice_item_fee_category` điền cho dòng tạo bằng RPC cũ.
+- **`invoices.billing_from/billing_to/note`** — khoảng ngày tính tiền (tháng lẻ tính theo ngày ÷ 30) và ghi chú in trên hóa đơn.
+- **Giảm trừ là dòng âm** (`Adjustment`, bắt buộc lý do); tổng hóa đơn vẫn ≥ 0. Không dùng cho tiền cọc.
+- **Giữ `create_invoice_with_items` trên DB** cho tới khi frontend mới deploy (bản đang chạy vẫn gọi nó). Sau deploy: migration dọn dẹp `drop function public.create_invoice_with_items(uuid, uuid, text, date, jsonb)`.
+
+## 17. Hồ sơ người ở (T42, `20261125090000_occupancy_profiles.sql`)
+
+- **Giấy tờ tùy thân ở bảng riêng `occupancy_profiles`**, không thêm cột vào `occupancies`: `occupancies` bị `select *`/embed ở nhiều màn, tách bảng giữ dữ liệu nhạy cảm chỉ ở màn hồ sơ. Đừng embed `occupancy_profiles` vào các truy vấn danh sách.
+- **Người ở đã liên kết chỉ đọc hồ sơ/xe của chính mình** (`is_linked_occupant`); người ở ghép không đọc được của nhau.
+- `landlord_legal_profiles` — một bản Bên A cho mọi khu của chủ trọ.
+- `property_services.quantity_basis` thêm `PerVehicle`.
+
+## 18. Điều khoản hợp đồng (T43, `20261125120000_contract_terms.sql`)
+
+- **`contract_services` là bản chụp lúc ký**, tạo bằng trigger `snapshot_contract_services` sau INSERT `contracts`. Chỉ dùng để in hợp đồng; hóa đơn vẫn tính theo giá đang áp của phòng. Muốn hóa đơn bám giá trong hợp đồng là quyết định nghiệp vụ riêng.
+- `create_occupancy_with_contract` được tạo lại với cùng chữ ký, thêm 3 trường điều khoản; mọi kiểm tra BR-006/BR-027/BR-029 giữ nguyên.

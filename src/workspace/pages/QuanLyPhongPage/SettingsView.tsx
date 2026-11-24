@@ -12,6 +12,7 @@ import {
   countRentedRooms,
 } from "../../services/property-service";
 import { toUserMessage } from "../../../shared/services/supabase-error";
+import { LandlordLegalProfileCard } from "./LandlordLegalProfileCard";
 
 interface SettingsViewProps {
   property: Property | null;
@@ -20,6 +21,8 @@ interface SettingsViewProps {
   onRefreshData?: () => void;
   /** Gọi sau khi xóa khu thành công — trang cha báo thành công và chuyển tab. */
   onDeleted?: (propertyName: string) => void;
+  /** Mở tab "Dịch vụ & phí" — đơn giá điện/nước/dịch vụ nay khai ở đó (T40). */
+  onOpenServices?: () => void;
 }
 
 const inputStyle: React.CSSProperties = {
@@ -43,42 +46,13 @@ const labelStyle: React.CSSProperties = {
 };
 
 /**
- * Kiểm tra dữ liệu cấu hình khu TRƯỚC khi ghi.
- *
- * Vì sao tách thành hàm thuần: bản cũ dùng `Number(elecPrice) || 3500`, nghĩa là
- * nhập `0` (hoặc chữ) thì **âm thầm** biến thành 3500đ/kWh và lưu luôn — chủ trọ
- * tin là đã đặt giá 0 nhưng hóa đơn tính 3.500. Sai kiểu đó không hiện ra ở đâu
- * cả cho tới lúc người ở thắc mắc hóa đơn.
+ * Kiểm tra tài khoản nhận tiền TRƯỚC khi ghi.
+ * Đơn giá điện/nước/dịch vụ không còn ở đây — khai ở tab "Dịch vụ & phí" (T40).
  */
 export function validatePropertySettings(input: {
-  elecPrice: string;
-  waterPrice: string;
-  serviceFee: string;
   accountNumber: string;
   bankCode: string;
 }): string | null {
-  const elec = Number(input.elecPrice);
-  const water = Number(input.waterPrice);
-  const service = Number(input.serviceFee);
-
-  // Ô trống phải báo riêng: `Number("")` là 0, nên phí dịch vụ để trống sẽ lọt
-  // qua kiểm "không âm" và âm thầm lưu thành 0đ.
-  if (input.elecPrice.trim() === "") return "Vui lòng nhập đơn giá điện.";
-  if (input.waterPrice.trim() === "") return "Vui lòng nhập đơn giá nước.";
-  if (input.serviceFee.trim() === "") {
-    return "Vui lòng nhập phí dịch vụ (nhập 0 nếu khu không thu phí).";
-  }
-
-  if (!Number.isFinite(elec) || elec <= 0) {
-    return "Đơn giá điện phải là một số lớn hơn 0.";
-  }
-  if (!Number.isFinite(water) || water <= 0) {
-    return "Đơn giá nước phải là một số lớn hơn 0.";
-  }
-  if (!Number.isFinite(service) || service < 0) {
-    return "Phí dịch vụ phải là một số không âm (nhập 0 nếu khu không thu phí).";
-  }
-
   const account = input.accountNumber.trim();
   if (account !== "") {
     if (!/^\d+$/.test(account)) {
@@ -97,19 +71,12 @@ export function validatePropertySettings(input: {
   return null;
 }
 
-/** Chưa khai ⇒ ô trống (hiện "Chưa cấu hình"), KHÔNG điền một mức giá bịa ra. */
-const priceToInput = (value: number | null | undefined): string =>
-  value === null || value === undefined ? "" : String(value);
-
 /**
  * ⚠️ State form khởi tạo từ `property` MỘT lần. Nơi render PHẢI đặt
  * `key={property.id}` — nếu không, đổi khu vẫn giữ giá/STK của khu cũ và bấm
  * "Lưu" sẽ ghi đè chúng lên khu mới.
  */
-export function SettingsView({ property, mobile, isReadOnly, onRefreshData, onDeleted }: SettingsViewProps) {
-  const [elecPrice, setElecPrice] = useState(priceToInput(property?.electricity_unit_price));
-  const [waterPrice, setWaterPrice] = useState(priceToInput(property?.water_unit_price));
-  const [serviceFee, setServiceFee] = useState(priceToInput(property?.service_fee));
+export function SettingsView({ property, mobile, isReadOnly, onRefreshData, onDeleted, onOpenServices }: SettingsViewProps) {
   const [bankName, setBankName] = useState(property?.bank_name || "");
   const [accountNum, setAccountNum] = useState(property?.bank_account_number || "");
   const [accountName, setAccountName] = useState(property?.bank_account_name || "");
@@ -131,9 +98,7 @@ export function SettingsView({ property, mobile, isReadOnly, onRefreshData, onDe
 
     setErrorMsg("");
 
-    const validationError = validatePropertySettings({
-      elecPrice, waterPrice, serviceFee, accountNumber: accountNum, bankCode: bankName,
-    });
+    const validationError = validatePropertySettings({ accountNumber: accountNum, bankCode: bankName });
     if (validationError) {
       setErrorMsg(validationError);
       return;
@@ -142,9 +107,6 @@ export function SettingsView({ property, mobile, isReadOnly, onRefreshData, onDe
     try {
       setSaving(true);
       await updatePropertySettings(property.id, {
-        electricity_unit_price: Number(elecPrice),
-        water_unit_price: Number(waterPrice),
-        service_fee: Number(serviceFee),
         bank_name: bankName.trim(),
         bank_account_number: accountNum.trim(),
         bank_account_name: accountName.trim(),
@@ -197,9 +159,6 @@ export function SettingsView({ property, mobile, isReadOnly, onRefreshData, onDe
 
   // Theo giá trị ĐÃ LƯU của khu, không theo ô đang gõ.
   const missingSettings = [
-    property?.electricity_unit_price == null && "đơn giá điện",
-    property?.water_unit_price == null && "đơn giá nước",
-    property?.service_fee == null && "phí dịch vụ",
     !property?.bank_account_number && "tài khoản nhận tiền",
   ].filter((item): item is string => typeof item === "string");
 
@@ -217,10 +176,10 @@ export function SettingsView({ property, mobile, isReadOnly, onRefreshData, onDe
 
         <div style={{ marginBottom: 20 }}>
           <h2 style={{ fontFamily: font, fontSize: 17, fontWeight: 800, color: C.textPrimary, margin: "0 0 4px" }}>
-            Cấu hình khu trọ &amp; Đơn giá
+            Cấu hình khu trọ
           </h2>
           <p style={{ fontFamily: font, fontSize: 13, color: C.textSecondary, margin: 0 }}>
-            Cài đặt đơn giá điện, nước, dịch vụ và tài khoản nhận tiền cho {property?.name || "khu trọ"}.
+            Tài khoản nhận tiền và thông tin của {property?.name || "khu trọ"}.
           </p>
         </div>
 
@@ -232,48 +191,11 @@ export function SettingsView({ property, mobile, isReadOnly, onRefreshData, onDe
         )}
 
         <form onSubmit={handleSave} style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-          <div style={{ display: "grid", gridTemplateColumns: gridColumns, gap: 12 }}>
-            <div>
-              <label style={labelStyle} htmlFor="setting-elec-price">Đơn giá điện (VND/kWh) *</label>
-              <input
-                id="setting-elec-price"
-                data-testid="setting-elec-price"
-                type="number"
-                min={1}
-                value={elecPrice}
-                placeholder="Chưa cấu hình"
-                onChange={(e) => setElecPrice(e.target.value)}
-                style={inputStyle}
-              />
-            </div>
-
-            <div>
-              <label style={labelStyle} htmlFor="setting-water-price">Đơn giá nước (VND/m³) *</label>
-              <input
-                id="setting-water-price"
-                data-testid="setting-water-price"
-                type="number"
-                min={1}
-                value={waterPrice}
-                placeholder="Chưa cấu hình"
-                onChange={(e) => setWaterPrice(e.target.value)}
-                style={inputStyle}
-              />
-            </div>
-
-            <div>
-              <label style={labelStyle} htmlFor="setting-service-fee">Phí dịch vụ (VND/tháng)</label>
-              <input
-                id="setting-service-fee"
-                data-testid="setting-service-fee"
-                type="number"
-                min={0}
-                value={serviceFee}
-                placeholder="Chưa cấu hình"
-                onChange={(e) => setServiceFee(e.target.value)}
-                style={inputStyle}
-              />
-            </div>
+          <div data-testid="settings-services-link" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, flexWrap: "wrap", padding: "12px 14px", borderRadius: 10, background: C.cream, fontFamily: font, fontSize: 13, color: C.textPrimary, lineHeight: 1.5 }}>
+            <span>Đơn giá điện, nước, wifi, rác, giữ xe… nay khai ở <strong>Dịch vụ &amp; phí</strong>, kèm phân loại doanh thu / thu hộ.</span>
+            {onOpenServices && (
+              <Button type="button" variant="outline" size="sm" onClick={onOpenServices}>Mở Dịch vụ &amp; phí</Button>
+            )}
           </div>
 
           <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: 16 }}>
@@ -364,6 +286,8 @@ export function SettingsView({ property, mobile, isReadOnly, onRefreshData, onDe
           </div>
         </form>
       </div>
+
+      <LandlordLegalProfileCard mobile={mobile} isReadOnly={isReadOnly} />
 
       {/* ── BR-011: Vùng nguy hiểm ─────────────────────────────────────────── */}
       <div style={{ background: C.white, border: `1px solid ${C.error}`, borderRadius: 16, padding: mobile ? 16 : 22 }}>

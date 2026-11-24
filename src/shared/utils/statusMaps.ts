@@ -99,3 +99,25 @@ export const REVENUE_KIND_META: Record<RevenueKind, { label: string; color: stri
 export const REVENUE_KINDS: RevenueKind[] = ["Saas", "ListingBoost", "DemandBoost"];
 export const isRevenueKind = (value: string | null | undefined): value is RevenueKind =>
   !!value && value in REVENUE_KIND_META;
+
+/**
+ * T40 — Bản chất khoản tiền trên dịch vụ / dòng hóa đơn.
+ * `Service` là doanh thu của chủ trọ; `PassThrough` là thu hộ bên thứ 3 (không phải doanh thu).
+ * `Rent` / `Adjustment` chỉ xuất hiện trên dòng hóa đơn (T41).
+ */
+export type FeeCategoryKey = "Rent" | "Service" | "PassThrough" | "Adjustment";
+export const FEE_CATEGORY_META: Record<FeeCategoryKey, { label: string; hint: string; color: string; bg: string }> = {
+  Rent:        { label: "Tiền phòng",           hint: "Doanh thu",            color: C.primary, bg: C.cream },
+  Service:     { label: "Phí dịch vụ",          hint: "Doanh thu của bạn",    color: C.success, bg: C.successBg },
+  PassThrough: { label: "Thu hộ",               hint: "Không phải doanh thu", color: C.warning, bg: C.warningBg },
+  Adjustment:  { label: "Cộng thêm / Giảm trừ", hint: "Điều chỉnh",           color: C.textSecondary, bg: C.cream },
+};
+
+/** T40 — Cách tính số lượng của một dịch vụ. */
+export type QuantityBasisKey = "Meter" | "PerOccupant" | "PerVehicle" | "Fixed";
+export const QUANTITY_BASIS_META: Record<QuantityBasisKey, { label: string; description: string }> = {
+  Meter:       { label: "Theo chỉ số đồng hồ", description: "Ghi chỉ số mỗi kỳ, tự tính mức sử dụng (điện, nước)." },
+  PerOccupant: { label: "Theo số người",       description: "Nhân với số người ở trong phòng." },
+  PerVehicle:  { label: "Theo số xe",          description: "Nhân với số xe khai trong hồ sơ người ở (giữ xe)." },
+  Fixed:       { label: "Cố định mỗi kỳ",      description: "Một khoản cố định mỗi tháng (wifi, rác, phí quản lý…)." },
+};

@@ -44,6 +44,8 @@ export function AddOccupantModal({ property, mobile, initialRoomId, onClose, onC
   const [rentPrice, setRentPrice] = useState(firstRoom ? String(roomPrice(firstRoom.price) || "") : "");
   const [deposit, setDeposit] = useState(firstRoom ? String(roomPrice(firstRoom.price) || "") : "");
   const [renterEmail, setRenterEmail] = useState("");
+  // Mặc định thu theo ngày vào ở; kẹp ≤ 28 để tháng nào cũng có ngày đó.
+  const [paymentDay, setPaymentDay] = useState(() => String(Math.min(new Date().getDate(), 28)));
   const [submitting, setSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
 
@@ -62,6 +64,7 @@ export function AddOccupantModal({ property, mobile, initialRoomId, onClose, onC
     : !fullName.trim() ? "Nhập họ tên người ở."
     : !rentPrice || Number(rentPrice) <= 0 ? "Nhập giá thuê."
     : endDate <= startDate ? "Ngày hết hạn phải sau ngày bắt đầu."
+    : paymentDay !== "" && !(Number(paymentDay) >= 1 && Number(paymentDay) <= 31) ? "Ngày thu tiền phải từ 1 đến 31."
     : null;
 
   const handleSubmit = async (event: React.FormEvent) => {
@@ -82,7 +85,14 @@ export function AddOccupantModal({ property, mobile, initialRoomId, onClose, onC
           start_date: startDate,
           end_date: endDate,
         },
-        { start_date: startDate, end_date: endDate, rent_price: Number(rentPrice) || 0, deposit: Number(deposit) || 0 },
+        {
+          start_date: startDate,
+          end_date: endDate,
+          rent_price: Number(rentPrice) || 0,
+          deposit: Number(deposit) || 0,
+          payment_day: paymentDay ? Number(paymentDay) : null,
+          billing_cycle_months: 1,
+        },
       );
 
       let message = "Đã thêm người ở và tạo hợp đồng.";
@@ -185,7 +195,14 @@ export function AddOccupantModal({ property, mobile, initialRoomId, onClose, onC
               <label htmlFor="occupant-deposit" style={labelStyle}>Tiền cọc (đ)</label>
               <input id="occupant-deposit" type="number" min="0" inputMode="numeric" placeholder="VD: 3500000" value={deposit} onChange={(e) => setDeposit(e.target.value)} style={inputStyle} />
             </div>
+            <div>
+              <label htmlFor="occupant-payment-day" style={labelStyle}>Ngày thu tiền hàng tháng</label>
+              <input id="occupant-payment-day" type="number" min="1" max="31" inputMode="numeric" placeholder="VD: 5" value={paymentDay} onChange={(e) => setPaymentDay(e.target.value)} style={inputStyle} data-testid="contract-payment-day-input" />
+            </div>
           </div>
+          <p style={{ margin: "-4px 0 0", fontFamily: font, fontSize: 12, color: C.textSecondary }}>
+            Dịch vụ và đơn giá đang áp của phòng sẽ được ghi vào hợp đồng tại thời điểm tạo.
+          </p>
 
           <div>
             <label htmlFor="occupant-email" style={labelStyle}>Email tài khoản Trọ Nhanh của người ở (tùy chọn)</label>

@@ -22,6 +22,12 @@ interface OccupancyTableProps {
   onAddCoOccupant: (target: { contractId: string; roomLabel: string; primaryName: string }) => void;
   onEndContract: (contractId: string) => void;
   onExtendContract: (contractId: string, currentEndDate: string) => void;
+  /** T42 — mở hồ sơ người ở (giấy tờ, tạm trú, xe). */
+  onOpenProfile: (occ: OccupancyItem) => void;
+  /** T43 — in hợp đồng (chỉ người đứng tên có hợp đồng). */
+  onPrintContract: (contractId: string) => void;
+  /** T44 — in tờ khai tạm trú CT01 cho người ở này. */
+  onPrintCt01: (occ: OccupancyItem) => void;
 }
 
 interface OccupancyRow {
@@ -142,6 +148,38 @@ function ContractActions({ row, onAddCoOccupant, onEndContract, onExtendContract
   );
 }
 
+const rowLinkStyle: React.CSSProperties = { padding: 0, border: "none", background: "none", cursor: "pointer", fontFamily: font, fontSize: 12, fontWeight: 700, color: C.primary, whiteSpace: "nowrap" };
+
+/**
+ * "Hồ sơ & giấy tờ" (T42) và "In hợp đồng" (T43, chỉ người đứng tên có hợp đồng).
+ * Mở được cả với người đã rời để tra cứu.
+ */
+function ProfileLink({ row, onOpenProfile, onPrintContract, onPrintCt01 }: {
+  row: OccupancyRow;
+  onOpenProfile: (occ: OccupancyItem) => void;
+  onPrintContract: (contractId: string) => void;
+  onPrintCt01: (occ: OccupancyItem) => void;
+}) {
+  const contractId = row.occ.is_primary !== false ? row.contract?.id : undefined;
+  return (
+    <span style={{ display: "flex", flexWrap: "wrap", gap: "2px 12px", marginTop: 2 }}>
+      <button type="button" onClick={() => onOpenProfile(row.occ)} data-testid="occupant-profile-btn" style={rowLinkStyle}>
+        Hồ sơ & giấy tờ
+      </button>
+      {contractId && (
+        <button type="button" onClick={() => onPrintContract(contractId)} data-testid="contract-print-open-btn" style={rowLinkStyle}>
+          In hợp đồng
+        </button>
+      )}
+      {row.occ.is_active && (
+        <button type="button" onClick={() => onPrintCt01(row.occ)} data-testid="ct01-open-btn" style={rowLinkStyle}>
+          Tờ khai CT01
+        </button>
+      )}
+    </span>
+  );
+}
+
 function LeftTag() {
   return (
     <span data-testid="occupancy-left-tag" style={{ fontFamily: font, fontSize: 10.5, fontWeight: 700, color: C.textSecondary, background: C.bg, border: `1px solid ${C.border}`, borderRadius: radius.pill, padding: "1px 7px", marginLeft: 6 }}>
@@ -176,6 +214,9 @@ export function OccupancyTable({
   onAddCoOccupant,
   onEndContract,
   onExtendContract,
+  onOpenProfile,
+  onPrintContract,
+  onPrintCt01,
 }: OccupancyTableProps) {
   if (loading) {
     return (
@@ -212,6 +253,7 @@ export function OccupancyTable({
                   {row.occ.is_primary === false && <CoOccupantTag />}
                   {!row.occ.is_active && <LeftTag />}
                 </div>
+                <ProfileLink row={row} onOpenProfile={onOpenProfile} onPrintContract={onPrintContract} onPrintCt01={onPrintCt01} />
                 <div style={{ fontSize: 12.5, color: C.textSecondary, marginTop: 2 }}>
                   Phòng {row.roomLabel} · {row.occ.occupant_count} người{row.occ.phone_number ? ` · ${row.occ.phone_number}` : ""}
                 </div>
@@ -255,6 +297,7 @@ export function OccupancyTable({
                 {row.occ.full_name}
                 {row.occ.is_primary === false && <CoOccupantTag />}
                 {!row.occ.is_active && <LeftTag />}
+                <ProfileLink row={row} onOpenProfile={onOpenProfile} onPrintContract={onPrintContract} onPrintCt01={onPrintCt01} />
               </td>
               <td style={cellStyle}>{row.occ.phone_number || "—"}</td>
               <td style={cellStyle}>{row.occ.occupant_count} người</td>

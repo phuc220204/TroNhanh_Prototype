@@ -22,6 +22,10 @@ export interface InvoiceItem {
   total_amount: number;
   status: string;
   created_at: string;
+  /** T41 — khoảng ngày tính tiền + ghi chú (hóa đơn cũ: null). */
+  billing_from?: string | null;
+  billing_to?: string | null;
+  note?: string | null;
   invoice_items?: any[];
   /** Có khi query dùng `getInvoices` (embed `rooms!inner`). */
   rooms?: {
@@ -78,17 +82,6 @@ export interface GetInvoicesParams {
   /** Định dạng `YYYY-MM`. Bỏ trống hoặc "all" = mọi kỳ. */
   period?: string;
   status?: InvoiceStatusFilter;
-}
-
-/** Đúng 5 giá trị RPC `create_invoice_with_items` chấp nhận (INVALID_INVOICE_ITEM_TYPE). */
-export type InvoiceItemType = "Rent" | "Electricity" | "Water" | "Service" | "Other";
-
-export interface CreateInvoiceItemPayload {
-  type: InvoiceItemType;
-  description: string;
-  quantity: number;
-  unit_price: number;
-  amount: number;
 }
 
 /**
@@ -231,38 +224,7 @@ export async function recordUtilityReading(
   }
 }
 
-/**
- * Create an invoice with items via RPC create_invoice_with_items.
- * ⚠️ Security constraint: DOES NOT pass owner_id, status, or total_amount.
- * Supabase derives owner_id = auth.uid(), status = 'Unpaid', and total_amount = sum(item.amount).
- */
-export async function createInvoiceWithItems(input: {
-  roomId: string;
-  contractId?: string | null;
-  period: string;
-  dueDate: string;
-  items: CreateInvoiceItemPayload[];
-}): Promise<string> {
-  try {
-    // `p_contract_id` phải là null khi phòng chưa có hợp đồng Active — RPC có nhánh
-    // `if p_contract_id is not null`. Truyền "" thì Postgres cast sang uuid và ném 22P02.
-    // Generated types khai báo param là `string` (SQL không có DEFAULT) nên phải cast ở đây.
-    const args = {
-      p_room_id: input.roomId,
-      p_contract_id: input.contractId ?? null,
-      p_period: input.period,
-      p_due_date: input.dueDate,
-      p_items: input.items,
-    } as unknown as Parameters<typeof supabase.rpc<"create_invoice_with_items">>[1];
-
-    const { data, error } = await supabase.rpc("create_invoice_with_items", args);
-    if (error) throw error;
-    return data as string;
-  } catch (err) {
-    logError("billing-service.createInvoiceWithItems", err);
-    throw err;
-  }
-}
+// Lập hóa đơn: xem `invoice-create-service.ts` (RPC `create_invoice_v2`, T41).
 
 /**
  * Ghi nhận một khoản thu cho hóa đơn qua RPC record_payment (AS-002 — chủ trọ tự bấm "Đã thu").
@@ -336,66 +298,4 @@ export async function getPreviousReadingsOrThrow(roomId: string): Promise<Previo
     getLatestReadingOrThrow(roomId, "Water"),
   ]);
   return { electricity: electricity?.current_reading ?? 0, water: water?.current_reading ?? 0 };
-}
-
-export interface InvoiceDraftSourceData {
-  /** Hợp đồng Active mới nhất của phòng; null = chưa có hợp đồng đang hiệu lực. */
-  contract: { id: string; rent_price: number } | null;
-  /** Chỉ số điện/nước của ĐÚNG kỳ `period`. */
-  readings: {
-    type: string;
-    period: string;
-    previous_reading: number;
-    current_reading: number;
-    unit_price: number;
-    deleted_at: string | null;
-  }[];
-  /** Phí dịch vụ đang áp (giá riêng phòng → giá khu). null = chưa cấu hình. */
-  serviceFee: number | null;
-}
-
-/**
- * Dữ liệu thật để dựng bản nháp hóa đơn (xem `invoice-draft.ts`). Ném lỗi để
- * UI phân biệt "lỗi tải" với "chưa có dữ liệu".
- *
- * Phí dịch vụ lấy qua RPC `get_room_effective_prices` (đã coalesce giá phòng →
- * giá khu, và assert `owner_id = auth.uid()`), không tự lặp logic ở client.
- */
-export async function getInvoiceDraftSources(roomId: string, period: string): Promise<InvoiceDraftSourceData> {
-  try {
-    const [contractRes, readingsRes, pricesRes] = await Promise.all([
-      supabase
-        .from("contracts")
-        .select("id, rent_price")
-        .eq("room_id", roomId)
-        .eq("status", "Active")
-        .is("deleted_at", null)
-        .order("start_date", { ascending: false })
-        .limit(1)
-        .maybeSingle(),
-      supabase
-        .from("utility_readings")
-        .select("type, period, previous_reading, current_reading, unit_price, deleted_at")
-        .eq("room_id", roomId)
-        .eq("period", period)
-        .is("deleted_at", null),
-      supabase.rpc("get_room_effective_prices", { p_room_id: roomId }),
-    ]);
-    if (contractRes.error) throw contractRes.error;
-    if (readingsRes.error) throw readingsRes.error;
-    if (pricesRes.error) throw pricesRes.error;
-
-    const prices = (pricesRes.data ?? [])[0];
-    const rawServiceFee = prices?.service_fee as number | null | undefined;
-    return {
-      contract: contractRes.data
-        ? { id: contractRes.data.id, rent_price: Number(contractRes.data.rent_price) }
-        : null,
-      readings: readingsRes.data ?? [],
-      serviceFee: rawServiceFee === null || rawServiceFee === undefined ? null : Number(rawServiceFee),
-    };
-  } catch (err) {
-    logError("billing-service.getInvoiceDraftSources", err);
-    throw err;
-  }
 }
