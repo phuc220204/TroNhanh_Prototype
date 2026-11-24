@@ -2,13 +2,14 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router";
 import {
   LayoutGrid, Building2, FileText, Users, Wallet, Settings, LogOut,
-  Home, MessageSquare, User, Search, Lock, X, ChevronLeft, Star, UserSearch, Crown, Receipt
+  Home, MessageSquare, User, Search, Lock, X, ChevronLeft, Star, UserSearch, Crown, Receipt, CircleHelp
 } from "lucide-react";
 import { C, font, shadow } from "../../theme";
 import { BrandLogo } from "../brand/BrandLogo";
 import { useAuth } from "../../contexts/AuthContext";
 import { useSubscriptionContext } from "../../contexts/SubscriptionContext";
 import { useUnreadMessageCount } from "../../hooks/useUnreadMessageCount";
+import { HELP_ROUTE } from "../../constants/legal";
 
 export type LandlordNavId =
   | "overview" | "rooms" | "listings" | "occupants" | "services" | "billing" | "settings"
@@ -16,7 +17,9 @@ export type LandlordNavId =
   /** Hộp thư `/tin-nhan` khi mở từ khu chủ trọ — miễn phí, không thuộc SAAS_NAV_IDS. */
   | "messages"
   /** Trang mua/gia hạn gói — KHÔNG thuộc SAAS_NAV_IDS: người chưa có gói phải vào được để mua. */
-  | "plans";
+  | "plans"
+  /** Trang công khai `/huong-dan` — chỉ là lối tắt, không render trong LandlordShell. */
+  | "help";
 
 /**
  * Các trang thuộc module SaaS (bị khóa khi chưa có gói). Một chỗ duy nhất — LandlordShell dùng lại.
@@ -65,6 +68,7 @@ const NAV_FREE: { id: LandlordNavId; icon: typeof LayoutGrid; label: string; to?
   { id: "messages", icon: MessageSquare, label: "Tin nhắn", to: "/tin-nhan" },
   { id: "find-renter", icon: UserSearch, label: "Tìm người thuê", to: "/chu-tro/tim-nguoi-thue" },
   { id: "reviews", icon: Star, label: "Đánh giá khu trọ", to: "/chu-tro/danh-gia" },
+  { id: "help", icon: CircleHelp, label: "Hướng dẫn sử dụng", to: HELP_ROUTE },
 ];
 
 // "Tổng quan" chuyển xuống đây: sau khi quản lý tin đăng dọn sang khu tài

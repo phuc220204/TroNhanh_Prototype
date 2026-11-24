@@ -31,6 +31,8 @@ export const router = createHashRouter([
       { path: "dieu-khoan", lazy: async () => ({ Component: (await import("../shared/pages/LegalPage")).TermsPage }) },
       { path: "chinh-sach-bao-mat", lazy: async () => ({ Component: (await import("../shared/pages/LegalPage")).PrivacyPage }) },
       { path: "chinh-sach-hoan-tien", lazy: async () => ({ Component: (await import("../shared/pages/LegalPage")).RefundPolicyPage }) },
+      // Hướng dẫn sử dụng / FAQ — công khai, link từ footer, sidebar chủ trọ và nút "?".
+      { path: "huong-dan", lazy: async () => ({ Component: (await import("../shared/pages/HelpPage")).HelpPage }) },
       { path: "bang-gia", lazy: async () => ({ Component: (await import("../shared/pages/PricingPage")).PricingPage }) },
       { path: "dang-nhap", lazy: async () => ({ Component: (await import("../marketplace/pages/LoginPage")).LoginPage }) },
       { path: "dang-ky", lazy: async () => ({ Component: (await import("../marketplace/pages/RegisterPage")).RegisterPage }) },

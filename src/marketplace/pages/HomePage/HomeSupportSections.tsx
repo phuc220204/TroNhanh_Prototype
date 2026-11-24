@@ -9,7 +9,7 @@ import { C, font } from "../../../shared/theme";
 import { ModalShell } from "../../../shared/components/common/ModalShell";
 import { EmptyState, Skeleton } from "../../../shared/components/common";
 import { logError } from "../../../shared/services/supabase-error";
-import { LEGAL_ROUTES } from "../../../shared/constants/legal";
+import { HELP_ROUTE, LEGAL_ROUTES } from "../../../shared/constants/legal";
 import { useAuth } from "../../../shared/contexts/AuthContext";
 import { startConversation } from "../../../shared/services/messaging-service";
 import { DemandPostCard } from "../../components/DemandPostCard";
@@ -450,6 +450,7 @@ export function SiteFooter({ mobile }: { mobile?: boolean }) {
           </span>
           <nav aria-label="Chính sách" data-testid="footer-legal-links" style={{ display: "flex", flexWrap: "wrap", gap: 16 }}>
             {[
+              { label: "Hướng dẫn", to: HELP_ROUTE },
               { label: "Điều khoản sử dụng", to: LEGAL_ROUTES.terms },
               { label: "Chính sách bảo mật", to: LEGAL_ROUTES.privacy },
               { label: "Chính sách hoàn tiền", to: LEGAL_ROUTES.refund },

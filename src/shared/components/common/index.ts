@@ -17,3 +17,4 @@ export * from "./MoneyInput";
 export * from "./AuthCard";
 export * from "./LegalConsentCheckbox";
 export * from "./ImageWithFallback";
+export * from "./HelpLink";

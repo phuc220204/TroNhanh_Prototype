@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Pencil, Plus, Receipt, Trash2 } from "lucide-react";
 import { C, font, radius } from "../../../../shared/theme";
-import { Button, EmptyState, ModalShell, Skeleton } from "../../../../shared/components/common";
+import { Button, EmptyState, HelpLink, ModalShell, Skeleton } from "../../../../shared/components/common";
 import { useToast } from "../../../../shared/contexts/ToastContext";
 import { qk } from "../../../../shared/query/keys";
 import { toUserMessage } from "../../../../shared/services/supabase-error";
@@ -75,7 +75,10 @@ export function ServicesView({ property, isReadOnly, onRefreshData }: ServicesVi
     <section data-testid="services-view" style={{ display: "flex", flexDirection: "column", gap: 14 }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12, flexWrap: "wrap" }}>
         <div>
-          <h2 style={{ fontFamily: font, fontSize: 18, fontWeight: 800, color: C.textPrimary, margin: 0 }}>Dịch vụ & phí</h2>
+          <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+            <h2 style={{ fontFamily: font, fontSize: 18, fontWeight: 800, color: C.textPrimary, margin: 0 }}>Dịch vụ & phí</h2>
+            <HelpLink anchor="phi-dich-vu" label="Hướng dẫn: Phí dịch vụ và Thu hộ khác nhau thế nào?" data-testid="services-help-link" />
+          </div>
           <p style={{ fontFamily: font, fontSize: 13, color: C.textSecondary, margin: "4px 0 0", maxWidth: 560, lineHeight: 1.5 }}>
             Mỗi khoản ghi rõ là <strong>phí dịch vụ</strong> (doanh thu của bạn) hay <strong>thu hộ</strong> (thu giúp bên thứ 3).
             Hóa đơn sẽ tách riêng hai nhóm này.
