@@ -8,6 +8,8 @@ export interface Occupant {
 }
 
 export interface Contract {
+  /** T43 — để mở "In hợp đồng" từ thẻ phòng. */
+  id: string;
   start: string;
   end: string;
   deposit: string;
@@ -29,6 +31,8 @@ export interface RoomDebt {
   /** Số ngày quá hạn của hóa đơn trễ nhất; 0 khi chưa quá hạn. */
   overdueDays: number;
   invoiceCount: number;
+  /** Tổng còn phải thu (tổng hóa đơn − đã thu) của các hóa đơn chưa thu đủ. */
+  amount: number;
 }
 
 export interface Room {

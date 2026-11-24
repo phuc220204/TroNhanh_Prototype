@@ -1,9 +1,10 @@
-import { Phone, Users } from "lucide-react";
+import { CalendarClock, Phone, Users, Wallet } from "lucide-react";
 import { C, font, radius, shadow } from "../../../shared/theme";
 import { Badge } from "../../../shared/components/common";
 import type { Room } from "../../types/room";
 import { RoomActions, type RoomActionType } from "./RoomActions";
 import { RoomDebtBadge } from "./RoomDebtBadge";
+import { formatDate, formatVnd } from "../../../shared/utils/format";
 
 const NOT_DECLARED = "Chưa khai báo";
 
@@ -74,6 +75,16 @@ export function RoomCard({ room, onSelect, onAction }: RoomCardProps) {
               <Phone size={14} style={{ flexShrink: 0 }} /> {room.occupant.phone}
             </span>
           )}
+          {room.contract?.end && (
+            <span data-testid="room-card-contract-end" style={{ display: "flex", alignItems: "center", gap: 6, color: C.textSecondary }}>
+              <CalendarClock size={14} style={{ flexShrink: 0 }} /> HĐ đến {formatDate(room.contract.end)}
+            </span>
+          )}
+          {room.debt && room.debt.amount > 0 && (
+            <span data-testid="room-card-debt" style={{ display: "flex", alignItems: "center", gap: 6, color: C.error, fontWeight: 700 }}>
+              <Wallet size={14} style={{ flexShrink: 0 }} /> Còn nợ {formatVnd(room.debt.amount)}
+            </span>
+          )}
         </div>
       ) : (
         <div style={{ background: C.bg, borderRadius: radius.md, padding: "10px 12px", fontSize: 14, color: C.textSecondary }}>
@@ -82,7 +93,7 @@ export function RoomCard({ room, onSelect, onAction }: RoomCardProps) {
       )}
 
       {/* `marginTop: auto` giữ hàng nút ở đáy thẻ ⇒ các thẻ cùng hàng thẳng nút. */}
-      <div style={{ marginTop: "auto", display: "flex", flexWrap: "wrap", gap: 8 }} onClick={(e) => e.stopPropagation()}>
+      <div style={{ marginTop: "auto" }} onClick={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()}>
         <RoomActions room={room} onAction={onAction} size="md" />
       </div>
     </div>

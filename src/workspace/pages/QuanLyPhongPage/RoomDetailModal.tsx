@@ -143,7 +143,7 @@ export function RoomDetailModal({ room, onClose, onEdit, onOpenActionModal, prop
         {/* Làm việc ngay từ chi tiết phòng — trước đây đây là ngõ cụt, phải đóng rồi tìm lại thẻ. */}
         {onOpenActionModal && (
           <div data-testid="room-detail-actions" style={{ display: "flex", flexWrap: "wrap", gap: 8, padding: isMobile ? "12px 16px calc(12px + env(safe-area-inset-bottom))" : "14px 26px", borderTop: `1px solid ${C.border}`, flexShrink: 0 }}>
-            <RoomActions room={room} onAction={onOpenActionModal} size="md" />
+            <RoomActions room={room} onAction={onOpenActionModal} size="md" exclude={["detail"]} />
           </div>
         )}
       </div>
