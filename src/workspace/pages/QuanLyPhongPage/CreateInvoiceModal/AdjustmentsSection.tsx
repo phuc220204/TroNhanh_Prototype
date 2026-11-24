@@ -15,7 +15,8 @@ export interface AdjustmentRow {
 /** Số tiền có dấu của một dòng; 0 khi chưa nhập. */
 export const signedAdjustment = (row: AdjustmentRow): number => row.sign * (Number(row.amount) || 0);
 
-const REASON_SUGGESTIONS = ["Giảm ngày Tết", "Phạt trễ hạn", "Sửa chữa do khách", "Trừ tiền cọc tháng trước"];
+// Không có gợi ý nào liên quan tiền cọc: cộng thêm/giảm trừ không dùng cho cọc.
+const REASON_SUGGESTIONS = ["Giảm ngày Tết", "Giảm sinh nhật", "Phạt trễ hạn", "Sửa chữa do khách"];
 
 export function AdjustmentsSection({ rows, onChange }: {
   rows: AdjustmentRow[];

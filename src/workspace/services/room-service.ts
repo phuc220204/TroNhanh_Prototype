@@ -85,7 +85,8 @@ export async function getRoomsByOwnerOrThrow(ownerId: string): Promise<RoomItem[
       ),
       invoices(
         id, period, due_date, total_amount, status,
-        invoice_items(id, type, description, quantity, unit_price, amount)
+        invoice_items(id, type, description, quantity, unit_price, amount),
+        payments(amount)
       )
     `)
     .eq("owner_id", ownerId)

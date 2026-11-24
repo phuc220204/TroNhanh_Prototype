@@ -111,7 +111,9 @@ test.describe("Vận hành khu trọ", () => {
     await selectProperty(page);
 
     // Kỳ đầu — chỉ số cao.
-    await roomCard(page).getByTestId("room-utility-btn").click();
+    // Ghi chỉ số nằm trong menu ⋮ của thẻ phòng (nút chính là Lập hóa đơn / Thêm người ở).
+    await roomCard(page).getByTestId("room-menu-btn").click();
+    await page.getByTestId("room-menu-utility").click();
     await page.getByTestId("utility-period-input").fill("2026-01");
     await page.getByTestId("utility-elec-input").fill("500");
     await page.getByTestId("utility-water-input").fill("50");
@@ -119,7 +121,9 @@ test.describe("Vận hành khu trọ", () => {
     await expect(page.getByTestId("utility-save-btn")).toBeHidden();
 
     // Kỳ sau — nhập THẤP HƠN. Server phải chặn (`READING_LOWER_THAN_PREVIOUS`).
-    await roomCard(page).getByTestId("room-utility-btn").click();
+    // Ghi chỉ số nằm trong menu ⋮ của thẻ phòng (nút chính là Lập hóa đơn / Thêm người ở).
+    await roomCard(page).getByTestId("room-menu-btn").click();
+    await page.getByTestId("room-menu-utility").click();
     await page.getByTestId("utility-period-input").fill("2026-02");
     await page.getByTestId("utility-elec-input").fill("100");
     await page.getByTestId("utility-save-btn").click();

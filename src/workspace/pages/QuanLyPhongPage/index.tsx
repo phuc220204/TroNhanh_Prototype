@@ -22,6 +22,7 @@ import { RoomDetailModal } from "./RoomDetailModal";
 import { getRoomDebt } from "./RoomDebtBadge";
 import { UtilityReadingForm } from "./UtilityReadingForm";
 import { CreateInvoiceModal } from "./CreateInvoiceModal";
+import { ContractPrintModal } from "./ContractPrintModal";
 import { AddOccupantModal } from "./AddOccupantModal";
 import type { RoomActionType } from "./RoomActions";
 import { AddRoomModal } from "../../components/AddRoomModal";
@@ -48,6 +49,7 @@ const mapDbRoomToRoom = (dbRoom: any): Room => {
       occupantCount: Number(occ?.occupant_count || 1),
     };
     contract = {
+      id: activeContract.id,
       start: activeContract.start_date,
       end: activeContract.end_date,
       deposit: `${Number(activeContract.deposit || 0).toLocaleString("vi-VN")}đ`,
@@ -127,6 +129,18 @@ export function QuanLyPhongPage() {
   const [detailRoom, setDetailRoom] = useState<Room | null>(null);
   const [switcherOpen, setSwitcherOpen] = useState(false);
   const [actionModal, setActionModal] = useState<{ type: RoomActionType; room: Room } | null>(null);
+  const [printContractId, setPrintContractId] = useState<string | null>(null);
+  /**
+   * Một chỗ xử lý mọi thao tác từ thẻ phòng / bảng / chi tiết phòng. Luôn đóng
+   * modal chi tiết trước: hai modal chồng nhau thì Esc đóng nhầm cái dưới.
+   */
+  const handleRoomAction = (type: RoomActionType, room: Room) => {
+    setDetailRoom(null);
+    if (type === "edit") setEditRoomId(room.id);
+    else if (type === "detail") setDetailRoom(room);
+    else if (type === "contract") setPrintContractId(room.contract?.id ?? null);
+    else setActionModal({ type, room });
+  };
   const [loading, setLoading] = useState(true);
   // Lỗi tải KHÁC "chưa có khu": trước đây lỗi bị nuốt và trang hiện "Bạn chưa có
   // khu trọ nào" + nút tạo khu ⇒ chủ trọ tưởng mất dữ liệu và tạo trùng.
@@ -357,7 +371,7 @@ export function QuanLyPhongPage() {
                 sort={sort}
                 setSort={setSort}
                 onSelectRoom={(r) => setDetailRoom(r)}
-                onOpenActionModal={(type, room) => setActionModal({ type, room })}
+                onOpenActionModal={handleRoomAction}
                 onAddRoom={() => setShowAddRoom(true)}
                 onAddProperty={() => setShowAddProperty(true)}
                 onOpenSettings={() => goToTab("settings")}
@@ -409,11 +423,7 @@ export function QuanLyPhongPage() {
           room={detailRoom}
           onClose={() => setDetailRoom(null)}
           property={selectedProperty}
-          onOpenActionModal={(type, room) => {
-            // Hai modal chồng nhau thì Esc đóng nhầm — đóng chi tiết trước khi mở thao tác.
-            setDetailRoom(null);
-            setActionModal({ type, room });
-          }}
+          onOpenActionModal={handleRoomAction}
           onEdit={(room) => {
             // Đóng modal chi tiết trước: hai modal chồng nhau thì Esc đóng nhầm cái
             // dưới, và người dùng không biết mình đang ở form nào.
@@ -429,6 +439,10 @@ export function QuanLyPhongPage() {
           onClose={() => setEditRoomId(null)}
           onUpdated={() => void loadDbData(false)}
         />
+      )}
+
+      {printContractId && (
+        <ContractPrintModal contractId={printContractId} isReadOnly={isReadOnly} onClose={() => setPrintContractId(null)} />
       )}
 
       {/* Action Modals */}

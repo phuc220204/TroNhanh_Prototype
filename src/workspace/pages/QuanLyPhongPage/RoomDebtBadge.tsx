@@ -6,6 +6,8 @@ import type { RoomDebt } from "../../types/room";
 interface DbInvoiceSummary {
   status?: string | null;
   due_date?: string | null;
+  total_amount?: number | string | null;
+  payments?: { amount: number | string | null }[] | null;
 }
 
 /**
@@ -22,7 +24,10 @@ export function getRoomDebt(invoices: DbInvoiceSummary[] | null | undefined, tod
   if (outstanding.length === 0) return null;
 
   let maxOverdueDays = 0;
+  let amount = 0;
   for (const invoice of outstanding) {
+    const paid = (invoice.payments ?? []).reduce((sum, p) => sum + Number(p.amount || 0), 0);
+    amount += Math.max(0, Number(invoice.total_amount || 0) - paid);
     const days = invoice.due_date ? getDaysUntilDue(invoice.due_date, today) : null;
     if (days !== null && days < 0) maxOverdueDays = Math.max(maxOverdueDays, -days);
   }
@@ -30,6 +35,7 @@ export function getRoomDebt(invoices: DbInvoiceSummary[] | null | undefined, tod
     state: maxOverdueDays > 0 ? "overdue" : "outstanding",
     overdueDays: maxOverdueDays,
     invoiceCount: outstanding.length,
+    amount,
   };
 }
 

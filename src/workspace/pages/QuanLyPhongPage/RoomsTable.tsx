@@ -11,7 +11,7 @@ const COLUMNS: Column<Room>[] = [
   { key: "area", label: "Diện tích" },
   { key: "price", label: "Giá thuê", align: "right" },
   { key: "occupant", label: "Người ở" },
-  { key: "actions", label: "Thao tác", width: 260 },
+  { key: "actions", label: "Thao tác", width: 220 },
 ];
 
 interface RoomsTableProps {
@@ -54,7 +54,7 @@ export function RoomsTable({ rooms, onSelect, onAction }: RoomsTableProps) {
             );
           case "actions":
             return (
-              <div style={{ display: "flex", gap: 8 }} onClick={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()}>
+              <div onClick={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()}>
                 <RoomActions room={room} onAction={onAction} />
               </div>
             );
