@@ -30,12 +30,14 @@ export function validateOccupancyProfile(profile: OccupancyProfileForm): string 
  * Dùng cho hợp đồng in (T43) và tờ khai tạm trú CT01 (T44). Dữ liệu nhạy cảm — chỉ chủ
  * trọ và chính người ở đã liên kết đọc được (RLS).
  */
-export function OccupantProfileModal({ occupancyId, fullName, isPrimary, isReadOnly, onClose }: {
+export function OccupantProfileModal({ occupancyId, fullName, isPrimary, isReadOnly, onClose, onOpenCt01 }: {
   occupancyId: string;
   fullName: string;
   isPrimary: boolean;
   isReadOnly: boolean;
   onClose: () => void;
+  /** T44 — đóng hồ sơ và mở tờ khai CT01 (lưu hồ sơ trước để tờ khai có số liệu mới). */
+  onOpenCt01?: () => void;
 }) {
   const queryClient = useQueryClient();
   const profileQuery = useQuery({
@@ -81,6 +83,11 @@ export function OccupantProfileModal({ occupancyId, fullName, isPrimary, isReadO
       footer={(
         <>
           <Button variant="ghost" onClick={onClose}>Đóng</Button>
+          {onOpenCt01 && (
+            <Button variant="outline" disabled={!profileQuery.data} onClick={onOpenCt01} data-testid="profile-open-ct01">
+              In tờ khai CT01
+            </Button>
+          )}
           <Button variant="primary" requiresWrite disabled={isReadOnly || !profileQuery.data} loading={saveMutation.isPending} onClick={submit} data-testid="profile-save">
             Lưu hồ sơ
           </Button>

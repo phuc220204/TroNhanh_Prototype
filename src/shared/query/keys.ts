@@ -106,6 +106,8 @@ export const qk = {
     mine: (userId: string | undefined) => ["occupancies", "mine", userId] as const,
     /** T42 — giấy tờ, tạm trú, xe của một người ở (dữ liệu nhạy cảm, chỉ màn hồ sơ). */
     profile: (occupancyId: string) => ["occupancies", "profile", occupancyId] as const,
+    /** T44 — dữ liệu điền sẵn tờ khai CT01 (người kê khai + người ở cùng hợp đồng). */
+    ct01: (occupancyId: string) => ["occupancies", "ct01", occupancyId] as const,
     /** Tên chủ trọ của các lời mời liên kết đang chờ (đối chiếu trước khi xác nhận). */
     pendingLinkDetails: (userId: string | undefined) => ["occupancies", "pendingLinkDetails", userId] as const,
   },
