@@ -88,6 +88,19 @@ const ERROR_MESSAGES: Record<string, string> = {
   INVALID_ADJUSTMENT_AMOUNT: "Số tiền cộng thêm / giảm trừ phải khác 0.",
   INVOICE_TOTAL_NEGATIVE: "Tổng hóa đơn không được âm. Giảm bớt khoản giảm trừ.",
 
+  // T42 — hồ sơ người ở, xe, Bên A
+  INVALID_OCCUPANCY_PROFILE: "Dữ liệu hồ sơ người ở không hợp lệ.",
+  INVALID_VEHICLES: "Danh sách xe không hợp lệ.",
+  TOO_MANY_VEHICLES: "Mỗi người ở khai tối đa 10 xe.",
+  INVALID_VEHICLE_TYPE: "Loại phương tiện không hợp lệ.",
+  INVALID_ID_DOCUMENT_TYPE: "Loại giấy tờ không hợp lệ.",
+  INVALID_CCCD_NUMBER: "Số CCCD phải gồm đúng 12 chữ số.",
+  INVALID_PASSPORT_NUMBER: "Số hộ chiếu gồm 6–20 chữ cái hoặc chữ số.",
+  INVALID_TEMP_RESIDENCE_RANGE: "Ngày hết hạn tạm trú phải sau ngày đăng ký.",
+  INVALID_DATE_OF_BIRTH: "Ngày sinh không được ở tương lai.",
+  INVALID_LANDLORD_PROFILE: "Thông tin chủ trọ không hợp lệ.",
+  LANDLORD_NAME_REQUIRED: "Vui lòng nhập họ tên chủ trọ (tối đa 80 ký tự).",
+
   // Hợp đồng & phòng
   ROOM_HAS_ACTIVE_CONTRACT:
     "Phòng này đã có hợp đồng còn hiệu lực trong khoảng thời gian đó.",

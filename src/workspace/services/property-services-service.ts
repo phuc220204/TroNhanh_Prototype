@@ -13,7 +13,7 @@ import { supabase } from "../../shared/supabaseClient";
 import { logError } from "../../shared/services/supabase-error";
 
 export type FeeCategory = "Service" | "PassThrough";
-export type QuantityBasis = "Meter" | "PerOccupant" | "Fixed";
+export type QuantityBasis = "Meter" | "PerOccupant" | "PerVehicle" | "Fixed";
 export type MeterType = "Electricity" | "Water";
 
 export interface PropertyService {

@@ -634,3 +634,10 @@ trả `setof` (bảo mật tương đương, phải sửa mọi chỗ gọi ở 
 - **`invoices.billing_from/billing_to/note`** — khoảng ngày tính tiền (tháng lẻ tính theo ngày ÷ 30) và ghi chú in trên hóa đơn.
 - **Giảm trừ là dòng âm** (`Adjustment`, bắt buộc lý do); tổng hóa đơn vẫn ≥ 0. Không dùng cho tiền cọc.
 - **Giữ `create_invoice_with_items` trên DB** cho tới khi frontend mới deploy (bản đang chạy vẫn gọi nó). Sau deploy: migration dọn dẹp `drop function public.create_invoice_with_items(uuid, uuid, text, date, jsonb)`.
+
+## 17. Hồ sơ người ở (T42, `20261125090000_occupancy_profiles.sql`)
+
+- **Giấy tờ tùy thân ở bảng riêng `occupancy_profiles`**, không thêm cột vào `occupancies`: `occupancies` bị `select *`/embed ở nhiều màn, tách bảng giữ dữ liệu nhạy cảm chỉ ở màn hồ sơ. Đừng embed `occupancy_profiles` vào các truy vấn danh sách.
+- **Người ở đã liên kết chỉ đọc hồ sơ/xe của chính mình** (`is_linked_occupant`); người ở ghép không đọc được của nhau.
+- `landlord_legal_profiles` — một bản Bên A cho mọi khu của chủ trọ.
+- `property_services.quantity_basis` thêm `PerVehicle`.

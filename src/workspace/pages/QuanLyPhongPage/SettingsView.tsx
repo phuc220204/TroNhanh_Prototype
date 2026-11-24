@@ -12,6 +12,7 @@ import {
   countRentedRooms,
 } from "../../services/property-service";
 import { toUserMessage } from "../../../shared/services/supabase-error";
+import { LandlordLegalProfileCard } from "./LandlordLegalProfileCard";
 
 interface SettingsViewProps {
   property: Property | null;
@@ -285,6 +286,8 @@ export function SettingsView({ property, mobile, isReadOnly, onRefreshData, onDe
           </div>
         </form>
       </div>
+
+      <LandlordLegalProfileCard mobile={mobile} isReadOnly={isReadOnly} />
 
       {/* ── BR-011: Vùng nguy hiểm ─────────────────────────────────────────── */}
       <div style={{ background: C.white, border: `1px solid ${C.error}`, borderRadius: 16, padding: mobile ? 16 : 22 }}>

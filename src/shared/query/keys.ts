@@ -104,6 +104,8 @@ export const qk = {
     byRoom: (roomId: string) => ["occupancies", "room", roomId] as const,
     /** Occupancy của chính Renter — dùng ở /tai-khoan/phong-cua-toi */
     mine: (userId: string | undefined) => ["occupancies", "mine", userId] as const,
+    /** T42 — giấy tờ, tạm trú, xe của một người ở (dữ liệu nhạy cảm, chỉ màn hồ sơ). */
+    profile: (occupancyId: string) => ["occupancies", "profile", occupancyId] as const,
     /** Tên chủ trọ của các lời mời liên kết đang chờ (đối chiếu trước khi xác nhận). */
     pendingLinkDetails: (userId: string | undefined) => ["occupancies", "pendingLinkDetails", userId] as const,
   },
@@ -163,6 +165,8 @@ export const qk = {
   },
 
   profile: (userId: string | undefined) => ["profile", userId] as const,
+  /** T42 — thông tin chủ trọ in làm Bên A trên hợp đồng / CT01. */
+  landlordLegalProfile: (ownerId: string | undefined) => ["landlordLegalProfile", ownerId] as const,
   roles: (userId: string | undefined) => ["roles", userId] as const,
 
   platformSettings: ["platformSettings"] as const,

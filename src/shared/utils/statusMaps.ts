@@ -113,9 +113,10 @@ export const FEE_CATEGORY_META: Record<FeeCategoryKey, { label: string; hint: st
 };
 
 /** T40 — Cách tính số lượng của một dịch vụ. */
-export type QuantityBasisKey = "Meter" | "PerOccupant" | "Fixed";
+export type QuantityBasisKey = "Meter" | "PerOccupant" | "PerVehicle" | "Fixed";
 export const QUANTITY_BASIS_META: Record<QuantityBasisKey, { label: string; description: string }> = {
   Meter:       { label: "Theo chỉ số đồng hồ", description: "Ghi chỉ số mỗi kỳ, tự tính mức sử dụng (điện, nước)." },
   PerOccupant: { label: "Theo số người",       description: "Nhân với số người ở trong phòng." },
+  PerVehicle:  { label: "Theo số xe",          description: "Nhân với số xe khai trong hồ sơ người ở (giữ xe)." },
   Fixed:       { label: "Cố định mỗi kỳ",      description: "Một khoản cố định mỗi tháng (wifi, rác, phí quản lý…)." },
 };

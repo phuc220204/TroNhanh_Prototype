@@ -22,6 +22,8 @@ interface OccupancyTableProps {
   onAddCoOccupant: (target: { contractId: string; roomLabel: string; primaryName: string }) => void;
   onEndContract: (contractId: string) => void;
   onExtendContract: (contractId: string, currentEndDate: string) => void;
+  /** T42 — mở hồ sơ người ở (giấy tờ, tạm trú, xe). */
+  onOpenProfile: (occ: OccupancyItem) => void;
 }
 
 interface OccupancyRow {
@@ -142,6 +144,20 @@ function ContractActions({ row, onAddCoOccupant, onEndContract, onExtendContract
   );
 }
 
+/** "Hồ sơ" — giấy tờ, tạm trú, xe (T42). Mở được cả với người đã rời để tra cứu. */
+function ProfileLink({ occ, onOpenProfile }: { occ: OccupancyItem; onOpenProfile: (occ: OccupancyItem) => void }) {
+  return (
+    <button
+      type="button"
+      onClick={() => onOpenProfile(occ)}
+      data-testid="occupant-profile-btn"
+      style={{ display: "block", marginTop: 2, padding: 0, border: "none", background: "none", cursor: "pointer", fontFamily: font, fontSize: 12, fontWeight: 700, color: C.primary }}
+    >
+      Hồ sơ & giấy tờ
+    </button>
+  );
+}
+
 function LeftTag() {
   return (
     <span data-testid="occupancy-left-tag" style={{ fontFamily: font, fontSize: 10.5, fontWeight: 700, color: C.textSecondary, background: C.bg, border: `1px solid ${C.border}`, borderRadius: radius.pill, padding: "1px 7px", marginLeft: 6 }}>
@@ -176,6 +192,7 @@ export function OccupancyTable({
   onAddCoOccupant,
   onEndContract,
   onExtendContract,
+  onOpenProfile,
 }: OccupancyTableProps) {
   if (loading) {
     return (
@@ -212,6 +229,7 @@ export function OccupancyTable({
                   {row.occ.is_primary === false && <CoOccupantTag />}
                   {!row.occ.is_active && <LeftTag />}
                 </div>
+                <ProfileLink occ={row.occ} onOpenProfile={onOpenProfile} />
                 <div style={{ fontSize: 12.5, color: C.textSecondary, marginTop: 2 }}>
                   Phòng {row.roomLabel} · {row.occ.occupant_count} người{row.occ.phone_number ? ` · ${row.occ.phone_number}` : ""}
                 </div>
@@ -255,6 +273,7 @@ export function OccupancyTable({
                 {row.occ.full_name}
                 {row.occ.is_primary === false && <CoOccupantTag />}
                 {!row.occ.is_active && <LeftTag />}
+                <ProfileLink occ={row.occ} onOpenProfile={onOpenProfile} />
               </td>
               <td style={cellStyle}>{row.occ.phone_number || "—"}</td>
               <td style={cellStyle}>{row.occ.occupant_count} người</td>

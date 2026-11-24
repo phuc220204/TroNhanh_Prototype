@@ -563,6 +563,45 @@ export type Database = {
           },
         ]
       }
+      landlord_legal_profiles: {
+        Row: {
+          created_at: string
+          date_of_birth: string | null
+          full_name: string
+          id_issue_date: string | null
+          id_issue_place: string | null
+          id_number: string | null
+          owner_id: string
+          permanent_address: string | null
+          phone: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          date_of_birth?: string | null
+          full_name: string
+          id_issue_date?: string | null
+          id_issue_place?: string | null
+          id_number?: string | null
+          owner_id: string
+          permanent_address?: string | null
+          phone?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          date_of_birth?: string | null
+          full_name?: string
+          id_issue_date?: string | null
+          id_issue_place?: string | null
+          id_number?: string | null
+          owner_id?: string
+          permanent_address?: string | null
+          phone?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       listing_amenities: {
         Row: {
           amenity: string
@@ -831,6 +870,118 @@ export type Database = {
             columns: ["room_id"]
             isOneToOne: false
             referencedRelation: "rooms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      occupancy_profiles: {
+        Row: {
+          created_at: string
+          date_of_birth: string | null
+          gender: string | null
+          id_document_type: string
+          id_issue_date: string | null
+          id_issue_place: string | null
+          id_number: string | null
+          is_info_verified: boolean
+          is_room_contact: boolean
+          occupancy_id: string
+          occupation: string | null
+          owner_id: string
+          permanent_address: string | null
+          relation_to_primary: string | null
+          temp_residence_from: string | null
+          temp_residence_registered: boolean
+          temp_residence_to: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          date_of_birth?: string | null
+          gender?: string | null
+          id_document_type?: string
+          id_issue_date?: string | null
+          id_issue_place?: string | null
+          id_number?: string | null
+          is_info_verified?: boolean
+          is_room_contact?: boolean
+          occupancy_id: string
+          occupation?: string | null
+          owner_id: string
+          permanent_address?: string | null
+          relation_to_primary?: string | null
+          temp_residence_from?: string | null
+          temp_residence_registered?: boolean
+          temp_residence_to?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          date_of_birth?: string | null
+          gender?: string | null
+          id_document_type?: string
+          id_issue_date?: string | null
+          id_issue_place?: string | null
+          id_number?: string | null
+          is_info_verified?: boolean
+          is_room_contact?: boolean
+          occupancy_id?: string
+          occupation?: string | null
+          owner_id?: string
+          permanent_address?: string | null
+          relation_to_primary?: string | null
+          temp_residence_from?: string | null
+          temp_residence_registered?: boolean
+          temp_residence_to?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "occupancy_profiles_occupancy_id_fkey"
+            columns: ["occupancy_id"]
+            isOneToOne: true
+            referencedRelation: "occupancies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      occupancy_vehicles: {
+        Row: {
+          created_at: string
+          id: string
+          name: string | null
+          occupancy_id: string
+          owner_id: string
+          plate_number: string | null
+          updated_at: string
+          vehicle_type: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name?: string | null
+          occupancy_id: string
+          owner_id: string
+          plate_number?: string | null
+          updated_at?: string
+          vehicle_type: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string | null
+          occupancy_id?: string
+          owner_id?: string
+          plate_number?: string | null
+          updated_at?: string
+          vehicle_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "occupancy_vehicles_occupancy_id_fkey"
+            columns: ["occupancy_id"]
+            isOneToOne: false
+            referencedRelation: "occupancies"
             referencedColumns: ["id"]
           },
         ]
@@ -2353,6 +2504,10 @@ export type Database = {
         Args: { p_role: string; p_user_id: string }
         Returns: undefined
       }
+      save_occupancy_profile: {
+        Args: { p_occupancy_id: string; p_profile: Json; p_vehicles: Json }
+        Returns: undefined
+      }
       seed_default_property_services: {
         Args: { p_property_id: string }
         Returns: undefined
@@ -2414,6 +2569,10 @@ export type Database = {
           p_status: string
           p_water_price: number
         }
+        Returns: undefined
+      }
+      upsert_landlord_legal_profile: {
+        Args: { p_profile: Json }
         Returns: undefined
       }
       upsert_property_service: {

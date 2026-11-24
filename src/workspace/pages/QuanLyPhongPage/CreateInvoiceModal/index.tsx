@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { AlertTriangle, Eye } from "lucide-react";
 import { C, font, radius } from "../../../../shared/theme";
-import { Button, ModalShell, Skeleton } from "../../../../shared/components/common";
+import { Button, HelpLink, ModalShell, Skeleton } from "../../../../shared/components/common";
 import { useBreakpoint } from "../../../../shared/components/useBreakpoint";
 import { qk } from "../../../../shared/query/keys";
 import { toUserMessage } from "../../../../shared/services/supabase-error";
@@ -86,7 +86,10 @@ export function CreateInvoiceModal({ room, property, onClose, onSuccess, isReadO
       for (const service of sources.services) {
         next[service.serviceId] = current[service.serviceId] ?? {
           checked: true,
-          quantity: service.quantityBasis === "PerOccupant" ? String(sources.occupantCount) : "1",
+          quantity: service.quantityBasis === "PerOccupant"
+            ? String(sources.occupantCount)
+            // Chưa khai xe nào thì để 1 cho chủ trọ tự sửa, không mặc định 0 (sẽ chặn lập).
+            : service.quantityBasis === "PerVehicle" ? String(Math.max(sources.vehicleCount, 1)) : "1",
         };
       }
       return next;
@@ -243,6 +246,9 @@ export function CreateInvoiceModal({ room, property, onClose, onSuccess, isReadO
   return (
     <ModalShell title={`Lập hóa đơn · Phòng ${room.code}`} size="xl" onClose={onClose} footer={footer}>
       <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+        <div style={{ display: "flex", justifyContent: "flex-end", marginTop: -6 }}>
+          <HelpLink anchor="lap-hoa-don" label="Hướng dẫn lập hóa đơn (mở tab mới)" text="Hướng dẫn lập hóa đơn" data-testid="invoice-help-link" />
+        </div>
         {errorMsg && <Banner tone="error" testId="invoice-form-error">{errorMsg}</Banner>}
         {sources && sources.outstandingDebt > 0 && (
           <Banner tone="warning" testId="invoice-debt-banner">

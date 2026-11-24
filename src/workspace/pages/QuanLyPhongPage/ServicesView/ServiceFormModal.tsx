@@ -58,6 +58,7 @@ export function ServiceFormModal({
     } else {
       setMeterType(null);
       if (next === "PerOccupant") setUnit("Người");
+      if (next === "PerVehicle") setUnit("Xe");
     }
   };
 
@@ -137,7 +138,7 @@ export function ServiceFormModal({
         <div>
           <SectionTitle title="Cách tính" />
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 10 }}>
-            {(["Fixed", "PerOccupant", "Meter"] as QuantityBasis[]).map((key) => (
+            {(["Fixed", "PerOccupant", "PerVehicle", "Meter"] as QuantityBasis[]).map((key) => (
               <ChoiceCard
                 key={key}
                 selected={basis === key}

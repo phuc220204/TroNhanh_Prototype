@@ -35,6 +35,8 @@ export interface InvoiceFormSources {
   readings: Partial<Record<MeterType, InvoiceFormReading>>;
   /** Số người mặc định cho khoản "theo số người". */
   occupantCount: number;
+  /** Số xe (hồ sơ người ở của hợp đồng) — mặc định cho khoản "theo số xe". */
+  vehicleCount: number;
   /** Tổng còn nợ của các hóa đơn cũ chưa thu đủ của phòng. */
   outstandingDebt: number;
   /** Người ở chính của hợp đồng — in trên hóa đơn. */
@@ -125,12 +127,13 @@ export async function getInvoiceFormSources(roomId: string, period: string): Pro
       : null;
 
     let occupantCount = 1;
+    let vehicleCount = 0;
     const occupant = contractRes.data?.occupancy_id ? await getOccupancyContact(contractRes.data.occupancy_id) : null;
     const previousInvoice = await getPreviousInvoice(roomId, period);
     if (contract) {
       const occupantsRes = await supabase
         .from("occupancies")
-        .select("occupant_count, is_primary")
+        .select("id, occupant_count, is_primary")
         .eq("contract_id", contract.id)
         .eq("is_active", true)
         .is("deleted_at", null);
@@ -138,6 +141,14 @@ export async function getInvoiceFormSources(roomId: string, period: string): Pro
       const rows = occupantsRes.data ?? [];
       const primaryCount = Number(rows.find((r) => r.is_primary)?.occupant_count ?? 1);
       occupantCount = Math.max(rows.length, primaryCount, 1);
+      if (rows.length > 0) {
+        const vehiclesRes = await supabase
+          .from("occupancy_vehicles")
+          .select("id", { count: "exact", head: true })
+          .in("occupancy_id", rows.map((r) => r.id));
+        if (vehiclesRes.error) throw vehiclesRes.error;
+        vehicleCount = vehiclesRes.count ?? 0;
+      }
     }
 
     const services = (servicesRes.data ?? [])
@@ -169,7 +180,7 @@ export async function getInvoiceFormSources(roomId: string, period: string): Pro
       return sum + Math.max(0, Number(invoice.total_amount) - paid);
     }, 0);
 
-    return { contract, services, readings, occupantCount, outstandingDebt, occupant, previousInvoice };
+    return { contract, services, readings, occupantCount, vehicleCount, outstandingDebt, occupant, previousInvoice };
   } catch (err) {
     logError("invoice-create-service.getInvoiceFormSources", err);
     throw err;
